@@ -193,12 +193,16 @@ function UI.Create(playerGui: PlayerGui): UI
 	table.insert(panels, shopFrame)
 	local eggButtons: { [string]: TextButton } = {}
 	local sortedEggs = {}
-	for eggType, egg in Config.Eggs do
-		table.insert(sortedEggs, { Type = eggType, Egg = egg })
+	for _, eggType in Config.ShopEggs do
+		local egg = Config.Eggs[eggType]
+		if egg then
+			table.insert(sortedEggs, { Type = eggType, Egg = egg })
+		end
 	end
-	table.sort(sortedEggs, function(a, b)
-		return a.Egg.Order < b.Egg.Order
-	end)
+	if #sortedEggs == 0 then
+		local empty = label(shopFrame, "Coming soon...", UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, 0.5, -30), 32)
+		empty.TextColor3 = COLORS.SubText
+	end
 	for i, entry in sortedEggs do
 		local egg = entry.Egg
 		local card = Instance.new("Frame")

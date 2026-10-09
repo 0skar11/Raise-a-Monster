@@ -42,6 +42,10 @@ type Nest = {
 
 local ZoneService = {}
 
+-- حدود المناطق (الجبال بتلف حواليها)
+ZoneService.ZoneHalfZ = ZONE_HALF_Z
+ZoneService.ZonesEndX = PlotService.ZonesStartX + #Config.Zones * ZONE_LENGTH
+
 local zonesFolder: Folder
 local nests: { Nest } = {}
 local gateLabels: { { Label: TextLabel, Title: string } } = {}
@@ -373,6 +377,86 @@ local function attack(player: Player, nest: Nest)
 	end
 end
 
+-- المضرب الخشبي -------------------------------------------------------------------
+
+-- أقرب أم عايشة في مدى ضربة المضرب
+local function nestInReach(player: Player): Nest?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return nil
+	end
+	local best: Nest? = nil
+	local bestDistance = math.huge
+	for _, nest in nests do
+		local mother = nest.Mother
+		if nest.Alive and mother then
+			local distance = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z).Magnitude
+			if distance <= nest.Zone.MotherSize / 2 + Config.Combat.BatReach and distance < bestDistance then
+				best = nest
+				bestDistance = distance
+			end
+		end
+	end
+	return best
+end
+
+local function makeBat(): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = "Bat"
+	tool.ToolTip = "Hit the mother monsters!"
+	tool.CanBeDropped = false
+	tool.GripPos = Vector3.new(0, 0, 0.6) -- اللاعب ماسكه من آخره
+	local handle = makePart({
+		Name = "Handle",
+		Size = Vector3.new(0.5, 0.5, 2.2),
+		Color = Color3.fromRGB(140, 95, 55),
+		Material = Enum.Material.Wood,
+		Anchored = false,
+		CanCollide = false,
+		Massless = true,
+	})
+	handle.Parent = tool
+	local barrel = makePart({
+		Name = "Barrel",
+		Size = Vector3.new(0.85, 0.85, 2.6),
+		CFrame = handle.CFrame * CFrame.new(0, 0, -2.3),
+		Color = Color3.fromRGB(170, 120, 70),
+		Material = Enum.Material.Wood,
+		Anchored = false,
+		CanCollide = false,
+		Massless = true,
+	})
+	barrel.Parent = tool
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = handle
+	weld.Part1 = barrel
+	weld.Parent = barrel
+	return tool
+end
+
+-- بيدّي اللاعب المضرب (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
+function ZoneService.GiveBat(player: Player)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local character = player.Character
+	if not backpack or backpack:FindFirstChild("Bat") or (character and character:FindFirstChild("Bat")) then
+		return
+	end
+	local bat = makeBat()
+	bat.Activated:Connect(function()
+		-- أنيميشن الضربة بتاع R6
+		local animation = Instance.new("StringValue")
+		animation.Name = "toolanim"
+		animation.Value = "Slash"
+		animation.Parent = bat
+		local nest = nestInReach(player)
+		if nest then
+			attack(player, nest)
+		end
+	end)
+	bat.Parent = backpack
+end
+
 local function take(player: Player, nest: Nest, baby: BasePart)
 	if nest.Alive or not baby.Parent or not nest.Species then
 		return
@@ -434,7 +518,7 @@ local function spawnNest(nest: Nest)
 	gui.Name = "Info"
 	gui.AlwaysOnTop = false
 	label.Size = UDim2.fromScale(1, 0.6)
-	label.Text = string.format('<font color="%s">%s</font> · MOTHER', rarityHex(species), name)
+	label.Text = string.format('<font color="%s">%s</font> · MOTHER\n🏏 Hit her with your bat', rarityHex(species), name)
 
 	local bar = Instance.new("Frame")
 	bar.Name = "HealthBar"
@@ -462,13 +546,6 @@ local function spawnNest(nest: Nest)
 	nest.HealthFill = fill
 	nest.HealthText = hpText
 	updateHealthBar(nest)
-
-	local attackPrompt = makePrompt(mother, "AttackPrompt", "Attack", Enum.KeyCode.E, 0)
-	attackPrompt.ObjectText = name .. " (Mother)"
-	attackPrompt.MaxActivationDistance = 8 + size
-	attackPrompt.Triggered:Connect(function(player)
-		attack(player, nest)
-	end)
 
 	for i = 1, Config.BabiesPerNest do
 		local angle = (i / Config.BabiesPerNest) * math.pi * 2

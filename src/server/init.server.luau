@@ -6,18 +6,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local CharacterService = require(script.CharacterService)
 local DataService = require(script.DataService)
 local PlotService = require(script.PlotService)
 local MonsterService = require(script.MonsterService)
 local StealService = require(script.StealService)
 local ZoneService = require(script.ZoneService)
+local TerrainService = require(script.TerrainService)
 
 local remotes = Remotes.Get()
 
+CharacterService.Init()
 PlotService.Init()
 MonsterService.Init(remotes)
 StealService.Init()
 ZoneService.Init()
+TerrainService.Init()
 DataService.StartAutosave()
 
 PlotService.Callbacks.Collect = MonsterService.Collect
@@ -67,12 +71,20 @@ local function onPlayerAdded(player: Player)
 		end
 	end)
 
-	player.CharacterAdded:Connect(function()
+	player.CharacterAdded:Connect(function(character)
 		task.wait()
 		PlotService.SendHome(player)
+		ZoneService.GiveBat(player)
+		task.spawn(CharacterService.ApplyAppearance, player, character)
 	end)
-	if player.Character then
+	local character = player.Character
+	if character and not CharacterService.IsR6(character) then
+		-- اتولد قبل ما الـ R6 يجهز: نولّده تاني
+		player:LoadCharacter()
+	elseif character then
 		PlotService.SendHome(player)
+		ZoneService.GiveBat(player)
+		task.spawn(CharacterService.ApplyAppearance, player, character)
 	end
 
 	MonsterService.SetupPlayer(player)
@@ -90,6 +102,7 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	StealService.CleanupPlayer(player)
 	ZoneService.CleanupPlayer(player)
+	CharacterService.Cleanup(player)
 	MonsterService.CleanupPlayer(player)
 	PlotService.Release(player)
 	DataService.Release(player)

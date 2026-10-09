@@ -18,6 +18,148 @@ Config.PlotColors = {
 	Color3.fromRGB(170, 70, 240), -- بنفسجي
 	Color3.fromRGB(40, 210, 230), -- سماوي
 }
+-- شكل القاعدة: منصة مفتوحة على الأرض فيها 10 أماكن للوحوش حوالين الأطراف، و4 أعمدة في الأركان،
+-- ونقطة في النص (شجرة أو كريستالة أو كورة)، وجناين صغيرة وفوانيس. كل النسخ نفس التصميم،
+-- الاختلاف في الألوان والخامات والديكور بس.
+export type BaseTheme = {
+	FloorColor: Color3, -- البلاط
+	FloorMaterial: Enum.Material,
+	RimColor: Color3, -- الحافة حوالين المنصة
+	RimMaterial: Enum.Material,
+	StoneColor: Color3, -- الأعمدة وقواعد الـ Pads والحجر
+	StoneMaterial: Enum.Material,
+	PadColor: Color3, -- النيون حوالين أماكن الوحوش
+	PillarTop: string, -- "Crystal" / "Flame" / "Lantern"
+	PillarTopColor: Color3,
+	LanternColor: Color3, -- الفوانيس الصغيرة
+	Center: string, -- "Tree" / "Crystal" / "Orb" / "Flame" / "GoldenTree"
+	CenterColor: Color3, -- المية أو الكريستالة أو الكورة
+	Foliage: string, -- "Oak" / "Pine" / "Palm" / "Spikes" / "Dead"
+	FoliageColor: Color3,
+	GardenColor: Color3, -- الجناين الصغيرة
+	GardenMaterial: Enum.Material,
+	BannerColor: Color3,
+}
+
+Config.BaseTheme = "Normal"
+Config.BaseThemes = {
+	Normal = {
+		FloorColor = Color3.fromRGB(196, 190, 182),
+		FloorMaterial = Enum.Material.Pavement,
+		RimColor = Color3.fromRGB(95, 165, 70),
+		RimMaterial = Enum.Material.Grass,
+		StoneColor = Color3.fromRGB(150, 150, 158),
+		StoneMaterial = Enum.Material.Cobblestone,
+		PadColor = Color3.fromRGB(70, 160, 255),
+		PillarTop = "Crystal",
+		PillarTopColor = Color3.fromRGB(80, 150, 255),
+		LanternColor = Color3.fromRGB(255, 180, 80),
+		Center = "Tree",
+		CenterColor = Color3.fromRGB(70, 170, 255),
+		Foliage = "Oak",
+		FoliageColor = Color3.fromRGB(70, 150, 60),
+		GardenColor = Color3.fromRGB(90, 160, 70),
+		GardenMaterial = Enum.Material.Grass,
+		BannerColor = Color3.fromRGB(40, 70, 160),
+	},
+	-- النسخ دي متسجلة وشغالة، بس مش مستخدمة لسه (غيّر Config.BaseTheme عشان تجربها)
+	Ice = {
+		FloorColor = Color3.fromRGB(215, 235, 250),
+		FloorMaterial = Enum.Material.Pavement,
+		RimColor = Color3.fromRGB(150, 200, 245),
+		RimMaterial = Enum.Material.Ice,
+		StoneColor = Color3.fromRGB(175, 205, 235),
+		StoneMaterial = Enum.Material.Ice,
+		PadColor = Color3.fromRGB(80, 210, 255),
+		PillarTop = "Crystal",
+		PillarTopColor = Color3.fromRGB(90, 200, 255),
+		LanternColor = Color3.fromRGB(150, 220, 255),
+		Center = "Crystal",
+		CenterColor = Color3.fromRGB(90, 200, 255),
+		Foliage = "Pine",
+		FoliageColor = Color3.fromRGB(240, 248, 255),
+		GardenColor = Color3.fromRGB(235, 245, 255),
+		GardenMaterial = Enum.Material.Snow,
+		BannerColor = Color3.fromRGB(60, 120, 200),
+	},
+	Desert = {
+		FloorColor = Color3.fromRGB(225, 195, 140),
+		FloorMaterial = Enum.Material.Sandstone,
+		RimColor = Color3.fromRGB(205, 165, 105),
+		RimMaterial = Enum.Material.Sand,
+		StoneColor = Color3.fromRGB(200, 160, 105),
+		StoneMaterial = Enum.Material.Sandstone,
+		PadColor = Color3.fromRGB(255, 170, 40),
+		PillarTop = "Lantern",
+		PillarTopColor = Color3.fromRGB(255, 150, 40),
+		LanternColor = Color3.fromRGB(255, 170, 60),
+		Center = "Orb",
+		CenterColor = Color3.fromRGB(255, 190, 40),
+		Foliage = "Palm",
+		FoliageColor = Color3.fromRGB(70, 140, 50),
+		GardenColor = Color3.fromRGB(210, 175, 115),
+		GardenMaterial = Enum.Material.Sand,
+		BannerColor = Color3.fromRGB(190, 120, 40),
+	},
+	Fire = {
+		FloorColor = Color3.fromRGB(90, 70, 75),
+		FloorMaterial = Enum.Material.Pavement,
+		RimColor = Color3.fromRGB(60, 40, 40),
+		RimMaterial = Enum.Material.Basalt,
+		StoneColor = Color3.fromRGB(80, 60, 62),
+		StoneMaterial = Enum.Material.Basalt,
+		PadColor = Color3.fromRGB(255, 70, 40),
+		PillarTop = "Flame",
+		PillarTopColor = Color3.fromRGB(255, 80, 30),
+		LanternColor = Color3.fromRGB(255, 90, 40),
+		Center = "Flame",
+		CenterColor = Color3.fromRGB(255, 70, 40),
+		Foliage = "Spikes",
+		FoliageColor = Color3.fromRGB(230, 60, 40),
+		GardenColor = Color3.fromRGB(70, 45, 40),
+		GardenMaterial = Enum.Material.CrackedLava,
+		BannerColor = Color3.fromRGB(160, 30, 30),
+	},
+	Gold = {
+		FloorColor = Color3.fromRGB(225, 210, 175),
+		FloorMaterial = Enum.Material.Pavement,
+		RimColor = Color3.fromRGB(95, 165, 70),
+		RimMaterial = Enum.Material.Grass,
+		StoneColor = Color3.fromRGB(205, 175, 110),
+		StoneMaterial = Enum.Material.Sandstone,
+		PadColor = Color3.fromRGB(255, 205, 60),
+		PillarTop = "Lantern",
+		PillarTopColor = Color3.fromRGB(255, 210, 90),
+		LanternColor = Color3.fromRGB(255, 200, 90),
+		Center = "GoldenTree",
+		CenterColor = Color3.fromRGB(240, 190, 60),
+		Foliage = "Oak",
+		FoliageColor = Color3.fromRGB(70, 150, 60),
+		GardenColor = Color3.fromRGB(90, 160, 70),
+		GardenMaterial = Enum.Material.Grass,
+		BannerColor = Color3.fromRGB(200, 40, 40),
+	},
+	Void = {
+		FloorColor = Color3.fromRGB(70, 50, 105),
+		FloorMaterial = Enum.Material.Pavement,
+		RimColor = Color3.fromRGB(55, 35, 85),
+		RimMaterial = Enum.Material.Slate,
+		StoneColor = Color3.fromRGB(80, 55, 120),
+		StoneMaterial = Enum.Material.Slate,
+		PadColor = Color3.fromRGB(190, 90, 255),
+		PillarTop = "Flame",
+		PillarTopColor = Color3.fromRGB(190, 90, 255),
+		LanternColor = Color3.fromRGB(200, 110, 255),
+		Center = "Orb",
+		CenterColor = Color3.fromRGB(110, 50, 170),
+		Foliage = "Dead",
+		FoliageColor = Color3.fromRGB(60, 40, 80),
+		GardenColor = Color3.fromRGB(60, 40, 90),
+		GardenMaterial = Enum.Material.Slate,
+		BannerColor = Color3.fromRGB(120, 50, 180),
+	},
+} :: { [string]: BaseTheme }
+
 Config.BaseSlots = 3 -- عدد أماكن الوحوش في البداية
 Config.MaxSlots = 10
 Config.SlotUpgradeCosts = { 500, 1500, 4000, 10000, 25000, 60000, 150000 } -- تكلفة كل slot زيادة
@@ -162,6 +304,10 @@ Config.Eggs = {
 	},
 } :: { [string]: Egg }
 
+-- البيض اللي بيتباع في المتجر، بالترتيب. فاضي دلوقتي (البيضة المجانية في الأول شغالة عادي).
+-- عشان ترجّع البيض: { "Basic", "Rare", "Mythic" }
+Config.ShopEggs = {} :: { string }
+
 -- الطفرات (Mutations) ------------------------------------------------------------
 export type Mutation = {
 	Name: string,
@@ -267,6 +413,7 @@ Config.Combat = {
 	BaseDamage = 10, -- ضرر اللاعب من غير وحوش
 	DamagePerProduction = 2, -- كل 1 Coin/s من وحوشك بيزوّد ضربتك 2
 	AttackCooldown = 0.35,
+	BatReach = 7, -- قد إيه تبعد عن حرف الأم وتقدر تضربها بالمضرب
 	MotherAttackInterval = 1.5,
 	MotherAttackRange = 24,
 	MotherRegenDelay = 20, -- لو محدش ضربها المدة دي الـ HP بيرجع كامل

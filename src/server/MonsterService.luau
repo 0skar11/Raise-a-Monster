@@ -179,7 +179,7 @@ local function buyEgg(player: Player, eggType: unknown)
 	end
 	local egg = Config.Eggs[eggType]
 	local profile = DataService.Get(player)
-	if not egg or not profile then
+	if not egg or not profile or not table.find(Config.ShopEggs, eggType) then
 		return
 	end
 	local slot = MonsterService.GetFreeSlot(player)
