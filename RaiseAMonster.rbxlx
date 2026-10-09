@@ -20,7 +20,16 @@ Config.DataStoreName = "RaiseAMonster_v1"
 Config.AutosaveInterval = 60 -- ثواني
 
 -- القاعدة ------------------------------------------------------------------
-Config.MaxPlots = 8
+Config.MaxPlots = 6
+-- لون كل قاعدة بالترتيب (القواعد جنب بعض على الشمال)
+Config.PlotColors = {
+	Color3.fromRGB(60, 140, 255), -- أزرق
+	Color3.fromRGB(235, 60, 60), -- أحمر
+	Color3.fromRGB(60, 210, 90), -- أخضر
+	Color3.fromRGB(245, 200, 40), -- أصفر
+	Color3.fromRGB(170, 70, 240), -- بنفسجي
+	Color3.fromRGB(40, 210, 230), -- سماوي
+}
 Config.BaseSlots = 3 -- عدد أماكن الوحوش في البداية
 Config.MaxSlots = 10
 Config.SlotUpgradeCosts = { 500, 1500, 4000, 10000, 25000, 60000, 150000 } -- تكلفة كل slot زيادة
@@ -92,6 +101,7 @@ export type Species = {
 	SellValue: number,
 	Color: Color3,
 	Horns: boolean,
+	Placeholder: boolean?, -- شكل مؤقت (مكعب واسمه فوقه) لحد ما الـ Skin يجهز
 }
 
 Config.Species = {
@@ -103,6 +113,29 @@ Config.Species = {
 	Flamey = { DisplayName = "Flamey", Rarity = "Epic", BaseProduction = 22, SellValue = 5000, Color = Color3.fromRGB(255, 80, 30), Horns = true },
 	Draco = { DisplayName = "Draco", Rarity = "Mythic", BaseProduction = 80, SellValue = 25000, Color = Color3.fromRGB(200, 20, 60), Horns = true },
 } :: { [string]: Species }
+
+-- وحوش المناطق: بالأرقام وشكلها مؤقت لحد ما الـ Skins تيجي.
+-- كل منطقة ليها 4 وحوش، وكل ما المنطقة تبعد الوحش بيبقى أندر وبينتج أكتر.
+local ZONE_SPECIES_STATS = {
+	{ Rarity = "Common", Production = { 1.5, 1.8, 2.1, 2.5 }, Sell = { 60, 70, 85, 100 } },
+	{ Rarity = "Rare", Production = { 6, 7, 8, 9 }, Sell = { 600, 700, 800, 900 } },
+	{ Rarity = "Epic", Production = { 28, 32, 36, 40 }, Sell = { 6000, 7000, 8000, 9000 } },
+	{ Rarity = "Mythic", Production = { 120, 140, 160, 180 }, Sell = { 40000, 46000, 52000, 60000 } },
+}
+for zoneIndex, stats in ZONE_SPECIES_STATS do
+	for i = 1, 4 do
+		local number = (zoneIndex - 1) * 4 + i
+		Config.Species["Monster" .. number] = {
+			DisplayName = "Monster " .. number,
+			Rarity = stats.Rarity,
+			BaseProduction = stats.Production[i],
+			SellValue = stats.Sell[i],
+			Color = Color3.fromRGB(163, 162, 165),
+			Horns = false,
+			Placeholder = true,
+		}
+	end
+end
 
 -- البيض ----------------------------------------------------------------------
 export type Egg = {
@@ -158,11 +191,98 @@ Config.Mutations = {
 
 -- السرقة -------------------------------------------------------------------
 Config.Steal = {
+	Enabled = false, -- السرقة بين اللاعبين مقفولة دلوقتي (خليها true عشان ترجع)
 	HoldDuration = 2.5, -- مدة الضغط على زرار السرقة
 	CarryWalkSpeed = 11, -- سرعة الحرامي وهو شايل الوحش
 	CatchRadius = 7, -- لو صاحب الوحش قرّب كده من الحرامي الوحش يرجع
 	MaxCarryTime = 60,
 	ProtectLastMonster = true, -- ماينفعش تسرق آخر وحش مع لاعب
+}
+
+-- مناطق الوحوش ---------------------------------------------------------------------
+-- كل ما المنطقة تبعد عن القواعد، الأم بتبقى أقوى والصغار أندر.
+-- عشان تاخد الصغار لازم تقتل الأم الأول.
+export type Zone = {
+	Name: string,
+	Difficulty: string,
+	Stars: number,
+	GroundColor: Color3,
+	GroundMaterial: Enum.Material,
+	AccentColor: Color3,
+	Decoration: string, -- "Flowers" / "Trees" / "Lava" / "Crystals"
+	Species: { string },
+	MotherHealth: number,
+	MotherDamage: number, -- الضرر اللي الأم بتعمله في اللاعبين اللي جنبها كل ضربة
+	MotherSize: number,
+}
+
+Config.Zones = {
+	{
+		Name = "Meadow",
+		Difficulty = "Easy",
+		Stars = 1,
+		GroundColor = Color3.fromRGB(120, 200, 90),
+		GroundMaterial = Enum.Material.Grass,
+		AccentColor = Color3.fromRGB(90, 220, 110),
+		Decoration = "Flowers",
+		Species = { "Monster1", "Monster2", "Monster3", "Monster4" },
+		MotherHealth = 300,
+		MotherDamage = 5,
+		MotherSize = 6,
+	},
+	{
+		Name = "Forest",
+		Difficulty = "Medium",
+		Stars = 2,
+		GroundColor = Color3.fromRGB(60, 130, 60),
+		GroundMaterial = Enum.Material.Grass,
+		AccentColor = Color3.fromRGB(60, 150, 255),
+		Decoration = "Trees",
+		Species = { "Monster5", "Monster6", "Monster7", "Monster8" },
+		MotherHealth = 4000,
+		MotherDamage = 12,
+		MotherSize = 7.5,
+	},
+	{
+		Name = "Lava Canyon",
+		Difficulty = "Hard",
+		Stars = 3,
+		GroundColor = Color3.fromRGB(60, 45, 45),
+		GroundMaterial = Enum.Material.Basalt,
+		AccentColor = Color3.fromRGB(255, 120, 30),
+		Decoration = "Lava",
+		Species = { "Monster9", "Monster10", "Monster11", "Monster12" },
+		MotherHealth = 40000,
+		MotherDamage = 25,
+		MotherSize = 9,
+	},
+	{
+		Name = "Shadow Realm",
+		Difficulty = "Extreme",
+		Stars = 4,
+		GroundColor = Color3.fromRGB(45, 30, 70),
+		GroundMaterial = Enum.Material.Slate,
+		AccentColor = Color3.fromRGB(170, 70, 255),
+		Decoration = "Crystals",
+		Species = { "Monster13", "Monster14", "Monster15", "Monster16" },
+		MotherHealth = 400000,
+		MotherDamage = 45,
+		MotherSize = 11,
+	},
+} :: { Zone }
+
+Config.ZoneResetInterval = 600 -- كل 10 دقايق الأعشاش بتتجدد بوحوش تانية
+Config.NestsPerZone = 3
+Config.BabiesPerNest = 3
+
+Config.Combat = {
+	BaseDamage = 10, -- ضرر اللاعب من غير وحوش
+	DamagePerProduction = 2, -- كل 1 Coin/s من وحوشك بيزوّد ضربتك 2
+	AttackCooldown = 0.35,
+	MotherAttackInterval = 1.5,
+	MotherAttackRange = 24,
+	MotherRegenDelay = 20, -- لو محدش ضربها المدة دي الـ HP بيرجع كامل
+	TakeHoldDuration = 1,
 }
 
 return Config
@@ -358,17 +478,20 @@ return Remotes
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local DataService = require(script.DataService)
 local PlotService = require(script.PlotService)
 local MonsterService = require(script.MonsterService)
 local StealService = require(script.StealService)
+local ZoneService = require(script.ZoneService)
 
 local remotes = Remotes.Get()
 
 PlotService.Init()
 MonsterService.Init(remotes)
 StealService.Init()
+ZoneService.Init()
 DataService.StartAutosave()
 
 PlotService.Callbacks.Collect = MonsterService.Collect
@@ -398,16 +521,22 @@ local function onPlayerAdded(player: Player)
 	coins.Name = "Coins"
 	coins.Value = profile.Data.Coins
 	coins.Parent = leaderstats
-	local steals = Instance.new("IntValue")
-	steals.Name = "Steals"
-	steals.Value = profile.Data.Stats.Steals
-	steals.Parent = leaderstats
+	local steals: IntValue? = nil
+	if Config.Steal.Enabled then
+		local value = Instance.new("IntValue")
+		value.Name = "Steals"
+		value.Value = profile.Data.Stats.Steals
+		value.Parent = leaderstats
+		steals = value
+	end
 	leaderstats.Parent = player
 
 	task.spawn(function()
 		while player.Parent and DataService.Get(player) == profile do
 			coins.Value = math.floor(profile.Data.Coins)
-			steals.Value = profile.Data.Stats.Steals
+			if steals then
+				steals.Value = profile.Data.Stats.Steals
+			end
 			task.wait(0.5)
 		end
 	end)
@@ -434,6 +563,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	StealService.CleanupPlayer(player)
+	ZoneService.CleanupPlayer(player)
 	MonsterService.CleanupPlayer(player)
 	PlotService.Release(player)
 	DataService.Release(player)
@@ -441,6 +571,81 @@ end)
 ]]></string>
       </Properties>
       <Item class="ModuleScript" referent="7">
+        <Properties>
+          <string name="Name">Build</string>
+          <string name="Source"><![CDATA[--!strict
+-- أدوات بناء مشتركة بين خدمات الماب (Parts و Billboards و ProximityPrompts).
+
+local Build = {}
+
+function Build.MakePart(props: { [string]: any }): Part
+	local part = Instance.new("Part")
+	part.Anchored = true
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	for key, value in props do
+		if key ~= "Parent" then
+			(part :: any)[key] = value
+		end
+	end
+	part.Parent = props.Parent
+	return part
+end
+
+function Build.MakeBillboard(
+	adornee: BasePart,
+	size: UDim2,
+	offset: Vector3,
+	maxDistance: number?
+): (BillboardGui, TextLabel)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = size
+	gui.StudsOffset = offset
+	gui.AlwaysOnTop = true
+	gui.MaxDistance = maxDistance or 120
+	gui.LightInfluence = 0
+	gui.Adornee = adornee
+	gui.Parent = adornee
+
+	local label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0.2
+	label.RichText = true
+	label.Parent = gui
+	return gui, label
+end
+
+function Build.MakePrompt(parent: Instance, name: string, action: string, key: Enum.KeyCode, hold: number): ProximityPrompt
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = name
+	prompt.ActionText = action
+	prompt.KeyboardKeyCode = key
+	prompt.HoldDuration = hold
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = parent
+	return prompt
+end
+
+function Build.ColorToHex(color: Color3): string
+	return string.format(
+		"#%02X%02X%02X",
+		math.floor(color.R * 255 + 0.5),
+		math.floor(color.G * 255 + 0.5),
+		math.floor(color.B * 255 + 0.5)
+	)
+end
+
+return Build
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="8">
         <Properties>
           <string name="Name">DataService</string>
           <string name="Source"><![CDATA[--!strict
@@ -661,7 +866,7 @@ return DataService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="8">
+      <Item class="ModuleScript" referent="9">
         <Properties>
           <string name="Name">MonsterService</string>
           <string name="Source"><![CDATA[--!strict
@@ -895,6 +1100,49 @@ local function hatch(player: Player, eggData: DataService.EggData)
 
 	local rarity = Config.Species[species].Rarity
 	MonsterService.Notify(player, "🐣 Hatched! You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")", "success")
+end
+
+-- بيدّي اللاعب وحش جديد Level 1 في أول مكان فاضي (من مناطق الوحوش مثلاً).
+function MonsterService.GiveMonster(player: Player, species: string): boolean
+	local profile = DataService.Get(player)
+	local slot = MonsterService.GetFreeSlot(player)
+	if not profile or not Config.Species[species] then
+		return false
+	end
+	if not slot then
+		MonsterService.Notify(player, "Your base is full! Sell a monster or buy a new slot.", "error")
+		return false
+	end
+	local monster: MonsterMath.MonsterData = {
+		Id = DataService.NewId(player),
+		Species = species,
+		Mutation = rollMutation(),
+		Level = 1,
+		Xp = 0,
+		Hunger = 100,
+		Happiness = 100,
+		Slot = slot,
+	}
+	profile.Data.Monsters[monster.Id] = monster
+	PlotService.RenderMonster(player, monster)
+	local rarity = Config.Species[species].Rarity
+	MonsterService.Notify(player, "🐾 You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")! It's in your base.", "success")
+	MonsterService.PushState(player)
+	return true
+end
+
+-- قوة ضربة اللاعب في الوحوش الأم: كل ما وحوشك تنتج أكتر ضربتك بتبقى أقوى.
+function MonsterService.GetAttackDamage(player: Player): number
+	local profile = DataService.Get(player)
+	local production = 0
+	if profile then
+		for id, monster in profile.Data.Monsters do
+			if not MonsterService.IsCarried(player, id) then
+				production += MonsterMath.GetProduction(monster)
+			end
+		end
+	end
+	return math.floor(Config.Combat.BaseDamage + production * Config.Combat.DamagePerProduction)
 end
 
 -- التربية ---------------------------------------------------------------------------
@@ -1217,7 +1465,7 @@ return MonsterService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="9">
+      <Item class="ModuleScript" referent="10">
         <Properties>
           <string name="Name">PlotService</string>
           <string name="Source"><![CDATA[--!strict
@@ -1230,12 +1478,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local Build = require(script.Parent.Build)
 
 local PLOT_SIZE = 60
 local HALF = PLOT_SIZE / 2
-local WALL_HEIGHT = 12
+local WALL_HEIGHT = 8 -- واطية عشان الكاميرا، بس أعلى من نطّة اللاعب
 local ENTRANCE_WIDTH = 16
 local FLOOR_TOP = 0.5
+
+-- شكل الماب: القواعد جنب بعض في عمود على الشمال (X سالب) وبتبص ناحية +X،
+-- قدامها ساحة فيها متجر البيض، وبعدها الطريق اللي داخل على مناطق الوحوش.
+local BASE_X = -40
+local PLOT_SPACING = PLOT_SIZE + 2
+local ISLAND_MIN_X = -80
+local PLAZA_MIN_X = -10
+local PLAZA_HALF_Z = 200
 
 export type Plot = {
 	Index: number,
@@ -1265,6 +1522,9 @@ type Callbacks = {
 
 local PlotService = {}
 
+-- أول المناطق (آخر الساحة) بالـ X
+PlotService.ZonesStartX = 50
+
 PlotService.Callbacks = {
 	Collect = function() end,
 	Lock = function() end,
@@ -1277,86 +1537,44 @@ local plots: { Plot } = {}
 local plotByPlayer: { [Player]: Plot } = {}
 local mapFolder: Folder
 
--- أدوات مساعدة ------------------------------------------------------------------
-
-local function makePart(props: { [string]: any }): Part
-	local part = Instance.new("Part")
-	part.Anchored = true
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	for key, value in props do
-		if key ~= "Parent" then
-			(part :: any)[key] = value
-		end
-	end
-	part.Parent = props.Parent
-	return part
-end
-
-local function makeBillboard(
-	adornee: BasePart,
-	size: UDim2,
-	offset: Vector3,
-	maxDistance: number?
-): (BillboardGui, TextLabel)
-	local gui = Instance.new("BillboardGui")
-	gui.Size = size
-	gui.StudsOffset = offset
-	gui.AlwaysOnTop = true
-	gui.MaxDistance = maxDistance or 120
-	gui.LightInfluence = 0
-	gui.Adornee = adornee
-	gui.Parent = adornee
-
-	local label = Instance.new("TextLabel")
-	label.Name = "Label"
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeTransparency = 0.2
-	label.RichText = true
-	label.Parent = gui
-	return gui, label
-end
-
-local function makePrompt(parent: Instance, name: string, action: string, key: Enum.KeyCode, hold: number): ProximityPrompt
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = name
-	prompt.ActionText = action
-	prompt.KeyboardKeyCode = key
-	prompt.HoldDuration = hold
-	prompt.MaxActivationDistance = 10
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = parent
-	return prompt
-end
-
-local function colorToHex(color: Color3): string
-	return string.format(
-		"#%02X%02X%02X",
-		math.floor(color.R * 255 + 0.5),
-		math.floor(color.G * 255 + 0.5),
-		math.floor(color.B * 255 + 0.5)
-	)
-end
+local makePart = Build.MakePart
+local makeBillboard = Build.MakeBillboard
+local makePrompt = Build.MakePrompt
+local colorToHex = Build.ColorToHex
 
 -- الخريطة ----------------------------------------------------------------------
 
 local function buildGround()
-	if workspace:FindFirstChild("Baseplate") then
-		return
-	end
+	-- الجزيرة اللي عليها القواعد والساحة (المناطق بتبني أرضها في ZoneService)
 	makePart({
 		Name = "Ground",
-		Size = Vector3.new(420, 2, 320),
-		Position = Vector3.new(0, -1, 0),
+		Size = Vector3.new(PlotService.ZonesStartX - ISLAND_MIN_X, 2, PLAZA_HALF_Z * 2),
+		Position = Vector3.new((ISLAND_MIN_X + PlotService.ZonesStartX) / 2, -1, 0),
 		Color = Color3.fromRGB(95, 160, 80),
 		Material = Enum.Material.Grass,
 		Parent = mapFolder,
 	})
+	makePart({
+		Name = "Plaza",
+		Size = Vector3.new(PlotService.ZonesStartX - PLAZA_MIN_X, 0.2, PLAZA_HALF_Z * 2 - 20),
+		Position = Vector3.new((PLAZA_MIN_X + PlotService.ZonesStartX) / 2, 0.1, 0),
+		Color = Color3.fromRGB(150, 150, 155),
+		Material = Enum.Material.Cobblestone,
+		Parent = mapFolder,
+	})
+	-- مية حوالين الماب كلها
+	makePart({
+		Name = "Water",
+		Size = Vector3.new(2000, 1, 1000),
+		Position = Vector3.new(300, -4, 0),
+		Color = Color3.fromRGB(40, 110, 200),
+		Material = Enum.Material.Glass,
+		Transparency = 0.2,
+		Parent = mapFolder,
+	})
 end
+
+local SHOP_ORIGIN = Vector3.new(20, 0, -100)
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
@@ -1366,7 +1584,7 @@ local function buildShop()
 	local counter = makePart({
 		Name = "Counter",
 		Size = Vector3.new(16, 4, 6),
-		Position = Vector3.new(0, 2, 12),
+		Position = SHOP_ORIGIN + Vector3.new(0, 2, 0),
 		Color = Color3.fromRGB(120, 80, 50),
 		Material = Enum.Material.Wood,
 		Parent = shopModel,
@@ -1374,7 +1592,7 @@ local function buildShop()
 	makePart({
 		Name = "Roof",
 		Size = Vector3.new(20, 1, 10),
-		Position = Vector3.new(0, 11, 12),
+		Position = SHOP_ORIGIN + Vector3.new(0, 11, 0),
 		Color = Color3.fromRGB(230, 80, 80),
 		Parent = shopModel,
 	})
@@ -1382,7 +1600,7 @@ local function buildShop()
 		makePart({
 			Name = "Pole",
 			Size = Vector3.new(1, 7, 1),
-			Position = Vector3.new(x, 7.5, 12),
+			Position = SHOP_ORIGIN + Vector3.new(x, 7.5, 0),
 			Color = Color3.fromRGB(240, 240, 240),
 			Parent = shopModel,
 		})
@@ -1400,7 +1618,7 @@ local function buildShop()
 			Name = "DisplayEgg",
 			Shape = Enum.PartType.Ball,
 			Size = Vector3.new(2.4, 2.4, 2.4),
-			Position = Vector3.new((i - 2) * 5, 5.4, 12),
+			Position = SHOP_ORIGIN + Vector3.new((i - 2) * 5, 5.4, 0),
 			Color = egg.Color,
 			Material = Enum.Material.SmoothPlastic,
 			CanCollide = false,
@@ -1427,7 +1645,7 @@ local function buildShop()
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.Position = Vector3.new(0, 0.5, -4)
+	spawn.Position = Vector3.new(20, 0.5, 40)
 	spawn.Color = Color3.fromRGB(255, 255, 255)
 	spawn.Material = Enum.Material.SmoothPlastic
 	spawn.Neutral = true
@@ -1435,19 +1653,14 @@ local function buildShop()
 	spawn.Parent = mapFolder
 end
 
+-- القواعد جنب بعض في عمود واحد، ومداخلها بتبص على الساحة (+X).
 local function plotCFrames(): { CFrame }
 	local result = {}
-	local columns = Config.MaxPlots // 2
-	local spacing = PLOT_SIZE + 12
-	local rowOffset = HALF + 40
-	for row = 0, 1 do
-		local z = if row == 0 then -rowOffset else rowOffset
-		local facing = if row == 0 then Vector3.new(0, 0, 1) else Vector3.new(0, 0, -1)
-		for column = 1, columns do
-			local x = (column - (columns + 1) / 2) * spacing
-			local position = Vector3.new(x, 0, z)
-			table.insert(result, CFrame.lookAt(position, position + facing))
-		end
+	local facing = Vector3.new(1, 0, 0)
+	for index = 1, Config.MaxPlots do
+		local z = (index - (Config.MaxPlots + 1) / 2) * PLOT_SPACING
+		local position = Vector3.new(BASE_X, 0, z)
+		table.insert(result, CFrame.lookAt(position, position + facing))
 	end
 	return result
 end
@@ -1468,16 +1681,17 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 		return cframe * CFrame.new(localPosition)
 	end
 
+	local baseColor = Config.PlotColors[index] or Color3.fromRGB(110, 120, 140)
 	makePart({
 		Name = "Floor",
 		Size = Vector3.new(PLOT_SIZE, 1, PLOT_SIZE),
 		CFrame = at(Vector3.new(0, 0, 0)),
-		Color = Color3.fromRGB(200, 190, 170),
+		Color = baseColor:Lerp(Color3.fromRGB(200, 190, 170), 0.75),
 		Material = Enum.Material.Slate,
 		Parent = model,
 	})
 
-	local wallColor = Color3.fromRGB(110, 120, 140)
+	local wallColor = baseColor:Lerp(Color3.fromRGB(90, 95, 110), 0.55)
 	local function wall(name: string, size: Vector3, position: Vector3)
 		makePart({
 			Name = name,
@@ -1485,6 +1699,15 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 			CFrame = at(position),
 			Color = wallColor,
 			Material = Enum.Material.Brick,
+			Parent = model,
+		})
+		-- شريط منوّر بلون القاعدة فوق كل حيطة
+		makePart({
+			Name = name .. "Trim",
+			Size = Vector3.new(size.X, 0.4, size.Z),
+			CFrame = at(position + Vector3.new(0, size.Y / 2 + 0.2, 0)),
+			Color = baseColor,
+			Material = Enum.Material.Neon,
 			Parent = model,
 		})
 	end
@@ -1512,8 +1735,10 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 		Material = Enum.Material.Brick,
 		Parent = model,
 	})
-	local _, signLabel = makeBillboard(signPart, UDim2.fromOffset(300, 50), Vector3.new(0, 3, 0), 200)
+	local signGui, signLabel = makeBillboard(signPart, UDim2.fromScale(22, 3.5), Vector3.new(0, 3, 0), 200)
+	signGui.AlwaysOnTop = false -- عشان لافتات القواعد مايركبوش على بعض
 	signLabel.Text = "Empty Base"
+	signLabel.TextColor3 = baseColor:Lerp(Color3.new(1, 1, 1), 0.4)
 
 	local barrier = makePart({
 		Name = "LockBarrier",
@@ -1644,7 +1869,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	local bodySize = 3 * scale
 	local body = makePart({
 		Name = "Body",
-		Shape = Enum.PartType.Ball,
+		Shape = if species.Placeholder then Enum.PartType.Block else Enum.PartType.Ball,
 		Size = Vector3.new(bodySize, bodySize, bodySize),
 		Color = color,
 		Material = material,
@@ -1664,8 +1889,11 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 		table.insert(parts, part)
 	end
 
+	-- الوحوش اللي لسه ملهاش Skin بتفضل مكعب واسمها فوقه بس
+	local hasFace = not species.Placeholder
+
 	-- العيون (الوش ناحية -Z)
-	for _, side in { -1, 1 } do
+	for _, side in if hasFace then { -1, 1 } else {} do
 		local eye = makePart({
 			Name = "Eye",
 			Shape = Enum.PartType.Ball,
@@ -1683,7 +1911,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	end
 
 	-- رجلين
-	for _, side in { -1, 1 } do
+	for _, side in if hasFace then { -1, 1 } else {} do
 		local foot = makePart({
 			Name = "Foot",
 			Size = Vector3.new(0.9, 0.6, 1.2) * scale,
@@ -1693,7 +1921,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 		attach(foot, CFrame.new(side * 0.8 * scale, -1.4 * scale, -0.2 * scale))
 	end
 
-	if species.Horns then
+	if species.Horns and hasFace then
 		for _, side in { -1, 1 } do
 			local horn = makePart({
 				Name = "Horn",
@@ -1800,17 +2028,19 @@ function PlotService.RenderMonster(player: Player, monster: MonsterMath.MonsterD
 	local care = makePrompt(body, "CarePrompt", "Care", Enum.KeyCode.E, 0)
 	care.ObjectText = name
 	care.MaxActivationDistance = 8 + body.Size.Y
-	local steal = makePrompt(body, "StealPrompt", "Steal", Enum.KeyCode.F, Config.Steal.HoldDuration)
-	steal.ObjectText = name
-	steal.MaxActivationDistance = 8 + body.Size.Y
-
 	local monsterId = monster.Id
 	care.Triggered:Connect(function(who)
 		PlotService.Callbacks.Care(who, player, monsterId)
 	end)
-	steal.Triggered:Connect(function(who)
-		PlotService.Callbacks.Steal(who, player, monsterId)
-	end)
+
+	if Config.Steal.Enabled then
+		local steal = makePrompt(body, "StealPrompt", "Steal", Enum.KeyCode.F, Config.Steal.HoldDuration)
+		steal.ObjectText = name
+		steal.MaxActivationDistance = 8 + body.Size.Y
+		steal.Triggered:Connect(function(who)
+			PlotService.Callbacks.Steal(who, player, monsterId)
+		end)
+	end
 
 	model.Parent = plot.MonstersFolder
 end
@@ -1994,7 +2224,7 @@ return PlotService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="10">
+      <Item class="ModuleScript" referent="11">
         <Properties>
           <string name="Name">StealService</string>
           <string name="Source"><![CDATA[--!strict
@@ -2115,7 +2345,7 @@ local function completeCarry(carry: Carry)
 end
 
 local function tryStartSteal(thief: Player, owner: Player, monsterId: string)
-	if thief == owner or carries[thief] then
+	if not Config.Steal.Enabled or thief == owner or carries[thief] then
 		return
 	end
 	local ownerPlot = PlotService.GetPlot(owner)
@@ -2253,17 +2483,605 @@ return StealService
 ]]></string>
         </Properties>
       </Item>
+      <Item class="ModuleScript" referent="12">
+        <Properties>
+          <string name="Name">ZoneService</string>
+          <string name="Source"><![CDATA[--!strict
+-- مناطق الوحوش: طريق طالع من الساحة بيعدّي على مناطق ورا بعض، وكل ما تبعد الأم بتبقى أقوى.
+-- في كل منطقة أعشاش، كل عش فيه وحش أم وحواليه صغارها.
+-- لازم تقتل الأم الأول عشان تقدر تاخد الصغار، وكل 10 دقايق الأعشاش بتتجدد بوحوش تانية.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local Build = require(script.Parent.Build)
+local PlotService = require(script.Parent.PlotService)
+local MonsterService = require(script.Parent.MonsterService)
+
+local makePart = Build.MakePart
+local makeBillboard = Build.MakeBillboard
+local makePrompt = Build.MakePrompt
+
+local ZONE_LENGTH = 140
+local ZONE_HALF_Z = 100
+local ROAD_WIDTH = 20
+local NEST_RADIUS = 17
+local NEST_Z = 55
+local NEST_TOP = 1
+local PLACEHOLDER_COLOR = Color3.fromRGB(163, 162, 165)
+
+type Nest = {
+	Zone: Config.Zone,
+	Center: Vector3,
+	Folder: Folder,
+	Species: string?,
+	Alive: boolean,
+	Health: number,
+	MaxHealth: number,
+	LastHit: number,
+	Mother: BasePart?,
+	HealthFill: Frame?,
+	HealthText: TextLabel?,
+	Babies: { BasePart },
+	Damagers: { [Player]: number },
+}
+
+local ZoneService = {}
+
+local zonesFolder: Folder
+local nests: { Nest } = {}
+local gateLabels: { { Label: TextLabel, Title: string } } = {}
+local lastAttack: { [Player]: number } = {}
+local nextResetAt = 0
+
+local function zoneStartX(index: number): number
+	return PlotService.ZonesStartX + (index - 1) * ZONE_LENGTH
+end
+
+local function stars(count: number): string
+	return string.rep("⭐", count)
+end
+
+local function rarityHex(species: string): string
+	return Build.ColorToHex(Config.Rarities[Config.Species[species].Rarity].Color)
+end
+
+-- شكل المنطقة ---------------------------------------------------------------------
+
+local function decorate(index: number, zone: Config.Zone, folder: Folder, nestCenters: { Vector3 })
+	local random = Random.new(index * 1000)
+	local x0 = zoneStartX(index)
+	local placed = 0
+	local attempts = 0
+	while placed < 22 and attempts < 200 do
+		attempts += 1
+		local position = Vector3.new(
+			random:NextNumber(x0 + 8, x0 + ZONE_LENGTH - 8),
+			0,
+			random:NextNumber(-ZONE_HALF_Z + 6, ZONE_HALF_Z - 6)
+		)
+		local blocked = math.abs(position.Z) < ROAD_WIDTH / 2 + 6
+		for _, center in nestCenters do
+			if (Vector3.new(center.X, 0, center.Z) - position).Magnitude < NEST_RADIUS + 8 then
+				blocked = true
+			end
+		end
+		if blocked then
+			continue
+		end
+		placed += 1
+		local spin = CFrame.Angles(0, random:NextNumber(0, math.pi * 2), 0)
+
+		if zone.Decoration == "Flowers" then
+			local bush = random:NextNumber() < 0.4
+			if bush then
+				makePart({
+					Name = "Bush",
+					Shape = Enum.PartType.Ball,
+					Size = Vector3.one * random:NextNumber(3, 5),
+					Position = position + Vector3.new(0, 1.5, 0),
+					Color = Color3.fromRGB(70, 160, 70),
+					Material = Enum.Material.Grass,
+					CanCollide = false,
+					Parent = folder,
+				})
+			else
+				local colors = { Color3.fromRGB(255, 120, 180), Color3.fromRGB(255, 230, 90), Color3.fromRGB(255, 255, 255) }
+				for i = 1, 4 do
+					makePart({
+						Name = "Flower",
+						Shape = Enum.PartType.Ball,
+						Size = Vector3.one * 1.2,
+						Position = position + Vector3.new(random:NextNumber(-2, 2), 0.6, random:NextNumber(-2, 2)),
+						Color = colors[(i % #colors) + 1],
+						Material = Enum.Material.SmoothPlastic,
+						CanCollide = false,
+						Parent = folder,
+					})
+				end
+			end
+		elseif zone.Decoration == "Trees" then
+			local height = random:NextNumber(8, 13)
+			makePart({
+				Name = "Trunk",
+				Size = Vector3.new(1.6, height, 1.6),
+				Position = position + Vector3.new(0, height / 2, 0),
+				Color = Color3.fromRGB(110, 75, 45),
+				Material = Enum.Material.Wood,
+				Parent = folder,
+			})
+			makePart({
+				Name = "Leaves",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.one * random:NextNumber(8, 11),
+				Position = position + Vector3.new(0, height + 2, 0),
+				Color = Color3.fromRGB(40, 110 + random:NextInteger(0, 40), 45),
+				Material = Enum.Material.Grass,
+				CanCollide = false,
+				Parent = folder,
+			})
+		elseif zone.Decoration == "Lava" then
+			if random:NextNumber() < 0.55 then
+				makePart({
+					Name = "Lava",
+					Size = Vector3.new(random:NextNumber(10, 24), 0.3, random:NextNumber(3, 7)),
+					CFrame = CFrame.new(position + Vector3.new(0, 0.1, 0)) * spin,
+					Color = Color3.fromRGB(255, 110, 20),
+					Material = Enum.Material.Neon,
+					CanCollide = false,
+					Parent = folder,
+				})
+			else
+				local size = random:NextNumber(3, 7)
+				makePart({
+					Name = "Rock",
+					Size = Vector3.new(size, size * 0.8, size),
+					CFrame = CFrame.new(position + Vector3.new(0, size * 0.4, 0)) * spin,
+					Color = Color3.fromRGB(45, 35, 35),
+					Material = Enum.Material.Basalt,
+					Parent = folder,
+				})
+			end
+		elseif zone.Decoration == "Crystals" then
+			local height = random:NextNumber(5, 12)
+			makePart({
+				Name = "Crystal",
+				Size = Vector3.new(2, height, 2),
+				CFrame = CFrame.new(position + Vector3.new(0, height / 2 - 0.5, 0))
+					* spin
+					* CFrame.Angles(random:NextNumber(-0.25, 0.25), 0, random:NextNumber(-0.25, 0.25)),
+				Color = Color3.fromRGB(170, 70, 255),
+				Material = Enum.Material.Neon,
+				Parent = folder,
+			})
+		end
+	end
+end
+
+local function buildGate(index: number, zone: Config.Zone, folder: Folder)
+	local x = zoneStartX(index)
+	local stoneColor = Color3.fromRGB(105, 105, 110)
+	local pillarZ = ROAD_WIDTH / 2 + 2
+	for _, side in { -1, 1 } do
+		makePart({
+			Name = "GatePillar",
+			Size = Vector3.new(4, 16, 4),
+			Position = Vector3.new(x, 8, side * pillarZ),
+			Color = stoneColor,
+			Material = Enum.Material.Cobblestone,
+			Parent = folder,
+		})
+		-- سور واطي على حدود المنطقة عشان الطريق يعدّي من البوابة
+		local wallLength = ZONE_HALF_Z - pillarZ - 2
+		makePart({
+			Name = "ZoneWall",
+			Size = Vector3.new(2, 4, wallLength),
+			Position = Vector3.new(x, 2, side * (pillarZ + 2 + wallLength / 2)),
+			Color = stoneColor,
+			Material = Enum.Material.Cobblestone,
+			Parent = folder,
+		})
+	end
+	local beam = makePart({
+		Name = "GateBeam",
+		Size = Vector3.new(4, 3, pillarZ * 2 + 4),
+		Position = Vector3.new(x, 17.5, 0),
+		Color = zone.AccentColor,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = folder,
+	})
+	local gui, label = makeBillboard(beam, UDim2.fromScale(34, 11), Vector3.new(0, 7, 0), 160)
+	gui.AlwaysOnTop = false
+	local title = string.format(
+		'<font color="%s">ZONE %d · %s</font>\n%s %s',
+		Build.ColorToHex(zone.AccentColor),
+		index,
+		string.upper(zone.Name),
+		stars(zone.Stars),
+		string.upper(zone.Difficulty)
+	)
+	label.Text = title
+	table.insert(gateLabels, { Label = label, Title = title })
+end
+
+local function buildZone(index: number, zone: Config.Zone)
+	local folder = Instance.new("Folder")
+	folder.Name = "Zone" .. index .. "_" .. zone.Name
+	folder.Parent = zonesFolder
+
+	local x0 = zoneStartX(index)
+	makePart({
+		Name = "Ground",
+		Size = Vector3.new(ZONE_LENGTH, 2, ZONE_HALF_Z * 2),
+		Position = Vector3.new(x0 + ZONE_LENGTH / 2, -1, 0),
+		Color = zone.GroundColor,
+		Material = zone.GroundMaterial,
+		Parent = folder,
+	})
+	makePart({
+		Name = "Road",
+		Size = Vector3.new(ZONE_LENGTH, 0.2, ROAD_WIDTH),
+		Position = Vector3.new(x0 + ZONE_LENGTH / 2, 0.1, 0),
+		Color = Color3.fromRGB(150, 120, 90),
+		Material = Enum.Material.Cobblestone,
+		Parent = folder,
+	})
+	buildGate(index, zone, folder)
+
+	local centers: { Vector3 } = {}
+	for n = 1, Config.NestsPerZone do
+		local x = x0 + ZONE_LENGTH * n / (Config.NestsPerZone + 1)
+		local z = if n % 2 == 1 then -NEST_Z else NEST_Z
+		local center = Vector3.new(x, NEST_TOP, z)
+		table.insert(centers, center)
+
+		makePart({
+			Name = "Nest",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(NEST_TOP, NEST_RADIUS * 2, NEST_RADIUS * 2),
+			CFrame = CFrame.new(x, NEST_TOP / 2, z) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = zone.AccentColor:Lerp(Color3.fromRGB(70, 70, 75), 0.6),
+			Material = Enum.Material.Slate,
+			Parent = folder,
+		})
+
+		local nestFolder = Instance.new("Folder")
+		nestFolder.Name = "Nest" .. n
+		nestFolder.Parent = folder
+		table.insert(nests, {
+			Zone = zone,
+			Center = center,
+			Folder = nestFolder,
+			Species = nil,
+			Alive = false,
+			Health = 0,
+			MaxHealth = zone.MotherHealth,
+			LastHit = 0,
+			Mother = nil,
+			HealthFill = nil,
+			HealthText = nil,
+			Babies = {},
+			Damagers = {},
+		})
+	end
+
+	decorate(index, zone, folder, centers)
+end
+
+-- الأم والصغار ----------------------------------------------------------------------
+
+local function updateHealthBar(nest: Nest)
+	local fill = nest.HealthFill
+	local text = nest.HealthText
+	if not fill or not text then
+		return
+	end
+	local ratio = math.clamp(nest.Health / nest.MaxHealth, 0, 1)
+	fill.Size = UDim2.fromScale(ratio, 1)
+	text.Text = MonsterMath.FormatNumber(math.max(0, nest.Health)) .. " / " .. MonsterMath.FormatNumber(nest.MaxHealth)
+end
+
+local function babyText(nest: Nest): string
+	local species = nest.Species :: string
+	local name = Config.Species[species].DisplayName
+	if nest.Alive then
+		return string.format('<font color="%s">%s</font>\n🔒 Defeat the mother', rarityHex(species), name)
+	end
+	return string.format('<font color="%s">%s</font>\n✋ Hold E to take', rarityHex(species), name)
+end
+
+local function killMother(nest: Nest, killer: Player)
+	nest.Alive = false
+	nest.Health = 0
+	if nest.Mother then
+		nest.Mother:Destroy()
+		nest.Mother = nil
+	end
+	nest.HealthFill = nil
+	nest.HealthText = nil
+	for _, baby in nest.Babies do
+		local prompt = baby:FindFirstChild("TakePrompt") :: ProximityPrompt?
+		if prompt then
+			prompt.Enabled = true
+		end
+		local info = baby:FindFirstChild("Info")
+		local label = info and info:FindFirstChild("Label") :: TextLabel?
+		if label then
+			label.Text = babyText(nest)
+		end
+	end
+	local name = Config.Species[nest.Species :: string].DisplayName
+	for player in nest.Damagers do
+		if player.Parent then
+			MonsterService.Notify(
+				player,
+				"🏆 " .. killer.DisplayName .. " finished off the " .. name .. " mother! Grab her babies!",
+				"success"
+			)
+		end
+	end
+end
+
+local function attack(player: Player, nest: Nest)
+	if not nest.Alive then
+		return
+	end
+	local now = os.clock()
+	if lastAttack[player] and now - lastAttack[player] < Config.Combat.AttackCooldown then
+		return
+	end
+	lastAttack[player] = now
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	local damage = MonsterService.GetAttackDamage(player)
+	nest.Health -= damage
+	nest.Damagers[player] = (nest.Damagers[player] or 0) + damage
+	nest.LastHit = now
+
+	local mother = nest.Mother
+	if mother then
+		mother.Color = Color3.fromRGB(255, 90, 90)
+		task.delay(0.1, function()
+			if mother.Parent then
+				mother.Color = PLACEHOLDER_COLOR:Lerp(Color3.new(0, 0, 0), 0.3)
+			end
+		end)
+	end
+
+	if nest.Health <= 0 then
+		killMother(nest, player)
+	else
+		updateHealthBar(nest)
+	end
+end
+
+local function take(player: Player, nest: Nest, baby: BasePart)
+	if nest.Alive or not baby.Parent or not nest.Species then
+		return
+	end
+	if not nest.Damagers[player] then
+		MonsterService.Notify(player, "Help defeat the mother first to take her babies!", "error")
+		return
+	end
+	if MonsterService.GiveMonster(player, nest.Species :: string) then
+		baby:Destroy()
+		local index = table.find(nest.Babies, baby)
+		if index then
+			table.remove(nest.Babies, index)
+		end
+	end
+end
+
+local function clearNest(nest: Nest)
+	nest.Folder:ClearAllChildren()
+	nest.Mother = nil
+	nest.HealthFill = nil
+	nest.HealthText = nil
+	nest.Babies = {}
+	nest.Damagers = {}
+	nest.Alive = false
+end
+
+local function spawnNest(nest: Nest)
+	clearNest(nest)
+
+	-- وحش مختلف عن اللي كان قبل كده لو ينفع
+	local pool = nest.Zone.Species
+	local species = pool[math.random(1, #pool)]
+	if #pool > 1 then
+		while species == nest.Species do
+			species = pool[math.random(1, #pool)]
+		end
+	end
+	nest.Species = species
+	nest.Alive = true
+	nest.MaxHealth = nest.Zone.MotherHealth
+	nest.Health = nest.MaxHealth
+	nest.LastHit = 0
+
+	local name = Config.Species[species].DisplayName
+	local size = nest.Zone.MotherSize
+	local mother = makePart({
+		Name = "Mother",
+		Size = Vector3.one * size,
+		Position = nest.Center + Vector3.new(0, size / 2, 0),
+		Color = PLACEHOLDER_COLOR:Lerp(Color3.new(0, 0, 0), 0.3),
+		Material = Enum.Material.SmoothPlastic,
+		Parent = nest.Folder,
+	})
+	nest.Mother = mother
+
+	-- مقاسات الـ Billboards بالـ studs عشان تصغر مع البعد وماتركبش على بعض
+	local gui, label = makeBillboard(mother, UDim2.fromScale(16, 5.5), Vector3.new(0, size / 2 + 3.5, 0), 120)
+	gui.Name = "Info"
+	gui.AlwaysOnTop = false
+	label.Size = UDim2.fromScale(1, 0.6)
+	label.Text = string.format('<font color="%s">%s</font> · MOTHER', rarityHex(species), name)
+
+	local bar = Instance.new("Frame")
+	bar.Name = "HealthBar"
+	bar.Size = UDim2.fromScale(1, 0.32)
+	bar.Position = UDim2.fromScale(0, 0.66)
+	bar.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+	bar.BorderSizePixel = 0
+	bar.Parent = gui
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = Color3.fromRGB(230, 50, 50)
+	fill.BorderSizePixel = 0
+	fill.Parent = bar
+	local hpText = Instance.new("TextLabel")
+	hpText.Name = "HealthText"
+	hpText.Size = UDim2.fromScale(1, 1)
+	hpText.BackgroundTransparency = 1
+	hpText.Font = Enum.Font.FredokaOne
+	hpText.TextScaled = true
+	hpText.TextColor3 = Color3.new(1, 1, 1)
+	hpText.TextStrokeTransparency = 0.3
+	hpText.ZIndex = 2
+	hpText.Parent = bar
+	nest.HealthFill = fill
+	nest.HealthText = hpText
+	updateHealthBar(nest)
+
+	local attackPrompt = makePrompt(mother, "AttackPrompt", "Attack", Enum.KeyCode.E, 0)
+	attackPrompt.ObjectText = name .. " (Mother)"
+	attackPrompt.MaxActivationDistance = 8 + size
+	attackPrompt.Triggered:Connect(function(player)
+		attack(player, nest)
+	end)
+
+	for i = 1, Config.BabiesPerNest do
+		local angle = (i / Config.BabiesPerNest) * math.pi * 2
+		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * (size / 2 + 6)
+		local baby = makePart({
+			Name = "Baby",
+			Size = Vector3.one * 2.5,
+			Position = nest.Center + offset + Vector3.new(0, 1.25, 0),
+			Color = PLACEHOLDER_COLOR,
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+			Parent = nest.Folder,
+		})
+		local babyGui, babyLabel = makeBillboard(baby, UDim2.fromScale(7, 2.2), Vector3.new(0, 3, 0), 60)
+		babyGui.Name = "Info"
+		babyGui.AlwaysOnTop = false
+		babyLabel.Text = babyText(nest)
+		local takePrompt = makePrompt(baby, "TakePrompt", "Take", Enum.KeyCode.E, Config.Combat.TakeHoldDuration)
+		takePrompt.ObjectText = name
+		takePrompt.Enabled = false
+		takePrompt.Triggered:Connect(function(player)
+			take(player, nest, baby)
+		end)
+		table.insert(nest.Babies, baby)
+	end
+end
+
+local function resetAll()
+	for _, nest in nests do
+		spawnNest(nest)
+	end
+	nextResetAt = os.clock() + Config.ZoneResetInterval
+end
+
+-- اللوب -----------------------------------------------------------------------------
+
+-- الأم بتضرب أي لاعب قريب منها، والـ HP بيرجع كامل لو محدش ضربها شوية.
+local function motherTick()
+	local now = os.clock()
+	for _, nest in nests do
+		local mother = nest.Mother
+		if not nest.Alive or not mother then
+			continue
+		end
+		if nest.Health < nest.MaxHealth and now - nest.LastHit > Config.Combat.MotherRegenDelay then
+			nest.Health = nest.MaxHealth
+			nest.Damagers = {}
+			updateHealthBar(nest)
+		end
+		for _, player in Players:GetPlayers() do
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if root and humanoid and humanoid.Health > 0 then
+				local flat = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z)
+				if flat.Magnitude <= Config.Combat.MotherAttackRange then
+					humanoid:TakeDamage(nest.Zone.MotherDamage)
+				end
+			end
+		end
+	end
+end
+
+local function updateGateTimers()
+	local left = math.max(0, math.ceil(nextResetAt - os.clock()))
+	local timer = string.format("🔄 New monsters in %d:%02d", left // 60, left % 60)
+	for _, gate in gateLabels do
+		gate.Label.Text = gate.Title .. "\n" .. timer
+	end
+end
+
+function ZoneService.CleanupPlayer(player: Player)
+	lastAttack[player] = nil
+	for _, nest in nests do
+		nest.Damagers[player] = nil
+	end
+end
+
+function ZoneService.Init()
+	zonesFolder = Instance.new("Folder")
+	zonesFolder.Name = "Zones"
+	zonesFolder.Parent = workspace
+
+	for index, zone in Config.Zones do
+		buildZone(index, zone)
+	end
+	resetAll()
+
+	task.spawn(function()
+		while true do
+			task.wait(Config.Combat.MotherAttackInterval)
+			motherTick()
+		end
+	end)
+
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			if os.clock() >= nextResetAt then
+				resetAll()
+				for _, player in Players:GetPlayers() do
+					MonsterService.Notify(player, "🔄 The monster zones have new monsters!", "info")
+				end
+			end
+			updateGateTimers()
+		end
+	end)
+	updateGateTimers()
+end
+
+return ZoneService
+]]></string>
+        </Properties>
+      </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="11">
+  <Item class="StarterPlayer" referent="13">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="12">
+    <Item class="StarterPlayerScripts" referent="14">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="13">
+      <Item class="LocalScript" referent="15">
         <Properties>
           <string name="Name">Client</string>
           <string name="Source"><![CDATA[--!strict
@@ -2543,7 +3361,7 @@ end)
 UI.Toast(ui, "Welcome to Raise a Monster! Hatch your egg, care for your monster and steal others' 👀", "info")
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="14">
+        <Item class="ModuleScript" referent="16">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[--!strict
