@@ -4,17 +4,20 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local DataService = require(script.DataService)
 local PlotService = require(script.PlotService)
 local MonsterService = require(script.MonsterService)
 local StealService = require(script.StealService)
+local ZoneService = require(script.ZoneService)
 
 local remotes = Remotes.Get()
 
 PlotService.Init()
 MonsterService.Init(remotes)
 StealService.Init()
+ZoneService.Init()
 DataService.StartAutosave()
 
 PlotService.Callbacks.Collect = MonsterService.Collect
@@ -44,16 +47,22 @@ local function onPlayerAdded(player: Player)
 	coins.Name = "Coins"
 	coins.Value = profile.Data.Coins
 	coins.Parent = leaderstats
-	local steals = Instance.new("IntValue")
-	steals.Name = "Steals"
-	steals.Value = profile.Data.Stats.Steals
-	steals.Parent = leaderstats
+	local steals: IntValue? = nil
+	if Config.Steal.Enabled then
+		local value = Instance.new("IntValue")
+		value.Name = "Steals"
+		value.Value = profile.Data.Stats.Steals
+		value.Parent = leaderstats
+		steals = value
+	end
 	leaderstats.Parent = player
 
 	task.spawn(function()
 		while player.Parent and DataService.Get(player) == profile do
 			coins.Value = math.floor(profile.Data.Coins)
-			steals.Value = profile.Data.Stats.Steals
+			if steals then
+				steals.Value = profile.Data.Stats.Steals
+			end
 			task.wait(0.5)
 		end
 	end)
@@ -80,6 +89,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	StealService.CleanupPlayer(player)
+	ZoneService.CleanupPlayer(player)
 	MonsterService.CleanupPlayer(player)
 	PlotService.Release(player)
 	DataService.Release(player)

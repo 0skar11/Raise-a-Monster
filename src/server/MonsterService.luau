@@ -231,6 +231,49 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	MonsterService.Notify(player, "🐣 Hatched! You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")", "success")
 end
 
+-- بيدّي اللاعب وحش جديد Level 1 في أول مكان فاضي (من مناطق الوحوش مثلاً).
+function MonsterService.GiveMonster(player: Player, species: string): boolean
+	local profile = DataService.Get(player)
+	local slot = MonsterService.GetFreeSlot(player)
+	if not profile or not Config.Species[species] then
+		return false
+	end
+	if not slot then
+		MonsterService.Notify(player, "Your base is full! Sell a monster or buy a new slot.", "error")
+		return false
+	end
+	local monster: MonsterMath.MonsterData = {
+		Id = DataService.NewId(player),
+		Species = species,
+		Mutation = rollMutation(),
+		Level = 1,
+		Xp = 0,
+		Hunger = 100,
+		Happiness = 100,
+		Slot = slot,
+	}
+	profile.Data.Monsters[monster.Id] = monster
+	PlotService.RenderMonster(player, monster)
+	local rarity = Config.Species[species].Rarity
+	MonsterService.Notify(player, "🐾 You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")! It's in your base.", "success")
+	MonsterService.PushState(player)
+	return true
+end
+
+-- قوة ضربة اللاعب في الوحوش الأم: كل ما وحوشك تنتج أكتر ضربتك بتبقى أقوى.
+function MonsterService.GetAttackDamage(player: Player): number
+	local profile = DataService.Get(player)
+	local production = 0
+	if profile then
+		for id, monster in profile.Data.Monsters do
+			if not MonsterService.IsCarried(player, id) then
+				production += MonsterMath.GetProduction(monster)
+			end
+		end
+	end
+	return math.floor(Config.Combat.BaseDamage + production * Config.Combat.DamagePerProduction)
+end
+
 -- التربية ---------------------------------------------------------------------------
 
 local function addXp(player: Player, monster: MonsterMath.MonsterData, amount: number)

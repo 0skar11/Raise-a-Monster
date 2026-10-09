@@ -8,12 +8,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local Build = require(script.Parent.Build)
 
 local PLOT_SIZE = 60
 local HALF = PLOT_SIZE / 2
-local WALL_HEIGHT = 12
+local WALL_HEIGHT = 8 -- واطية عشان الكاميرا، بس أعلى من نطّة اللاعب
 local ENTRANCE_WIDTH = 16
 local FLOOR_TOP = 0.5
+
+-- شكل الماب: القواعد جنب بعض في عمود على الشمال (X سالب) وبتبص ناحية +X،
+-- قدامها ساحة فيها متجر البيض، وبعدها الطريق اللي داخل على مناطق الوحوش.
+local BASE_X = -40
+local PLOT_SPACING = PLOT_SIZE + 2
+local ISLAND_MIN_X = -80
+local PLAZA_MIN_X = -10
+local PLAZA_HALF_Z = 200
 
 export type Plot = {
 	Index: number,
@@ -43,6 +52,9 @@ type Callbacks = {
 
 local PlotService = {}
 
+-- أول المناطق (آخر الساحة) بالـ X
+PlotService.ZonesStartX = 50
+
 PlotService.Callbacks = {
 	Collect = function() end,
 	Lock = function() end,
@@ -55,86 +67,44 @@ local plots: { Plot } = {}
 local plotByPlayer: { [Player]: Plot } = {}
 local mapFolder: Folder
 
--- أدوات مساعدة ------------------------------------------------------------------
-
-local function makePart(props: { [string]: any }): Part
-	local part = Instance.new("Part")
-	part.Anchored = true
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	for key, value in props do
-		if key ~= "Parent" then
-			(part :: any)[key] = value
-		end
-	end
-	part.Parent = props.Parent
-	return part
-end
-
-local function makeBillboard(
-	adornee: BasePart,
-	size: UDim2,
-	offset: Vector3,
-	maxDistance: number?
-): (BillboardGui, TextLabel)
-	local gui = Instance.new("BillboardGui")
-	gui.Size = size
-	gui.StudsOffset = offset
-	gui.AlwaysOnTop = true
-	gui.MaxDistance = maxDistance or 120
-	gui.LightInfluence = 0
-	gui.Adornee = adornee
-	gui.Parent = adornee
-
-	local label = Instance.new("TextLabel")
-	label.Name = "Label"
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeTransparency = 0.2
-	label.RichText = true
-	label.Parent = gui
-	return gui, label
-end
-
-local function makePrompt(parent: Instance, name: string, action: string, key: Enum.KeyCode, hold: number): ProximityPrompt
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = name
-	prompt.ActionText = action
-	prompt.KeyboardKeyCode = key
-	prompt.HoldDuration = hold
-	prompt.MaxActivationDistance = 10
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = parent
-	return prompt
-end
-
-local function colorToHex(color: Color3): string
-	return string.format(
-		"#%02X%02X%02X",
-		math.floor(color.R * 255 + 0.5),
-		math.floor(color.G * 255 + 0.5),
-		math.floor(color.B * 255 + 0.5)
-	)
-end
+local makePart = Build.MakePart
+local makeBillboard = Build.MakeBillboard
+local makePrompt = Build.MakePrompt
+local colorToHex = Build.ColorToHex
 
 -- الخريطة ----------------------------------------------------------------------
 
 local function buildGround()
-	if workspace:FindFirstChild("Baseplate") then
-		return
-	end
+	-- الجزيرة اللي عليها القواعد والساحة (المناطق بتبني أرضها في ZoneService)
 	makePart({
 		Name = "Ground",
-		Size = Vector3.new(420, 2, 320),
-		Position = Vector3.new(0, -1, 0),
+		Size = Vector3.new(PlotService.ZonesStartX - ISLAND_MIN_X, 2, PLAZA_HALF_Z * 2),
+		Position = Vector3.new((ISLAND_MIN_X + PlotService.ZonesStartX) / 2, -1, 0),
 		Color = Color3.fromRGB(95, 160, 80),
 		Material = Enum.Material.Grass,
 		Parent = mapFolder,
 	})
+	makePart({
+		Name = "Plaza",
+		Size = Vector3.new(PlotService.ZonesStartX - PLAZA_MIN_X, 0.2, PLAZA_HALF_Z * 2 - 20),
+		Position = Vector3.new((PLAZA_MIN_X + PlotService.ZonesStartX) / 2, 0.1, 0),
+		Color = Color3.fromRGB(150, 150, 155),
+		Material = Enum.Material.Cobblestone,
+		Parent = mapFolder,
+	})
+	-- مية حوالين الماب كلها
+	makePart({
+		Name = "Water",
+		Size = Vector3.new(2000, 1, 1000),
+		Position = Vector3.new(300, -4, 0),
+		Color = Color3.fromRGB(40, 110, 200),
+		Material = Enum.Material.Glass,
+		Transparency = 0.2,
+		Parent = mapFolder,
+	})
 end
+
+local SHOP_ORIGIN = Vector3.new(20, 0, -100)
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
@@ -144,7 +114,7 @@ local function buildShop()
 	local counter = makePart({
 		Name = "Counter",
 		Size = Vector3.new(16, 4, 6),
-		Position = Vector3.new(0, 2, 12),
+		Position = SHOP_ORIGIN + Vector3.new(0, 2, 0),
 		Color = Color3.fromRGB(120, 80, 50),
 		Material = Enum.Material.Wood,
 		Parent = shopModel,
@@ -152,7 +122,7 @@ local function buildShop()
 	makePart({
 		Name = "Roof",
 		Size = Vector3.new(20, 1, 10),
-		Position = Vector3.new(0, 11, 12),
+		Position = SHOP_ORIGIN + Vector3.new(0, 11, 0),
 		Color = Color3.fromRGB(230, 80, 80),
 		Parent = shopModel,
 	})
@@ -160,7 +130,7 @@ local function buildShop()
 		makePart({
 			Name = "Pole",
 			Size = Vector3.new(1, 7, 1),
-			Position = Vector3.new(x, 7.5, 12),
+			Position = SHOP_ORIGIN + Vector3.new(x, 7.5, 0),
 			Color = Color3.fromRGB(240, 240, 240),
 			Parent = shopModel,
 		})
@@ -178,7 +148,7 @@ local function buildShop()
 			Name = "DisplayEgg",
 			Shape = Enum.PartType.Ball,
 			Size = Vector3.new(2.4, 2.4, 2.4),
-			Position = Vector3.new((i - 2) * 5, 5.4, 12),
+			Position = SHOP_ORIGIN + Vector3.new((i - 2) * 5, 5.4, 0),
 			Color = egg.Color,
 			Material = Enum.Material.SmoothPlastic,
 			CanCollide = false,
@@ -205,7 +175,7 @@ local function buildShop()
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.Position = Vector3.new(0, 0.5, -4)
+	spawn.Position = Vector3.new(20, 0.5, 40)
 	spawn.Color = Color3.fromRGB(255, 255, 255)
 	spawn.Material = Enum.Material.SmoothPlastic
 	spawn.Neutral = true
@@ -213,19 +183,14 @@ local function buildShop()
 	spawn.Parent = mapFolder
 end
 
+-- القواعد جنب بعض في عمود واحد، ومداخلها بتبص على الساحة (+X).
 local function plotCFrames(): { CFrame }
 	local result = {}
-	local columns = Config.MaxPlots // 2
-	local spacing = PLOT_SIZE + 12
-	local rowOffset = HALF + 40
-	for row = 0, 1 do
-		local z = if row == 0 then -rowOffset else rowOffset
-		local facing = if row == 0 then Vector3.new(0, 0, 1) else Vector3.new(0, 0, -1)
-		for column = 1, columns do
-			local x = (column - (columns + 1) / 2) * spacing
-			local position = Vector3.new(x, 0, z)
-			table.insert(result, CFrame.lookAt(position, position + facing))
-		end
+	local facing = Vector3.new(1, 0, 0)
+	for index = 1, Config.MaxPlots do
+		local z = (index - (Config.MaxPlots + 1) / 2) * PLOT_SPACING
+		local position = Vector3.new(BASE_X, 0, z)
+		table.insert(result, CFrame.lookAt(position, position + facing))
 	end
 	return result
 end
@@ -246,16 +211,17 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 		return cframe * CFrame.new(localPosition)
 	end
 
+	local baseColor = Config.PlotColors[index] or Color3.fromRGB(110, 120, 140)
 	makePart({
 		Name = "Floor",
 		Size = Vector3.new(PLOT_SIZE, 1, PLOT_SIZE),
 		CFrame = at(Vector3.new(0, 0, 0)),
-		Color = Color3.fromRGB(200, 190, 170),
+		Color = baseColor:Lerp(Color3.fromRGB(200, 190, 170), 0.75),
 		Material = Enum.Material.Slate,
 		Parent = model,
 	})
 
-	local wallColor = Color3.fromRGB(110, 120, 140)
+	local wallColor = baseColor:Lerp(Color3.fromRGB(90, 95, 110), 0.55)
 	local function wall(name: string, size: Vector3, position: Vector3)
 		makePart({
 			Name = name,
@@ -263,6 +229,15 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 			CFrame = at(position),
 			Color = wallColor,
 			Material = Enum.Material.Brick,
+			Parent = model,
+		})
+		-- شريط منوّر بلون القاعدة فوق كل حيطة
+		makePart({
+			Name = name .. "Trim",
+			Size = Vector3.new(size.X, 0.4, size.Z),
+			CFrame = at(position + Vector3.new(0, size.Y / 2 + 0.2, 0)),
+			Color = baseColor,
+			Material = Enum.Material.Neon,
 			Parent = model,
 		})
 	end
@@ -290,8 +265,10 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 		Material = Enum.Material.Brick,
 		Parent = model,
 	})
-	local _, signLabel = makeBillboard(signPart, UDim2.fromOffset(300, 50), Vector3.new(0, 3, 0), 200)
+	local signGui, signLabel = makeBillboard(signPart, UDim2.fromScale(22, 3.5), Vector3.new(0, 3, 0), 200)
+	signGui.AlwaysOnTop = false -- عشان لافتات القواعد مايركبوش على بعض
 	signLabel.Text = "Empty Base"
+	signLabel.TextColor3 = baseColor:Lerp(Color3.new(1, 1, 1), 0.4)
 
 	local barrier = makePart({
 		Name = "LockBarrier",
@@ -422,7 +399,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	local bodySize = 3 * scale
 	local body = makePart({
 		Name = "Body",
-		Shape = Enum.PartType.Ball,
+		Shape = if species.Placeholder then Enum.PartType.Block else Enum.PartType.Ball,
 		Size = Vector3.new(bodySize, bodySize, bodySize),
 		Color = color,
 		Material = material,
@@ -442,8 +419,11 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 		table.insert(parts, part)
 	end
 
+	-- الوحوش اللي لسه ملهاش Skin بتفضل مكعب واسمها فوقه بس
+	local hasFace = not species.Placeholder
+
 	-- العيون (الوش ناحية -Z)
-	for _, side in { -1, 1 } do
+	for _, side in if hasFace then { -1, 1 } else {} do
 		local eye = makePart({
 			Name = "Eye",
 			Shape = Enum.PartType.Ball,
@@ -461,7 +441,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	end
 
 	-- رجلين
-	for _, side in { -1, 1 } do
+	for _, side in if hasFace then { -1, 1 } else {} do
 		local foot = makePart({
 			Name = "Foot",
 			Size = Vector3.new(0.9, 0.6, 1.2) * scale,
@@ -471,7 +451,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 		attach(foot, CFrame.new(side * 0.8 * scale, -1.4 * scale, -0.2 * scale))
 	end
 
-	if species.Horns then
+	if species.Horns and hasFace then
 		for _, side in { -1, 1 } do
 			local horn = makePart({
 				Name = "Horn",
@@ -578,17 +558,19 @@ function PlotService.RenderMonster(player: Player, monster: MonsterMath.MonsterD
 	local care = makePrompt(body, "CarePrompt", "Care", Enum.KeyCode.E, 0)
 	care.ObjectText = name
 	care.MaxActivationDistance = 8 + body.Size.Y
-	local steal = makePrompt(body, "StealPrompt", "Steal", Enum.KeyCode.F, Config.Steal.HoldDuration)
-	steal.ObjectText = name
-	steal.MaxActivationDistance = 8 + body.Size.Y
-
 	local monsterId = monster.Id
 	care.Triggered:Connect(function(who)
 		PlotService.Callbacks.Care(who, player, monsterId)
 	end)
-	steal.Triggered:Connect(function(who)
-		PlotService.Callbacks.Steal(who, player, monsterId)
-	end)
+
+	if Config.Steal.Enabled then
+		local steal = makePrompt(body, "StealPrompt", "Steal", Enum.KeyCode.F, Config.Steal.HoldDuration)
+		steal.ObjectText = name
+		steal.MaxActivationDistance = 8 + body.Size.Y
+		steal.Triggered:Connect(function(who)
+			PlotService.Callbacks.Steal(who, player, monsterId)
+		end)
+	end
 
 	model.Parent = plot.MonstersFolder
 end

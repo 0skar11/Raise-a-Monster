@@ -116,7 +116,7 @@ local function completeCarry(carry: Carry)
 end
 
 local function tryStartSteal(thief: Player, owner: Player, monsterId: string)
-	if thief == owner or carries[thief] then
+	if not Config.Steal.Enabled or thief == owner or carries[thief] then
 		return
 	end
 	local ownerPlot = PlotService.GetPlot(owner)
