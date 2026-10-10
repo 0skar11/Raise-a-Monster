@@ -28,6 +28,7 @@ local dailyClaim: TextButton
 local spinGo: TextButton
 local passButtons: { [string]: TextButton } = {}
 local speedAccessoryButtons: { [string]: TextButton } = {}
+local weaponButtons: { [string]: TextButton } = {}
 local accessoryRows: { [string]: { Row: Frame, Button: TextButton, Info: TextLabel } } = {}
 local accessoriesFrame: Frame
 local miniGameFrame: Frame
@@ -247,7 +248,7 @@ local function buildButtons()
 	statusLabel.ZIndex = 0
 end
 
--- المتجر: Gamepasses و Boosts تحت خالص --------------------------------------------------------
+-- المتجر: الإكسسوارات والأسلحة بعملات اللعبة، ثم الـ Gamepasses والـ Boosts -----------------
 
 local function buildShopExtras()
 	local y = ui.ShopContentBottom
@@ -277,24 +278,7 @@ local function buildShopExtras()
 		return buy
 	end
 
-	section("⭐ Gamepasses")
-	local passes = {}
-	for name, pass in Config.Gamepasses do
-		if not Config.WeaponStats[name] then
-			table.insert(passes, { Name = name, Pass = pass })
-		end
-	end
-	table.sort(passes, function(a, b)
-		return a.Pass.Order < b.Pass.Order
-	end)
-	for i, entry in passes do
-		passButtons[entry.Name] = card(i, #passes, entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, COLORS.Yellow, function()
-			remotes.BuyPass:FireServer(entry.Name)
-		end)
-	end
-	y += 168
-
-	section("🏃 Speed Accessories")
+	section("🏃 Player Accessories · Coins")
 	local speedAccessories = {}
 	for name, accessory in Config.SpeedAccessories do
 		table.insert(speedAccessories, { Name = name, Accessory = accessory })
@@ -310,7 +294,7 @@ local function buildShopExtras()
 	end
 	y += math.ceil(#speedAccessories / 4) * 168
 
-	section("⚔️ Weapons")
+	section("⚔️ Weapons · Coins")
 	local weapons = {}
 	for name, stats in Config.WeaponStats do
 		local pass = Config.Gamepasses[name]
@@ -320,7 +304,27 @@ local function buildShopExtras()
 		return a.Pass.Order < b.Pass.Order
 	end)
 	for i, entry in weapons do
-		passButtons[entry.Name] = card(i, #weapons, entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, COLORS.Red, function()
+		local price = Config.WeaponCoinPrices[entry.Name]
+		if price then
+			weaponButtons[entry.Name] = card(i, 4, entry.Pass.Name, entry.Pass.Description, price, COLORS.Red, function()
+				remotes.BuyWeapon:FireServer(entry.Name)
+			end, "💰 ")
+		end
+	end
+	y += math.ceil(#weapons / 4) * 168
+
+	section("⭐ Gamepasses · Robux")
+	local passes = {}
+	for name, pass in Config.Gamepasses do
+		if not Config.WeaponStats[name] then
+			table.insert(passes, { Name = name, Pass = pass })
+		end
+	end
+	table.sort(passes, function(a, b)
+		return a.Pass.Order < b.Pass.Order
+	end)
+	for i, entry in passes do
+		passButtons[entry.Name] = card(i, #passes, entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, COLORS.Yellow, function()
 			remotes.BuyPass:FireServer(entry.Name)
 		end)
 	end
@@ -860,16 +864,26 @@ function Features.Refresh()
 			button.Text = "R$ " .. Config.Gamepasses[name].Price
 			button.BackgroundColor3 = COLORS.Green
 		end
-		local speedAccessories = state.SpeedAccessories or {}
-		for name, button in speedAccessoryButtons do
-			local accessory = Config.SpeedAccessories[name]
-			if speedAccessories[name] then
-				button.Text = "Owned ✓"
-				button.BackgroundColor3 = COLORS.Gray
-			else
-				button.Text = "💰 " .. accessory.Price
-				button.BackgroundColor3 = COLORS.Green
-			end
+	end
+	local speedAccessories = state.SpeedAccessories or {}
+	for name, button in speedAccessoryButtons do
+		local accessory = Config.SpeedAccessories[name]
+		if speedAccessories[name] then
+			button.Text = "Owned ✓"
+			button.BackgroundColor3 = COLORS.Gray
+		else
+			button.Text = "💰 " .. MonsterMath.FormatNumber(accessory.Price)
+			button.BackgroundColor3 = COLORS.Green
+		end
+	end
+	local weapons = state.Weapons or {}
+	for name, button in weaponButtons do
+		if weapons[name] or passes[name] then
+			button.Text = "Owned ✓"
+			button.BackgroundColor3 = COLORS.Gray
+		else
+			button.Text = "💰 " .. MonsterMath.FormatNumber(Config.WeaponCoinPrices[name])
+			button.BackgroundColor3 = COLORS.Green
 		end
 	end
 

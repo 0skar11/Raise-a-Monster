@@ -543,6 +543,16 @@ Config.WeaponStats = {
 	IceSword = { Template = "IceSword", DamageMultiplier = 2.5, ExtraReach = 2.5 },
 	LavaSword = { Template = "LavaSword", DamageMultiplier = 3.5, ExtraReach = 4 },
 } :: { [string]: { Template: string, DamageMultiplier: number, ExtraReach: number } }
+-- معدات القتال تُشترى بعملات اللعبة من المتجر، مش بـ Robux.
+Config.WeaponCoinPrices = {
+	IronBat = 1500,
+	IronSword = 2500,
+	ForestSword = 6000,
+	DesertSword = 12000,
+	IceSword = 30000,
+	VIPSword = 45000,
+	LavaSword = 65000,
+} :: { [string]: number }
 Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
 
 -- أحداث الماب ---------------------------------------------------------------------------

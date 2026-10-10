@@ -17,6 +17,7 @@ local EVENT_NAMES = {
 	"BuyUpgrade", -- (upgradeName)
 	"Teleport", -- ("Home" | "Shop")
 	"BuyPass", -- (passName)
+	"BuyWeapon", -- (weaponName), paid with in-game coins
 	"BuyProduct", -- (productName)
 	"ClaimDaily", -- ()
 	"Spin", -- ()

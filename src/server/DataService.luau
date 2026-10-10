@@ -28,6 +28,7 @@ export type PlayerData = {
 	Stats: { Hatched: number, Steals: number, TimesRobbed: number, ArenaWins: number },
 	Accessories: { [string]: boolean }, -- الإكسسوارات اللي اللاعب اشتراها
 	SpeedAccessories: { [string]: boolean },
+	Weapons: { [string]: boolean },
 	Daily: { LastClaim: number, Streak: number },
 	LastSpin: number,
 }
@@ -50,6 +51,7 @@ local DEFAULT_DATA: PlayerData = {
 	Stats = { Hatched = 0, Steals = 0, TimesRobbed = 0, ArenaWins = 0 },
 	Accessories = {},
 	SpeedAccessories = {},
+	Weapons = {},
 	Daily = { LastClaim = 0, Streak = 0 },
 	LastSpin = 0,
 }
