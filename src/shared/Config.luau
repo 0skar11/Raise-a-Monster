@@ -468,6 +468,17 @@ Config.BabiesPerNest = 3
 
 Config.WalkSpeed = 25 -- سرعة المشي ثابتة (الافتراضي في Roblox 16)
 
+Config.SpeedAccessories = {
+	SwiftSneakers = { Name = "Swift Sneakers", Description = "Blue neon sneakers", Price = 1500, Multiplier = 1.05, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
+	FlameBoots = { Name = "Flame Boots", Description = "Boots with a fiery trail", Price = 3000, Multiplier = 1.08, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
+	IceSkates = { Name = "Ice Skates", Description = "Frozen skates that glide", Price = 6000, Multiplier = 1.10, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
+	WindScarf = { Name = "Wind Scarf", Description = "A scarf carried by the wind", Price = 10000, Multiplier = 1.12, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
+	LightningBoots = { Name = "Lightning Boots", Description = "Boots charged with lightning", Price = 15000, Multiplier = 1.15, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
+	ShadowCloak = { Name = "Shadow Cloak", Description = "A cloak that moves like smoke", Price = 22000, Multiplier = 1.18, Order = 6, Color = Color3.fromRGB(125, 75, 210) },
+	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 32000, Multiplier = 1.22, Order = 7, Color = Color3.fromRGB(195, 80, 255) },
+	GoldenWings = { Name = "Golden Wings", Description = "Radiant wings for maximum speed", Price = 50000, Multiplier = 1.30, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
+} :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, Order: number, Color: Color3 } }
+
 -- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
 Config.Carry = {
 	WalkSpeedMultiplier = 1, -- السرعة مابتقلّش وانت شايل وحش

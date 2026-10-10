@@ -96,6 +96,10 @@ end)
 local function onCharacter(player: Player, character: Model)
 	PlotService.SendHome(player)
 	CharacterService.UpdateSpeed(player)
+	local profile = DataService.Get(player)
+	if profile then
+		CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
+	end
 	CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player))
 	MonetizationService.OnCharacter(player)
 	task.spawn(function()
