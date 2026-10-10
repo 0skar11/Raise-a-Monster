@@ -1,5 +1,5 @@
 --!strict
--- الأسلحة والضرب: المضرب الخشبي لكل الناس، وسيف الـ VIP لأصحاب الـ Gamepass.
+-- الأسلحة والضرب: المضرب الخشبي للجميع، والأسلحة الإضافية من متجر الـ Gamepass.
 -- أي حاجة ممكن تتضرب (الوحوش الأم، الـ Big Boss) بتتسجل هنا كـ Target،
 -- ولو مفيش Target قريب السلاح بيضرب أقرب لاعب (برّه القواعد بس).
 
@@ -143,20 +143,20 @@ local function makeBat(): Tool
 	tool.Name = "Bat"
 	tool.ToolTip = "Hit the mother monsters!"
 	tool.CanBeDropped = false
-	tool.GripPos = Vector3.new(0, 0, 0.6)
 	return tool
 end
 
-local function makeSword(): Tool
-	local tool = cloneWeaponTemplate("IceSword")
-	tool.Name = "VIP Sword"
-	tool.ToolTip = "VIP: hits much harder!"
+local function makeSword(passName: string): Tool
+	local stats = Config.WeaponStats[passName]
+	assert(stats, "Weapon stats are missing: " .. passName)
+	local tool = cloneWeaponTemplate(stats.Template)
+	tool.Name = Config.Gamepasses[passName].Name
+	tool.ToolTip = Config.Gamepasses[passName].Description
 	tool.CanBeDropped = false
-	tool.GripPos = Vector3.new(0, 0, 0.4)
 	return tool
 end
 -- بيدّي اللاعب أسلحته (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
-function CombatService.GiveWeapons(player: Player, hasSword: boolean)
+function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: boolean })
 	local backpack = player:FindFirstChildOfClass("Backpack")
 	if not backpack then
 		return
@@ -172,12 +172,15 @@ function CombatService.GiveWeapons(player: Player, hasSword: boolean)
 		end)
 		bat.Parent = backpack
 	end
-	if hasSword and not has("VIP Sword") then
-		local sword = makeSword()
-		sword.Activated:Connect(function()
-			swing(player, sword, Config.VIPSword.DamageMultiplier, Config.VIPSword.ExtraReach, Config.PvP.SwordDamage)
-		end)
-		sword.Parent = backpack
+	for passName, stats in Config.WeaponStats do
+		local displayName = Config.Gamepasses[passName].Name
+		if ownedPasses[passName] and not has(displayName) then
+			local sword = makeSword(passName)
+			sword.Activated:Connect(function()
+				swing(player, sword, stats.DamageMultiplier, stats.ExtraReach, Config.PvP.SwordDamage)
+			end)
+			sword.Parent = backpack
+		end
 	end
 end
 

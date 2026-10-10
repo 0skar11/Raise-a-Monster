@@ -37,7 +37,9 @@ end
 -- لما الـ Pass يتفعّل (اشترى أو دخل وهو معاه)
 local function onPassGranted(player: Player, name: string)
 	if name == "VIPSword" then
-		CombatService.GiveWeapons(player, true)
+		CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player))
+	elseif Config.WeaponStats[name] then
+		CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player))
 	elseif name == "ExtraSlots" then
 		PlotService.SetUnlockedSlots(player, MonsterService.GetUnlockedSlots(player))
 	end
