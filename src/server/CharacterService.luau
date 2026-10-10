@@ -72,23 +72,23 @@ function CharacterService.SetSpeedFactor(player: Player, reason: string, factor:
 		factors = {}
 		speedFactors[player] = factors
 	end
-
-	function CharacterService.ApplySpeedAccessory(player: Player, owned: { [string]: boolean })
-		local multiplier = CharacterService.GetSpeedAccessoryMultiplier(owned)
-		CharacterService.SetSpeedFactor(player, "SpeedAccessory", if multiplier > 1 then multiplier else nil)
-	end
-
-	function CharacterService.GetSpeedAccessoryMultiplier(owned: { [string]: boolean }): number
-		local best = 1
-		for name, accessory in Config.SpeedAccessories do
-			if owned[name] then
-				best = math.max(best, accessory.Multiplier)
-			end
-		end
-		return best
-	end
 	factors[reason] = factor
 	CharacterService.UpdateSpeed(player)
+end
+
+function CharacterService.ApplySpeedAccessory(player: Player, owned: { [string]: boolean })
+	local multiplier = CharacterService.GetSpeedAccessoryMultiplier(owned)
+	CharacterService.SetSpeedFactor(player, "SpeedAccessory", if multiplier > 1 then multiplier else nil)
+end
+
+function CharacterService.GetSpeedAccessoryMultiplier(owned: { [string]: boolean }): number
+	local best = 1
+	for name, accessory in Config.SpeedAccessories do
+		if owned[name] then
+			best = math.max(best, accessory.Multiplier)
+		end
+	end
+	return best
 end
 
 function CharacterService.Cleanup(player: Player)
