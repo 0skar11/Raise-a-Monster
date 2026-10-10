@@ -137,17 +137,30 @@ local function setForwardGrip(tool: Tool)
 	tool.Grip = CFrame.new(0, -0.65, 0) * CFrame.Angles(0, math.rad(90), 0)
 end
 
+-- Sword blades extend along tool-local -Z; pitch that axis toward the character's up direction.
+local function setSwordGrip(tool: Tool)
+	tool.Grip = CFrame.new(0, -0.65, 0) * CFrame.Angles(math.rad(90), 0, 0)
+end
+
+local function setTemplateGrip(tool: Tool, templateName: string)
+	if string.find(templateName, "Sword", 1, true) then
+		setSwordGrip(tool)
+	else
+		setForwardGrip(tool)
+	end
+end
+
 local function cloneWeaponTemplate(name: string): Tool
 	local folder = ReplicatedStorage:WaitForChild("WeaponModels")
 	local template = folder:WaitForChild(name)
 	assert(template:IsA("Tool"), "Weapon template is missing or invalid: " .. name)
 	local tool = template:Clone() :: Tool
-	setForwardGrip(tool)
 	return tool
 end
 
 local function makeBat(): Tool
 	local tool = cloneWeaponTemplate("WoodenBat")
+	setForwardGrip(tool)
 	tool.Name = "Bat"
 	tool.ToolTip = "Hit the mother monsters!"
 	tool.CanBeDropped = false
@@ -158,6 +171,7 @@ local function makeSword(passName: string): Tool
 	local stats = Config.WeaponStats[passName]
 	assert(stats, "Weapon stats are missing: " .. passName)
 	local tool = cloneWeaponTemplate(stats.Template)
+	setTemplateGrip(tool, stats.Template)
 	tool.Name = Config.Gamepasses[passName].Name
 	tool.ToolTip = Config.Gamepasses[passName].Description
 	tool.CanBeDropped = false
@@ -193,7 +207,7 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 		if ownedPasses[passName] or ownedWeapons[passName] then
 			local existingSword = backpack:FindFirstChild(displayName) or (character and character:FindFirstChild(displayName))
 			if existingSword and existingSword:IsA("Tool") then
-				setForwardGrip(existingSword)
+				setTemplateGrip(existingSword, stats.Template)
 			elseif not existingSword then
 				local sword = makeSword(passName)
 				sword.Activated:Connect(function()
