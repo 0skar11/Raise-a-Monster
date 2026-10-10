@@ -105,6 +105,13 @@ local function onCharacter(player: Player, character: Model)
 	task.spawn(function()
 		CharacterService.ApplyAppearance(player, character)
 		CharacterService.UpdateSpeed(player)
+		task.wait()
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		local backpack = player:FindFirstChildOfClass("Backpack")
+		local bat = backpack and backpack:FindFirstChild("Bat")
+		if humanoid and bat and bat:IsA("Tool") then
+			humanoid:EquipTool(bat)
+		end
 	end)
 end
 

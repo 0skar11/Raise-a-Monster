@@ -142,7 +142,6 @@ local function makeBat(): Tool
 	local tool = cloneWeaponTemplate("WoodenBat")
 	tool.Name = "Bat"
 	tool.ToolTip = "Hit the mother monsters!"
-	tool.Grip = CFrame.Angles(math.rad(35), 0, 0)
 	tool.CanBeDropped = false
 	return tool
 end
@@ -166,12 +165,20 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 	local function has(name: string): boolean
 		return backpack:FindFirstChild(name) ~= nil or (character ~= nil and character:FindFirstChild(name) ~= nil)
 	end
+	local bat = backpack:FindFirstChild("Bat") :: Tool?
 	if not has("Bat") then
-		local bat = makeBat()
+		bat = makeBat()
 		bat.Activated:Connect(function()
-			swing(player, bat, 1, 0, Config.PvP.BatDamage)
+			swing(player, bat :: Tool, 1, 0, Config.PvP.BatDamage)
 		end)
 		bat.Parent = backpack
+	end
+	if bat then
+		bat.Grip = CFrame.new(0, -0.65, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+	end
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid and bat then
+		humanoid:EquipTool(bat)
 	end
 	for passName, stats in Config.WeaponStats do
 		local displayName = Config.Gamepasses[passName].Name
