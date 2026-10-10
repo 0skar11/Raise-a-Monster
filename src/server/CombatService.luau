@@ -131,11 +131,19 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 	end
 end
 
+-- Each Handle's long axis maps to tool-local -Z. Rotate the grip so it points
+-- along the character's forward direction when equipped.
+local function setForwardGrip(tool: Tool)
+	tool.Grip = CFrame.new(0, -0.65, 0) * CFrame.Angles(0, math.rad(90), 0)
+end
+
 local function cloneWeaponTemplate(name: string): Tool
 	local folder = ReplicatedStorage:WaitForChild("WeaponModels")
 	local template = folder:WaitForChild(name)
 	assert(template:IsA("Tool"), "Weapon template is missing or invalid: " .. name)
-	return template:Clone() :: Tool
+	local tool = template:Clone() :: Tool
+	setForwardGrip(tool)
+	return tool
 end
 
 local function makeBat(): Tool
@@ -165,8 +173,8 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 	local function has(name: string): boolean
 		return backpack:FindFirstChild(name) ~= nil or (character ~= nil and character:FindFirstChild(name) ~= nil)
 	end
-	local bat = backpack:FindFirstChild("Bat") :: Tool?
-	if not has("Bat") then
+	local bat = (backpack:FindFirstChild("Bat") or (character and character:FindFirstChild("Bat"))) :: Tool?
+	if not bat then
 		bat = makeBat()
 		bat.Activated:Connect(function()
 			swing(player, bat :: Tool, 1, 0, Config.PvP.BatDamage)
@@ -174,7 +182,7 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 		bat.Parent = backpack
 	end
 	if bat then
-		bat.Grip = CFrame.new(0, -0.65, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+		setForwardGrip(bat)
 	end
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid and bat then
@@ -182,12 +190,17 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 	end
 	for passName, stats in Config.WeaponStats do
 		local displayName = Config.Gamepasses[passName].Name
-		if ownedPasses[passName] and not has(displayName) then
-			local sword = makeSword(passName)
-			sword.Activated:Connect(function()
-				swing(player, sword, stats.DamageMultiplier, stats.ExtraReach, Config.PvP.SwordDamage)
-			end)
-			sword.Parent = backpack
+		if ownedPasses[passName] then
+			local existingSword = backpack:FindFirstChild(displayName) or (character and character:FindFirstChild(displayName))
+			if existingSword and existingSword:IsA("Tool") then
+				setForwardGrip(existingSword)
+			elseif not existingSword then
+				local sword = makeSword(passName)
+				sword.Activated:Connect(function()
+					swing(player, sword, stats.DamageMultiplier, stats.ExtraReach, Config.PvP.SwordDamage)
+				end)
+				sword.Parent = backpack
+			end
 		end
 	end
 end
