@@ -100,7 +100,7 @@ local function onCharacter(player: Player, character: Model)
 	if profile then
 		CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
 	end
-	CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player))
+	CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player), if profile then profile.Data.Weapons else {})
 	MonetizationService.OnCharacter(player)
 	task.spawn(function()
 		CharacterService.ApplyAppearance(player, character)

@@ -164,7 +164,7 @@ local function makeSword(passName: string): Tool
 	return tool
 end
 -- بيدّي اللاعب أسلحته (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
-function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: boolean })
+function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: boolean }, ownedWeapons: { [string]: boolean })
 	local backpack = player:FindFirstChildOfClass("Backpack")
 	if not backpack then
 		return
@@ -190,7 +190,7 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 	end
 	for passName, stats in Config.WeaponStats do
 		local displayName = Config.Gamepasses[passName].Name
-		if ownedPasses[passName] then
+		if ownedPasses[passName] or ownedWeapons[passName] then
 			local existingSword = backpack:FindFirstChild(displayName) or (character and character:FindFirstChild(displayName))
 			if existingSword and existingSword:IsA("Tool") then
 				setForwardGrip(existingSword)

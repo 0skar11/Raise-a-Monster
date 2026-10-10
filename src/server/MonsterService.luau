@@ -156,6 +156,7 @@ function MonsterService.PushState(player: Player)
 		SaveDisabled = profile.LoadFailed,
 		Accessories = data.Accessories,
 		SpeedAccessories = data.SpeedAccessories,
+		Weapons = data.Weapons,
 		SpeedAccessoryMultiplier = CharacterService.GetSpeedAccessoryMultiplier(data.SpeedAccessories),
 		CoinMultiplier = MonsterService.GetCoinMultiplier(player),
 	}
@@ -571,6 +572,7 @@ local function buySpeedAccessory(player: Player, name: unknown)
 	CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
 	MonsterService.Notify(player, "🏃 You bought " .. accessory.Name .. "!", "success")
 	MonsterService.PushState(player)
+	task.spawn(DataService.Save, player)
 end
 
 local function buyAccessory(player: Player, name: unknown, monsterId: unknown)

@@ -21,6 +21,15 @@ local owned: { [Player]: { [string]: boolean } } = {}
 local boostUntil: { [Player]: number } = {}
 local lastPrompt: { [Player]: number } = {}
 
+local function giveWeapons(player: Player)
+	local profile = DataService.Get(player)
+	CombatService.GiveWeapons(
+		player,
+		MonetizationService.GetOwnedPasses(player),
+		if profile then profile.Data.Weapons else {}
+	)
+end
+
 function MonetizationService.HasPass(player: Player, name: string): boolean
 	local set = owned[player]
 	return set ~= nil and set[name] == true
@@ -37,9 +46,9 @@ end
 -- لما الـ Pass يتفعّل (اشترى أو دخل وهو معاه)
 local function onPassGranted(player: Player, name: string)
 	if name == "VIPSword" then
-		CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player))
+		giveWeapons(player)
 	elseif Config.WeaponStats[name] then
-		CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player))
+		giveWeapons(player)
 	elseif name == "ExtraSlots" then
 		PlotService.SetUnlockedSlots(player, MonsterService.GetUnlockedSlots(player))
 	end
@@ -84,6 +93,10 @@ local function buyPass(player: Player, name: unknown)
 	if type(name) ~= "string" then
 		return
 	end
+	if Config.WeaponStats[name] then
+		MonsterService.Notify(player, "Weapons are bought with coins from the shop now.", "info")
+		return
+	end
 	local pass = Config.Gamepasses[name]
 	if not pass then
 		return
@@ -102,6 +115,38 @@ local function buyPass(player: Player, name: unknown)
 		return
 	end
 	MarketplaceService:PromptGamePassPurchase(player, pass.Id)
+end
+
+local function buyWeapon(player: Player, name: unknown)
+	if type(name) ~= "string" or not Config.WeaponStats[name] then
+		return
+	end
+	local profile = DataService.Get(player)
+	local price = Config.WeaponCoinPrices[name]
+	local pass = Config.Gamepasses[name]
+	if not profile or not price or not pass then
+		return
+	end
+	if profile.Data.Weapons[name] or MonetizationService.HasPass(player, name) then
+		MonsterService.Notify(player, "You already own " .. pass.Name .. "!", "info")
+		return
+	end
+	if not DataService.TrySpend(player, price) then
+		MonsterService.Notify(player, "Not enough coins!", "error")
+		return
+	end
+	profile.Data.Weapons[name] = true
+	giveWeapons(player)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local weapon = (backpack and backpack:FindFirstChild(pass.Name)) or (character and character:FindFirstChild(pass.Name))
+	if humanoid and weapon and weapon:IsA("Tool") then
+		humanoid:EquipTool(weapon)
+	end
+	MonsterService.Notify(player, "⚔️ You bought " .. pass.Name .. "!", "success")
+	MonsterService.PushState(player)
+	task.spawn(DataService.Save, player)
 end
 
 local function buyProduct(player: Player, name: unknown)
@@ -164,6 +209,7 @@ end
 
 function MonetizationService.Init(remotes: { [string]: RemoteEvent })
 	remotes.BuyPass.OnServerEvent:Connect(buyPass)
+	remotes.BuyWeapon.OnServerEvent:Connect(buyWeapon)
 	remotes.BuyProduct.OnServerEvent:Connect(buyProduct)
 
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
