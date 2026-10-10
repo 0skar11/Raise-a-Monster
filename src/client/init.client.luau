@@ -11,6 +11,7 @@ local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UI = require(script.UI)
 local Features = require(script.Features)
+local MonsterAnimate = require(script.MonsterAnimate)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -260,12 +261,31 @@ CollectionService:GetInstanceAddedSignal("RainbowPart"):Connect(addRainbow)
 CollectionService:GetInstanceRemovedSignal("RainbowPart"):Connect(function(instance)
 	rainbowParts[instance :: BasePart] = nil
 end)
+-- الوحوش الـ Rig: الطفرة Rainbow عبارة عن Highlight بيتلوّن
+local rainbowHighlights: { [Highlight]: boolean } = {}
+for _, instance in CollectionService:GetTagged("RainbowHighlight") do
+	rainbowHighlights[instance :: Highlight] = true
+end
+CollectionService:GetInstanceAddedSignal("RainbowHighlight"):Connect(function(instance)
+	rainbowHighlights[instance :: Highlight] = true
+end)
+CollectionService:GetInstanceRemovedSignal("RainbowHighlight"):Connect(function(instance)
+	rainbowHighlights[instance :: Highlight] = nil
+end)
 RunService.RenderStepped:Connect(function()
 	local hue = (os.clock() * 0.25) % 1
+	local color = Color3.fromHSV(hue, 0.8, 1)
 	for part in rainbowParts do
-		part.Color = Color3.fromHSV(hue, 0.8, 1)
+		part.Color = color
+	end
+	for highlight in rainbowHighlights do
+		highlight.FillColor = color
+		highlight.OutlineColor = color
 	end
 end)
+
+-- أنيميشن الوحوش (Idle / Walk / Attack) من MonsterAnimator
+MonsterAnimate.Start()
 
 -- العدّاد في لوحة الوحش (Play cooldown) بيتحدث مع كل StateUpdate، وكمان كل نص ثانية.
 task.spawn(function()

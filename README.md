@@ -67,6 +67,38 @@ rojo build -o RaiseAMonster.rbxlx
 
 ---
 
+## 🎬 للـ Animator: الوحوش جاهزة في الماب
+فيه 50 وحش (5 مناطق × 10)، وكل واحد ليه 3 مراحل (Baby / Teen / Adult)، وكلهم **Rig** معمولين من Parts ومتوصلين بـ **Motor6D**.
+
+**إزاي توصلهم:**
+1. نزّل الريبو من GitHub وافتح **`RaiseAMonster.rbxlx`** بـ Roblox Studio.
+2. هتلاقي الوحوش في **Explorer ← ServerStorage ← MonsterModels ← <المنطقة> ← <رقم_الوحش> ← Baby / Teen / Adult**.
+3. اسحب أي واحد لـ **Workspace**، واختاره، وافتح **Avatar ← Animation Editor**.
+
+كل Rig فيه:
+- `HumanoidRootPart`، وهو الـ PrimaryPart (مخفي ومثبّت).
+- `AnimationController` جواه `Animator`.
+- Motor6D بين أجزاء الجسم (Body، Head، Jaw، Legs، Arms، Wings، Tail…)، والتفاصيل ملزوقة (Weld) في العضمة بتاعتها.
+
+**الأنيميشن جوه اللعبة:**
+- كل وحش بيتحرك لوحده بالكود (`src/shared/MonsterAnimator.luau`): Idle وWalk وAttack، على حسب الـ Attribute اسمه `AnimState`.
+- لو عايز تستخدم أنيميشن عملته بنفسك، حط الـ Attribute `Procedural = false` على الموديل، وشغّل الـ AnimationTrack بتاعك على الـ `Animator`.
+
+**الملفات:**
+| الملف | فيه إيه |
+|---|---|
+| `assets/MonsterModels.rbxmx` | الـ 150 Rig (اللي بيتحطوا في `ServerStorage.MonsterModels`) |
+| `src/shared/MonsterAnimator.luau` | الأنيميشن بالكود (Idle / Walk / Attack) |
+| `src/client/MonsterAnimate.luau` | بيشغّل الأنيميشن على الكلاينت لكل موديل عليه Tag اسمه `Monster` |
+| `tools/GrowAMonster_RiggedGenerator.lua` | السكريبت اللي بيبني الوحوش من الأول |
+
+**لو عدّلت شكل الوحوش:**
+1. شغّل `tools/GrowAMonster_RiggedGenerator.lua` من الـ Command Bar في Place فاضي.
+2. دوس كليك يمين على `ServerStorage.MonsterModels` واختار **Save to File** بصيغة **.rbxmx**، واحفظه مكان `assets/MonsterModels.rbxmx`.
+3. ابني الماب تاني: `rojo build -o RaiseAMonster.rbxlx`.
+
+---
+
 ## 📁 هيكل المشروع
 ```
 default.project.json      ← إعدادات Rojo

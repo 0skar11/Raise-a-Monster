@@ -120,7 +120,7 @@ local function showFighter(fighter: Fighter, pedestal: BasePart, monster: Monste
 	local model = PlotService.BuildMonsterModel(monster)
 	local body = model.PrimaryPart :: BasePart
 	local facing = Config.Arena.Position + Vector3.new(0, pedestal.Position.Y, 0)
-	model:PivotTo(CFrame.lookAt(pedestal.Position + Vector3.new(0, 0.75 + body.Size.Y / 2 + 0.6, 0), facing))
+	model:PivotTo(CFrame.lookAt(pedestal.Position + Vector3.new(0, 0.75 + PlotService.PivotHeight(model) + 0.1, 0), facing))
 	local info = body:FindFirstChild("Info")
 	local label = info and info:FindFirstChild("Label") :: TextLabel?
 	model.Parent = pedestal.Parent
@@ -213,15 +213,15 @@ local function runBattle(a: Fighter, b: Fighter)
 			defender.Label.Text = fighterLabel(defender)
 		end
 		local model = defender.Model
-		if model and model.PrimaryPart then
-			local body = model.PrimaryPart
-			local original = body.Color
-			body.Color = Color3.fromRGB(255, 80, 80)
-			task.delay(0.15, function()
-				if body.Parent then
-					body.Color = original
-				end
-			end)
+		if model then
+			PlotService.Flash(model, Color3.fromRGB(255, 80, 80))
+		end
+		-- أنيميشن: اللي بيضرب بيهاجم
+		if attacker.Model then
+			attacker.Model:SetAttribute("AnimState", "Attack")
+		end
+		if defender.Model then
+			defender.Model:SetAttribute("AnimState", "Idle")
 		end
 		sendState(a, b, attacker.Name .. " hits for " .. damage .. "!", false, nil)
 		if defender.Health <= 0 then

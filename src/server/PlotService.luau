@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local Build = require(script.Parent.Build)
+local MonsterModels = require(script.Parent.MonsterModels)
 
 local PLOT_SIZE = 60
 local HALF = PLOT_SIZE / 2
@@ -637,8 +638,151 @@ end
 
 -- رسم الوحوش ----------------------------------------------------------------
 
+-- الوحوش الـ Rig (من MonsterModels) ----------------------------------------------------
+
+-- المرحلة → نسخة الـ Template (الـ Legendary = الـ Adult مكبّر)
+local RIG_STAGES = { "Baby", "Teen", "Adult", "Adult" }
+local LEGENDARY_RIG_SCALE = 1.25
+
+-- المسافة من رجلين الوحش لحد الـ Pivot بتاعه (عشان نحطه على الأرض بالظبط)
+function PlotService.PivotHeight(model: Model): number
+	local height = model:GetAttribute("PivotHeight")
+	if type(height) == "number" then
+		return height
+	end
+	local body = model.PrimaryPart :: BasePart
+	return body.Size.Y / 2 + 0.3 + body.Size.Y * 0.1
+end
+
+-- لمعة سريعة على الوحش (لما يتضرب مثلاً)
+function PlotService.Flash(model: Model, color: Color3)
+	local flash = Instance.new("Highlight")
+	flash.Name = "HitFlash"
+	flash.FillColor = color
+	flash.FillTransparency = 0.3
+	flash.OutlineTransparency = 1
+	flash.DepthMode = Enum.HighlightDepthMode.Occluded
+	flash.Parent = model
+	task.delay(0.15, function()
+		flash:Destroy()
+	end)
+end
+
+local function weldTo(part: BasePart, target: BasePart, model: Model)
+	part.Anchored = false
+	part.CanCollide = false
+	part.Massless = true
+	part.Parent = model
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = target
+	weld.Part1 = part
+	weld.Parent = part
+end
+
+-- القبعة فوق الراس والنضارة قدام العينين، ملزوقين في الراس فبيتحركوا معاه
+local function addRigAccessories(model: Model, head: BasePart, monster: MonsterMath.MonsterData)
+	local k = math.max(head.Size.X, head.Size.Z) / 2.2
+	local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
+	local hat = monster.Hat and Config.Accessories[monster.Hat]
+	if hat then
+		local function hatPart(props: { [string]: any }, offset: CFrame)
+			local part = makePart(props)
+			part.CFrame = top * offset
+			weldTo(part, head, model)
+		end
+		local turn = CFrame.Angles(0, 0, math.rad(90))
+		if monster.Hat == "TopHat" then
+			hatPart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.4, 2.4) * k, Color = hat.Color }, CFrame.new(0, 0.1 * k, 0) * turn)
+			hatPart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 1.5, 1.5) * k, Color = hat.Color }, CFrame.new(0, 0.9 * k, 0) * turn)
+		elseif monster.Hat == "WizardHat" then
+			for i, width in { 2.2, 1.5, 0.9, 0.4 } do
+				hatPart({ Name = "Hat", Size = Vector3.new(width, 0.6, width) * k, Color = hat.Color }, CFrame.new(0, (0.3 + (i - 1) * 0.55) * k, 0) * CFrame.Angles(0, i * 0.3, 0))
+			end
+		elseif monster.Hat == "Crown" then
+			hatPart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 1.6, 1.6) * k, Color = hat.Color, Material = Enum.Material.Foil }, CFrame.new(0, 0.3 * k, 0) * turn)
+			for i = 0, 3 do
+				hatPart({ Name = "Hat", Size = Vector3.new(0.25, 0.6, 0.25) * k, Color = hat.Color, Material = Enum.Material.Foil }, CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, 0.8 * k, -0.65 * k))
+			end
+		else -- PartyHat
+			hatPart({ Name = "Hat", Size = Vector3.new(1, 1.6, 1) * k, Color = hat.Color }, CFrame.new(0, 0.8 * k, 0) * CFrame.Angles(0, math.rad(45), 0))
+			hatPart({ Name = "Hat", Shape = Enum.PartType.Ball, Size = Vector3.new(0.5, 0.5, 0.5) * k, Color = Color3.new(1, 1, 1) }, CFrame.new(0, 1.75 * k, 0))
+		end
+	end
+	local glasses = monster.Glasses and Config.Accessories[monster.Glasses]
+	if glasses then
+		local front = head.CFrame * CFrame.new(0, head.Size.Y * 0.15, -head.Size.Z / 2 - 0.06 * k)
+		local eyeX = head.Size.X * 0.24
+		local function lens(props: { [string]: any }, offset: CFrame)
+			local part = makePart(props)
+			part.CFrame = front * offset
+			weldTo(part, head, model)
+		end
+		if monster.Glasses == "Monocle" then
+			lens({ Name = "Glasses", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 0.9, 0.9) * k, Color = glasses.Color, Material = Enum.Material.Foil }, CFrame.new(eyeX, 0, 0) * CFrame.Angles(0, math.rad(90), 0))
+		else
+			local star = monster.Glasses == "StarGlasses"
+			for _, side in { -1, 1 } do
+				lens(
+					{ Name = "Glasses", Size = Vector3.new(0.85, 0.6, 0.1) * k, Color = glasses.Color, Material = if star then Enum.Material.Neon else Enum.Material.Glass },
+					CFrame.new(side * eyeX, 0, 0) * (if star then CFrame.Angles(0, 0, math.rad(45)) else CFrame.new())
+				)
+			end
+			lens({ Name = "Glasses", Size = Vector3.new(0.4, 0.12, 0.1) * k, Color = glasses.Color }, CFrame.new())
+		end
+	end
+end
+
+local function buildRiggedMonster(monster: MonsterMath.MonsterData, species: Config.Species): Model?
+	local info = species.Model
+	if not info then
+		return nil
+	end
+	local stageIndex = MonsterMath.GetStageIndex(monster.Level)
+	local model = MonsterModels.Get(info.Region, info.Index, RIG_STAGES[stageIndex] or "Adult")
+	if not model then
+		return nil
+	end
+	local extra = if stageIndex >= 4 then LEGENDARY_RIG_SCALE else 1
+	if extra ~= 1 then
+		model:ScaleTo(extra)
+	end
+	model.Name = monster.Id
+	model:SetAttribute("PivotHeight", (model:GetAttribute("Scale") or 1) * extra)
+	model:SetAttribute("AnimState", "Idle")
+	local root = model.PrimaryPart :: BasePart
+
+	-- الطفرة: لمعة باللون بتاعها (والـ Rainbow الكلاينت بيلوّنه)
+	local mutation = MonsterMath.GetMutation(monster.Mutation)
+	if mutation then
+		local glow = Instance.new("Highlight")
+		glow.Name = "MutationGlow"
+		glow.FillColor = mutation.Color or Color3.new(1, 1, 1)
+		glow.OutlineColor = mutation.Color or Color3.new(1, 1, 1)
+		glow.FillTransparency = 0.55
+		glow.DepthMode = Enum.HighlightDepthMode.Occluded
+		glow.Parent = model
+		if monster.Mutation == "Rainbow" then
+			CollectionService:AddTag(glow, "RainbowHighlight")
+		end
+	end
+
+	local head = (model:FindFirstChild("Head") or model:FindFirstChild("Body") or root) :: BasePart
+	addRigAccessories(model, head, monster)
+
+	local height = model:GetExtentsSize().Y
+	local gui, label = makeBillboard(root, UDim2.fromOffset(220, 70), Vector3.new(0, height - PlotService.PivotHeight(model) + 2, 0), 70)
+	gui.Name = "Info"
+	label.Name = "Label"
+	PlotService.UpdateMonsterLabelOn(label, monster)
+	return model
+end
+
 function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	local species = Config.Species[monster.Species]
+	local rigged = buildRiggedMonster(monster, species)
+	if rigged then
+		return rigged
+	end
 	local stage = MonsterMath.GetStage(monster.Level)
 	local mutation = MonsterMath.GetMutation(monster.Mutation)
 	local scale = stage.Scale
@@ -860,14 +1004,15 @@ function PlotService.RenderMonster(player: Player, monster: MonsterMath.MonsterD
 	local model = PlotService.BuildMonsterModel(monster)
 	local body = model.PrimaryPart :: BasePart
 	local slotCFrame = PlotService.GetSlotCFrame(plot, monster.Slot)
-	model:PivotTo(slotCFrame * CFrame.new(0, body.Size.Y / 2 + 0.3 + body.Size.Y * 0.1, 0))
+	model:PivotTo(slotCFrame * CFrame.new(0, PlotService.PivotHeight(model) + 0.2, 0))
+	local reach = 8 + model:GetExtentsSize().Y
 	model:SetAttribute("OwnerUserId", player.UserId)
 	model:SetAttribute("MonsterId", monster.Id)
 
 	local name = MonsterMath.GetDisplayName(monster)
 	local care = makePrompt(body, "CarePrompt", "Care", Enum.KeyCode.E, 0)
 	care.ObjectText = name
-	care.MaxActivationDistance = 8 + body.Size.Y
+	care.MaxActivationDistance = reach
 	local monsterId = monster.Id
 	care.Triggered:Connect(function(who)
 		PlotService.Callbacks.Care(who, player, monsterId)
@@ -876,7 +1021,7 @@ function PlotService.RenderMonster(player: Player, monster: MonsterMath.MonsterD
 	if Config.Steal.Enabled then
 		local steal = makePrompt(body, "StealPrompt", "Steal", Enum.KeyCode.F, Config.Steal.HoldDuration)
 		steal.ObjectText = name
-		steal.MaxActivationDistance = 8 + body.Size.Y
+		steal.MaxActivationDistance = reach
 		steal.Triggered:Connect(function(who)
 			PlotService.Callbacks.Steal(who, player, monsterId)
 		end)

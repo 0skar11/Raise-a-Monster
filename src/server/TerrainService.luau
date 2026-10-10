@@ -20,10 +20,11 @@ type Style = {
 local BASE_STYLE: Style = { Body = Enum.Material.Grass, Peak = Enum.Material.Rock, Cap = Enum.Material.Snow, Lava = false }
 -- بالترتيب زي Config.Zones
 local ZONE_STYLES: { Style } = {
-	{ Body = Enum.Material.Grass, Peak = Enum.Material.Grass, Cap = Enum.Material.Snow, Lava = false }, -- Meadow: تلال خضرا
-	{ Body = Enum.Material.Grass, Peak = Enum.Material.Rock, Cap = Enum.Material.Snow, Lava = false }, -- Forest: صخور
-	{ Body = Enum.Material.Basalt, Peak = Enum.Material.Basalt, Cap = nil, Lava = true }, -- Lava Canyon: منحدرات وحمم
-	{ Body = Enum.Material.Slate, Peak = Enum.Material.Slate, Cap = nil, Lava = false }, -- Shadow Realm: قمم بنفسجي
+	{ Body = Enum.Material.Grass, Peak = Enum.Material.Rock, Cap = Enum.Material.Snow, Lava = false }, -- Grassland: تلال خضرا
+	{ Body = Enum.Material.Sand, Peak = Enum.Material.Sandstone, Cap = nil, Lava = false }, -- Desert: كثبان وصخر رملي
+	{ Body = Enum.Material.Snow, Peak = Enum.Material.Glacier, Cap = Enum.Material.Snow, Lava = false }, -- Ice: جبال تلج
+	{ Body = Enum.Material.Basalt, Peak = Enum.Material.Basalt, Cap = nil, Lava = true }, -- Volcano: منحدرات وحمم
+	{ Body = Enum.Material.Slate, Peak = Enum.Material.Slate, Cap = nil, Lava = false }, -- Void: قمم بنفسجي
 }
 
 local SPACING = 26 -- المسافة بين الجبال على الحدود
