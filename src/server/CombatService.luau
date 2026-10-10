@@ -155,7 +155,6 @@ local function makeSword(passName: string): Tool
 	tool.CanBeDropped = false
 	return tool
 end
-
 -- بيدّي اللاعب أسلحته (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
 function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: boolean })
 	local backpack = player:FindFirstChildOfClass("Backpack")
