@@ -140,15 +140,6 @@ local function refresh()
 		ui.SlotsButton.BackgroundColor3 = UI.Colors.Gray
 	end
 
-	ui.LockInfo.Text = string.format("🔒 Base lock lasts %ds", state.LockDuration)
-	if state.NextLockCost then
-		ui.LockButton.Text = "+" .. Config.LockDurationPerUpgrade .. "s lock · 💰 " .. MonsterMath.FormatNumber(state.NextLockCost)
-		ui.LockButton.BackgroundColor3 = if state.Coins >= state.NextLockCost then UI.Colors.Green else UI.Colors.Gray
-	else
-		ui.LockButton.Text = "MAX"
-		ui.LockButton.BackgroundColor3 = UI.Colors.Gray
-	end
-
 	refreshMonsterPanel()
 	Features.Refresh()
 end
@@ -191,10 +182,6 @@ end
 ui.SlotsButton.Activated:Connect(function()
 	remotes.BuyUpgrade:FireServer("Slots")
 end)
-ui.LockButton.Activated:Connect(function()
-	remotes.BuyUpgrade:FireServer("Lock")
-end)
-
 ui.FeedButton.Activated:Connect(function()
 	if openMonsterId then
 		remotes.FeedMonster:FireServer(openMonsterId)

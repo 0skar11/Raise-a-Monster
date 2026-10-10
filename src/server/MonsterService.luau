@@ -811,12 +811,6 @@ function MonsterService.SetupPlayer(player: Player)
 	end
 	local data = profile.Data
 
-	-- أول مرة يلعب: بيضة مجانية عشان يبدأ على طول.
-	if next(data.Monsters) == nil and next(data.Eggs) == nil and data.Stats.Hatched == 0 then
-		local id = DataService.NewId(player)
-		data.Eggs[id] = { Id = id, EggType = "Basic", Slot = 1, HatchAt = os.time() + 5 }
-	end
-
 	PlotService.SetUnlockedSlots(player, MonsterService.GetUnlockedSlots(player))
 	for _, monster in data.Monsters do
 		PlotService.RenderMonster(player, monster)

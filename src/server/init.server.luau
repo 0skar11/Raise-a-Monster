@@ -89,7 +89,7 @@ remotes.Teleport.OnServerEvent:Connect(function(player: Player, where: unknown)
 	if where == "Home" then
 		PlotService.SendHome(player)
 	else
-		character:PivotTo(CFrame.new(PlotService.ShopPosition + Vector3.new(0, 4, 10)))
+		character:PivotTo(PlotService.ShopTeleportCFrame)
 	end
 end)
 
