@@ -578,17 +578,81 @@ Config.MiniGames = {
 	Run = { Duration = 15, Target = 160, MaxXp = 60 }, -- XP على حسب المسافة اللي جريتها
 }
 
--- إكسسوارات الوحوش -------------------------------------------------------------------------
-export type Accessory = { Name: string, Slot: string, Cost: number, Bonus: number, Color: Color3, Order: number }
-Config.Accessories = {
-	PartyHat = { Name = "Party Hat", Slot = "Hat", Cost = 300, Bonus = 0, Color = Color3.fromRGB(255, 90, 180), Order = 1 },
-	TopHat = { Name = "Top Hat", Slot = "Hat", Cost = 1500, Bonus = 0.03, Color = Color3.fromRGB(30, 30, 35), Order = 2 },
-	WizardHat = { Name = "Wizard Hat", Slot = "Hat", Cost = 8000, Bonus = 0.08, Color = Color3.fromRGB(90, 60, 200), Order = 3 },
-	Crown = { Name = "Crown", Slot = "Hat", Cost = 30000, Bonus = 0.15, Color = Color3.fromRGB(255, 205, 50), Order = 4 },
-	StarGlasses = { Name = "Star Glasses", Slot = "Glasses", Cost = 400, Bonus = 0, Color = Color3.fromRGB(255, 220, 60), Order = 5 },
-	CoolShades = { Name = "Cool Shades", Slot = "Glasses", Cost = 2500, Bonus = 0.05, Color = Color3.fromRGB(20, 20, 25), Order = 6 },
-	Monocle = { Name = "Monocle", Slot = "Glasses", Cost = 12000, Bonus = 0.1, Color = Color3.fromRGB(230, 190, 80), Order = 7 },
-} :: { [string]: Accessory }
+-- إكسسوارات الوحوش: كل وحش ليه قبعة ونضارة بتوعه هو بس، ولازم تشتريهم -------------------
+-- المفتاح "<نوع الوحش>_Hat" أو "<نوع الوحش>_Glasses"، وShape بيحدد شكلها في PlotService
+export type Accessory = {
+	Name: string,
+	Slot: string,
+	Shape: string,
+	Species: string,
+	Cost: number,
+	Bonus: number,
+	Color: Color3,
+	Order: number,
+}
+-- الشكل حسب ندرة الوحش: كل ما يندر الإكسسوار يبقى أشيك
+local ACCESSORY_SHAPES = {
+	Common = { Hat = "PartyHat", Glasses = "StarGlasses" },
+	Uncommon = { Hat = "TopHat", Glasses = "StarGlasses" },
+	Rare = { Hat = "TopHat", Glasses = "CoolShades" },
+	Epic = { Hat = "WizardHat", Glasses = "CoolShades" },
+	Legendary = { Hat = "Crown", Glasses = "Monocle" },
+	Mythic = { Hat = "Crown", Glasses = "Monocle" },
+	Secret = { Hat = "Crown", Glasses = "Monocle" },
+}
+local SHAPE_NAMES = {
+	PartyHat = "Party Hat",
+	TopHat = "Top Hat",
+	WizardHat = "Wizard Hat",
+	Crown = "Crown",
+	StarGlasses = "Star Glasses",
+	CoolShades = "Cool Shades",
+	Monocle = "Monocle",
+}
+Config.AccessoryHatCostSeconds = 300 -- القبعة بتمن 5 دقايق إنتاج الوحش وهو Baby
+Config.AccessoryGlassesCostSeconds = 200
+Config.AccessoryMinCost = 150
+Config.AccessoryHatBonus = 0.1 -- +10% فلوس
+Config.AccessoryGlassesBonus = 0.05
+Config.Accessories = {} :: { [string]: Accessory }
+do
+	local keys = {}
+	for key in Config.Species do
+		table.insert(keys, key)
+	end
+	table.sort(keys)
+	for order, key in keys do
+		local species = Config.Species[key]
+		local shapes = ACCESSORY_SHAPES[species.Rarity] or ACCESSORY_SHAPES.Common
+		local function cost(seconds: number): number
+			return math.max(Config.AccessoryMinCost, math.floor(species.BaseProduction * seconds / 10 + 0.5) * 10)
+		end
+		local hatColor = species.Color:Lerp(Color3.fromRGB(255, 70, 160), 0.35)
+		if shapes.Hat == "Crown" then
+			hatColor = Color3.fromRGB(255, 205, 50)
+		end
+		Config.Accessories[key .. "_Hat"] = {
+			Name = species.DisplayName .. " " .. SHAPE_NAMES[shapes.Hat],
+			Slot = "Hat",
+			Shape = shapes.Hat,
+			Species = key,
+			Cost = cost(Config.AccessoryHatCostSeconds),
+			Bonus = Config.AccessoryHatBonus,
+			Color = hatColor,
+			Order = order * 2 - 1,
+		}
+		Config.Accessories[key .. "_Glasses"] = {
+			Name = species.DisplayName .. " " .. SHAPE_NAMES[shapes.Glasses],
+			Slot = "Glasses",
+			Shape = shapes.Glasses,
+			Species = key,
+			Cost = cost(Config.AccessoryGlassesCostSeconds),
+			Bonus = Config.AccessoryGlassesBonus,
+			Color = if shapes.Glasses == "CoolShades" then Color3.fromRGB(20, 20, 25) else species.Color:Lerp(Color3.fromRGB(255, 220, 60), 0.6),
+			Order = order * 2,
+		}
+	end
+end
 
 -- Monster Arena: معارك 1 ضد 1. الكسبان بياخد فلوس والوحش اللي خسر --------------------------
 Config.Arena = {

@@ -36,7 +36,7 @@ export type Plot = {
 	Pedestals: { BasePart },
 	MonstersFolder: Folder,
 	EggsFolder: Folder,
-	Barrier: BasePart,
+	Barrier: BasePart?,
 	CollectorLabel: TextLabel,
 	LockLabel: TextLabel?, -- مش موجودين لما السرقة تبقى مقفولة
 	SignLabel: TextLabel,
@@ -539,28 +539,29 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 	collectorGui.AlwaysOnTop = false -- مايبانش من ورا القواعد التانية
 	collectorLabel.Text = "💰 0"
 
-	for _, side in { -1, 1 } do
-		block("SignPost", Vector3.new(0.6, 6, 0.6), Vector3.new(side * 5, FLOOR_TOP + 3, -29), {
-			Color = Color3.fromRGB(70, 50, 35),
-			Material = Enum.Material.Wood,
-		})
-	end
-	local signBoard = block("SignBoard", Vector3.new(10.6, 2.2, 0.4), Vector3.new(0, FLOOR_TOP + 5, -29), {
-		Color = baseColor,
-		Material = Enum.Material.SmoothPlastic,
+	-- اسم صاحب القاعدة عايم فوق قدامها (من غير يافطة)
+	local signAnchor = block("NameAnchor", Vector3.new(1, 1, 1), Vector3.new(0, FLOOR_TOP + 14, -27), {
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CastShadow = false,
 	})
-	local signGui, signLabel = makeBillboard(signBoard, UDim2.fromScale(22, 3.5), Vector3.new(0, 3.2, 0), 200)
+	local signGui, signLabel = makeBillboard(signAnchor, UDim2.fromScale(22, 3.5), Vector3.new(0, 0, 0), 200)
 	signGui.AlwaysOnTop = false -- عشان لافتات القواعد مايركبوش على بعض
 	signLabel.Text = "Empty Base"
 	signLabel.TextColor3 = baseColor:Lerp(Color3.new(1, 1, 1), 0.4)
 
-	-- حاجز القفل على حافة القاعدة القدامية (بيشتغل بس لو السرقة مفتوحة)
-	local barrier = block("LockBarrier", Vector3.new(PLOT_SIZE, 10, 1), Vector3.new(0, FLOOR_TOP + 5, -HALF), {
-		Color = Color3.fromRGB(255, 40, 40),
-		Material = Enum.Material.ForceField,
-		Transparency = 1,
-		CanCollide = false,
-	})
+	-- حاجز القفل على حافة القاعدة القدامية، بيتعمل بس لو السرقة مفتوحة
+	-- (خامة الـ ForceField بتنوّر خط على الأرض مكان ما بتلمسها حتى وهي شفافة)
+	local barrier: BasePart? = nil
+	if Config.Steal.Enabled then
+		barrier = block("LockBarrier", Vector3.new(PLOT_SIZE, 10, 1), Vector3.new(0, FLOOR_TOP + 5, -HALF), {
+			Color = Color3.fromRGB(255, 40, 40),
+			Material = Enum.Material.ForceField,
+			Transparency = 1,
+			CanCollide = false,
+		})
+	end
 
 	-- زرار القفل بيتعمل بس لو السرقة شغالة
 	local lockLabel: TextLabel? = nil
@@ -691,14 +692,14 @@ local function addRigAccessories(model: Model, head: BasePart, monster: MonsterM
 			weldTo(part, head, model)
 		end
 		local turn = CFrame.Angles(0, 0, math.rad(90))
-		if monster.Hat == "TopHat" then
+		if hat.Shape == "TopHat" then
 			hatPart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.4, 2.4) * k, Color = hat.Color }, CFrame.new(0, 0.1 * k, 0) * turn)
 			hatPart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 1.5, 1.5) * k, Color = hat.Color }, CFrame.new(0, 0.9 * k, 0) * turn)
-		elseif monster.Hat == "WizardHat" then
+		elseif hat.Shape == "WizardHat" then
 			for i, width in { 2.2, 1.5, 0.9, 0.4 } do
 				hatPart({ Name = "Hat", Size = Vector3.new(width, 0.6, width) * k, Color = hat.Color }, CFrame.new(0, (0.3 + (i - 1) * 0.55) * k, 0) * CFrame.Angles(0, i * 0.3, 0))
 			end
-		elseif monster.Hat == "Crown" then
+		elseif hat.Shape == "Crown" then
 			hatPart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 1.6, 1.6) * k, Color = hat.Color, Material = Enum.Material.Foil }, CFrame.new(0, 0.3 * k, 0) * turn)
 			for i = 0, 3 do
 				hatPart({ Name = "Hat", Size = Vector3.new(0.25, 0.6, 0.25) * k, Color = hat.Color, Material = Enum.Material.Foil }, CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, 0.8 * k, -0.65 * k))
@@ -717,10 +718,10 @@ local function addRigAccessories(model: Model, head: BasePart, monster: MonsterM
 			part.CFrame = front * offset
 			weldTo(part, head, model)
 		end
-		if monster.Glasses == "Monocle" then
+		if glasses.Shape == "Monocle" then
 			lens({ Name = "Glasses", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 0.9, 0.9) * k, Color = glasses.Color, Material = Enum.Material.Foil }, CFrame.new(eyeX, 0, 0) * CFrame.Angles(0, math.rad(90), 0))
 		else
-			local star = monster.Glasses == "StarGlasses"
+			local star = glasses.Shape == "StarGlasses"
 			for _, side in { -1, 1 } do
 				lens(
 					{ Name = "Glasses", Size = Vector3.new(0.85, 0.6, 0.1) * k, Color = glasses.Color, Material = if star then Enum.Material.Neon else Enum.Material.Glass },
@@ -882,7 +883,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 			attach(wing, CFrame.new(side * 1.6 * scale, 0.3 * scale, 0.6 * scale) * CFrame.Angles(0, 0, side * 0.5))
 		end
 	end
-	if stage.Name == "Legendary" and not monster.Hat then
+	if stage.Name == "Legendary" and not (monster.Hat and Config.Accessories[monster.Hat]) then
 		local crown = makePart({
 			Name = "Crown",
 			Shape = Enum.PartType.Cylinder,
@@ -901,14 +902,14 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	local hat = monster.Hat and Config.Accessories[monster.Hat]
 	if hat then
 		local hatProps = { Color = hat.Color, Material = Enum.Material.SmoothPlastic }
-		if monster.Hat == "TopHat" then
+		if hat.Shape == "TopHat" then
 			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.4, 2.4) * scale, Color = hat.Color }), CFrame.new(0, top + 0.1 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
 			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 1.5, 1.5) * scale, Color = hat.Color }), CFrame.new(0, top + 0.9 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
-		elseif monster.Hat == "WizardHat" then
+		elseif hat.Shape == "WizardHat" then
 			for i, width in { 2.2, 1.5, 0.9, 0.4 } do
 				attach(makePart({ Name = "Hat", Size = Vector3.new(width, 0.6, width) * scale, Color = hat.Color, Material = hatProps.Material }), CFrame.new(0, top + (0.2 + (i - 1) * 0.55) * scale, 0) * CFrame.Angles(0, i * 0.3, 0))
 			end
-		elseif monster.Hat == "Crown" then
+		elseif hat.Shape == "Crown" then
 			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 1.6, 1.6) * scale, Color = hat.Color, Material = Enum.Material.Foil }), CFrame.new(0, top + 0.3 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
 			for i = 0, 3 do
 				attach(makePart({ Name = "Hat", Size = Vector3.new(0.25, 0.6, 0.25) * scale, Color = hat.Color, Material = Enum.Material.Foil }), CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, top + 0.8 * scale, -0.65 * scale))
@@ -922,12 +923,12 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	if glasses then
 		local front = -1.7 * scale
 		local eyeY = 0.4 * scale
-		if monster.Glasses == "Monocle" then
+		if glasses.Shape == "Monocle" then
 			attach(makePart({ Name = "Glasses", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 0.9, 0.9) * scale, Color = glasses.Color, Material = Enum.Material.Foil }), CFrame.new(0.6 * scale, eyeY, front) * CFrame.Angles(0, math.rad(90), 0))
 		else
 			for _, side in { -1, 1 } do
-				local lens = makePart({ Name = "Glasses", Size = Vector3.new(0.85, 0.6, 0.1) * scale, Color = glasses.Color, Material = if monster.Glasses == "StarGlasses" then Enum.Material.Neon else Enum.Material.Glass })
-				attach(lens, CFrame.new(side * 0.6 * scale, eyeY, front) * (if monster.Glasses == "StarGlasses" then CFrame.Angles(0, 0, math.rad(45)) else CFrame.new()))
+				local lens = makePart({ Name = "Glasses", Size = Vector3.new(0.85, 0.6, 0.1) * scale, Color = glasses.Color, Material = if glasses.Shape == "StarGlasses" then Enum.Material.Neon else Enum.Material.Glass })
+				attach(lens, CFrame.new(side * 0.6 * scale, eyeY, front) * (if glasses.Shape == "StarGlasses" then CFrame.Angles(0, 0, math.rad(45)) else CFrame.new()))
 			end
 			attach(makePart({ Name = "Glasses", Size = Vector3.new(0.4, 0.12, 0.1) * scale, Color = glasses.Color }), CFrame.new(0, eyeY, front))
 		end
@@ -1131,7 +1132,9 @@ function PlotService.SetPending(player: Player, amount: number)
 end
 
 function PlotService.SetLockVisual(plot: Plot, locked: boolean, text: string)
-	plot.Barrier.Transparency = if locked then 0.35 else 1
+	if plot.Barrier then
+		plot.Barrier.Transparency = if locked then 0.35 else 1
+	end
 	if plot.LockLabel then
 		plot.LockLabel.Text = text
 	end

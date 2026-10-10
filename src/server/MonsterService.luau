@@ -546,7 +546,7 @@ end
 
 -- الإكسسوارات ------------------------------------------------------------------------------
 
-local function buyAccessory(player: Player, name: unknown)
+local function buyAccessory(player: Player, name: unknown, monsterId: unknown)
 	if rateLimited(player) or type(name) ~= "string" then
 		return
 	end
@@ -564,7 +564,17 @@ local function buyAccessory(player: Player, name: unknown)
 		return
 	end
 	profile.Data.Accessories[name] = true
-	MonsterService.Notify(player, "👒 You bought " .. accessory.Name .. "! Put it on any monster.", "success")
+	MonsterService.Notify(player, "👒 You bought " .. accessory.Name .. "!", "success")
+	-- بيلبسها على طول للوحش اللي اشتراها عشانه
+	local monster = getOwnMonster(player, monsterId)
+	if monster and monster.Species == accessory.Species then
+		if accessory.Slot == "Hat" then
+			monster.Hat = name
+		else
+			monster.Glasses = name
+		end
+		PlotService.UpdateMonster(player, monster, true)
+	end
 	MonsterService.PushState(player)
 end
 
@@ -583,7 +593,7 @@ local function equipAccessory(player: Player, monsterId: unknown, slot: unknown,
 			return
 		end
 		local accessory = Config.Accessories[name]
-		if not accessory or accessory.Slot ~= slot or not profile.Data.Accessories[name] then
+		if not accessory or accessory.Slot ~= slot or accessory.Species ~= monster.Species or not profile.Data.Accessories[name] then
 			return
 		end
 		chosen = name
