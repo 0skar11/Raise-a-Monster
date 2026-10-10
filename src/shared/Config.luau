@@ -466,18 +466,20 @@ Config.MotherDamageByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2
 Config.MotherHealthByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3, Mythic = 4 }
 Config.BabiesPerNest = 3
 
+Config.PlayerBaseHealth = 100
+Config.Shop = { Position = Vector3.new(20, 0, -205), TeleportOffset = Vector3.new(0, 4, 16) }
 Config.WalkSpeed = 25 -- سرعة المشي ثابتة (الافتراضي في Roblox 16)
 
 Config.SpeedAccessories = {
-	SwiftSneakers = { Name = "Swift Sneakers", Description = "Blue neon sneakers", Price = 1500, Multiplier = 1.05, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
-	FlameBoots = { Name = "Flame Boots", Description = "Boots with a fiery trail", Price = 3000, Multiplier = 1.08, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
-	IceSkates = { Name = "Ice Skates", Description = "Frozen skates that glide", Price = 6000, Multiplier = 1.10, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
-	WindScarf = { Name = "Wind Scarf", Description = "A scarf carried by the wind", Price = 10000, Multiplier = 1.12, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
-	LightningBoots = { Name = "Lightning Boots", Description = "Boots charged with lightning", Price = 15000, Multiplier = 1.15, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
-	ShadowCloak = { Name = "Shadow Cloak", Description = "A cloak that moves like smoke", Price = 22000, Multiplier = 1.18, Order = 6, Color = Color3.fromRGB(125, 75, 210) },
-	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 32000, Multiplier = 1.22, Order = 7, Color = Color3.fromRGB(195, 80, 255) },
-	GoldenWings = { Name = "Golden Wings", Description = "Radiant wings for maximum speed", Price = 50000, Multiplier = 1.30, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
-} :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, Order: number, Color: Color3 } }
+	SwiftSneakers = { Name = "Swift Sneakers", Description = "Blue neon sneakers", Price = 500, Multiplier = 1.05, HealthBonus = 15, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
+	FlameBoots = { Name = "Flame Boots", Description = "Boots with a fiery trail", Price = 1500, Multiplier = 1.08, HealthBonus = 30, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
+	IceSkates = { Name = "Ice Skates", Description = "Frozen skates that glide", Price = 3500, Multiplier = 1.10, HealthBonus = 50, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
+	WindScarf = { Name = "Wind Scarf", Description = "A scarf carried by the wind", Price = 7000, Multiplier = 1.12, HealthBonus = 75, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
+	LightningBoots = { Name = "Lightning Boots", Description = "Boots charged with lightning", Price = 14000, Multiplier = 1.15, HealthBonus = 100, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
+	ShadowCloak = { Name = "Shadow Cloak", Description = "A cloak that moves like smoke", Price = 28000, Multiplier = 1.18, HealthBonus = 140, Order = 6, Color = Color3.fromRGB(125, 75, 210) },
+	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 55000, Multiplier = 1.22, HealthBonus = 190, Order = 7, Color = Color3.fromRGB(195, 80, 255) },
+	GoldenWings = { Name = "Golden Wings", Description = "Radiant wings for maximum speed", Price = 100000, Multiplier = 1.30, HealthBonus = 250, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
+} :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, HealthBonus: number, Order: number, Color: Color3 } }
 
 -- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
 Config.Carry = {
@@ -544,14 +546,15 @@ Config.WeaponStats = {
 	LavaSword = { Template = "LavaSword", DamageMultiplier = 3.5, ExtraReach = 4 },
 } :: { [string]: { Template: string, DamageMultiplier: number, ExtraReach: number } }
 -- معدات القتال تُشترى بعملات اللعبة من المتجر، مش بـ Robux.
+-- Early upgrades are affordable; later tiers follow the five-zone economy.
 Config.WeaponCoinPrices = {
-	IronBat = 1500,
-	IronSword = 2500,
-	ForestSword = 6000,
-	DesertSword = 12000,
-	IceSword = 30000,
-	VIPSword = 45000,
-	LavaSword = 65000,
+	IronBat = 300,
+	IronSword = 800,
+	ForestSword = 2500,
+	DesertSword = 7500,
+	IceSword = 20000,
+	VIPSword = 40000,
+	LavaSword = 80000,
 } :: { [string]: number }
 Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
 

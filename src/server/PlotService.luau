@@ -109,10 +109,10 @@ local function buildGround()
 	})
 end
 
--- Keep the egg shop in the center of the plaza, beside the zone entrance.
-local SHOP_ORIGIN = Vector3.new(20, 0, 0)
+-- Left of the entrance, against the plaza wall, opposite the arena.
+local SHOP_ORIGIN = Config.Shop.Position
 PlotService.ShopPosition = SHOP_ORIGIN
-PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_ORIGIN + Vector3.new(0, 4, 16), SHOP_ORIGIN)
+PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_ORIGIN + Config.Shop.TeleportOffset, SHOP_ORIGIN + Vector3.new(0, Config.Shop.TeleportOffset.Y, 0))
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
@@ -171,11 +171,11 @@ local function buildShop()
 	end
 
 	local _, title = makeBillboard(counter, UDim2.fromOffset(260, 60), Vector3.new(0, 10, 0))
-	title.Text = "🥚 EGG SHOP 🥚"
+	title.Text = "⚔️ GEAR SHOP ⚔️"
 	title.TextColor3 = Color3.fromRGB(255, 230, 120)
 
 	local prompt = makePrompt(counter, "ShopPrompt", "Open Shop", Enum.KeyCode.E, 0)
-	prompt.ObjectText = "Egg Shop"
+	prompt.ObjectText = "Gear Shop"
 	prompt.MaxActivationDistance = 14
 	prompt.Triggered:Connect(function(player)
 		PlotService.Callbacks.OpenShop(player)

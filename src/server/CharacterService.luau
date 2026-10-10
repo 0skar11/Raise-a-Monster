@@ -52,6 +52,7 @@ end
 
 -- سرعة المشي = Config.WalkSpeed × كل العوامل (شايل وحش، Speed Boost، ...)
 local speedFactors: { [Player]: { [string]: number } } = {}
+local healthBonuses: { [Player]: number } = {}
 
 function CharacterService.UpdateSpeed(player: Player)
 	local character = player.Character
@@ -76,7 +77,25 @@ function CharacterService.SetSpeedFactor(player: Player, reason: string, factor:
 	CharacterService.UpdateSpeed(player)
 end
 
+function CharacterService.UpdateHealth(player: Player)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	local maximum = Config.PlayerBaseHealth + (healthBonuses[player] or 0)
+	if humanoid.MaxHealth == maximum then return end
+	-- Preserve current health percentage: buying gear never revives a dead player.
+	local fraction = if humanoid.MaxHealth > 0 then math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1) else 0
+	humanoid.MaxHealth = maximum
+	humanoid.Health = maximum * fraction
+end
+
 function CharacterService.ApplySpeedAccessory(player: Player, owned: { [string]: boolean })
+	local bonus = 0
+	for name, accessory in Config.SpeedAccessories do
+		if owned[name] then bonus = math.max(bonus, accessory.HealthBonus) end
+	end
+	healthBonuses[player] = bonus
+	CharacterService.UpdateHealth(player)
 	local multiplier = CharacterService.GetSpeedAccessoryMultiplier(owned)
 	CharacterService.SetSpeedFactor(player, "SpeedAccessory", if multiplier > 1 then multiplier else nil)
 end
@@ -94,6 +113,7 @@ end
 function CharacterService.Cleanup(player: Player)
 	descriptions[player] = nil
 	speedFactors[player] = nil
+	healthBonuses[player] = nil
 end
 
 function CharacterService.Init()
