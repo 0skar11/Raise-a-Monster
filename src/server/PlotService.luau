@@ -109,9 +109,10 @@ local function buildGround()
 	})
 end
 
-local SHOP_ORIGIN = Vector3.new(20, 0, -100)
+-- Keep the egg shop in the center of the plaza, beside the zone entrance.
+local SHOP_ORIGIN = Vector3.new(20, 0, 0)
 PlotService.ShopPosition = SHOP_ORIGIN
-PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_ORIGIN + Vector3.new(0, 4, 11), SHOP_ORIGIN)
+PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_ORIGIN + Vector3.new(0, 4, 16), SHOP_ORIGIN)
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
