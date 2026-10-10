@@ -111,6 +111,7 @@ end
 
 local SHOP_ORIGIN = Vector3.new(20, 0, -100)
 PlotService.ShopPosition = SHOP_ORIGIN
+PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_ORIGIN + Vector3.new(0, 4, 11), SHOP_ORIGIN)
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
@@ -125,6 +126,7 @@ local function buildShop()
 		Material = Enum.Material.Wood,
 		Parent = shopModel,
 	})
+	shopModel.PrimaryPart = counter
 	makePart({
 		Name = "Roof",
 		Size = Vector3.new(20, 1, 10),
@@ -177,6 +179,11 @@ local function buildShop()
 	prompt.Triggered:Connect(function(player)
 		PlotService.Callbacks.OpenShop(player)
 	end)
+	for _, part in shopModel:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+		end
+	end
 
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "CenterSpawn"

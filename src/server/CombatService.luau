@@ -142,6 +142,7 @@ local function makeBat(): Tool
 	local tool = cloneWeaponTemplate("WoodenBat")
 	tool.Name = "Bat"
 	tool.ToolTip = "Hit the mother monsters!"
+	tool.Grip = CFrame.Angles(math.rad(35), 0, 0)
 	tool.CanBeDropped = false
 	return tool
 end

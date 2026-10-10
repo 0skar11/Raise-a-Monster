@@ -351,6 +351,9 @@ end
 
 local function buildRewards()
 	local frame = newPanel("Rewards", UDim2.fromOffset(820, 470), "🎁 Rewards", COLORS.Yellow)
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.82
+	scale.Parent = frame
 	rewardsButton.Activated:Connect(function()
 		UI.Toggle(ui, frame)
 	end)

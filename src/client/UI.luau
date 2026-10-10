@@ -36,8 +36,6 @@ export type UI = {
 	UpgradesFrame: Frame,
 	SlotsInfo: TextLabel,
 	SlotsButton: TextButton,
-	LockInfo: TextLabel,
-	LockButton: TextButton,
 	MonsterFrame: Frame,
 	MonsterName: TextLabel,
 	MonsterInfo: TextLabel,
@@ -272,15 +270,12 @@ function UI.Create(playerGui: PlayerGui): UI
 	end
 
 	-- الترقيات ----------------------------------------------------------------------
-	local upgradesFrame = panel(gui, "Upgrades", UDim2.fromOffset(460, 300), "⬆️ Upgrades", COLORS.Blue)
+	local upgradesFrame = panel(gui, "Upgrades", UDim2.fromOffset(460, 190), "⬆️ Upgrades", COLORS.Blue)
 	table.insert(panels, upgradesFrame)
 
 	local slotsInfo = label(upgradesFrame, "", UDim2.new(1, -32, 0, 50), UDim2.fromOffset(16, 60), 18)
 	slotsInfo.TextXAlignment = Enum.TextXAlignment.Left
 	local slotsButton = button(upgradesFrame, "", COLORS.Green, UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 112))
-	local lockInfo = label(upgradesFrame, "", UDim2.new(1, -32, 0, 50), UDim2.fromOffset(16, 166), 18)
-	lockInfo.TextXAlignment = Enum.TextXAlignment.Left
-	local lockButton = button(upgradesFrame, "", COLORS.Green, UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 218))
 
 	-- لوحة الوحش ------------------------------------------------------------------
 	local monsterFrame, monsterName = panel(gui, "Monster", UDim2.fromOffset(440, 468), "", COLORS.Green)
@@ -333,8 +328,6 @@ function UI.Create(playerGui: PlayerGui): UI
 		UpgradesFrame = upgradesFrame,
 		SlotsInfo = slotsInfo,
 		SlotsButton = slotsButton,
-		LockInfo = lockInfo,
-		LockButton = lockButton,
 		MonsterFrame = monsterFrame,
 		MonsterName = monsterName,
 		MonsterInfo = monsterInfo,
