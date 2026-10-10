@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UI = require(script.UI)
+local Features = require(script.Features)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -18,6 +19,12 @@ local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
 local state: any = nil
 local openMonsterId: string? = nil
 local sellConfirmUntil = 0
+
+Features.Init(ui, remotes, function()
+	return state
+end, function()
+	return openMonsterId
+end)
 
 -- تحديث الواجهة ---------------------------------------------------------------------
 
@@ -86,10 +93,10 @@ local function refreshMonsterPanel()
 	ui.FeedButton.BackgroundColor3 = if state.Coins >= monster.FoodCost then UI.Colors.Orange else UI.Colors.Gray
 
 	if monster.PlayReadyIn > 0 then
-		ui.PlayButton.Text = string.format("🎾 Play (%ds)", math.ceil(monster.PlayReadyIn))
+		ui.PlayButton.Text = string.format("🎮 Play (%ds)", math.ceil(monster.PlayReadyIn))
 		ui.PlayButton.BackgroundColor3 = UI.Colors.Gray
 	else
-		ui.PlayButton.Text = "🎾 Play"
+		ui.PlayButton.Text = "🎮 Mini-game"
 		ui.PlayButton.BackgroundColor3 = UI.Colors.Pink
 	end
 
@@ -142,6 +149,7 @@ local function refresh()
 	end
 
 	refreshMonsterPanel()
+	Features.Refresh()
 end
 
 -- الأحداث -------------------------------------------------------------------------------
@@ -189,11 +197,6 @@ end)
 ui.FeedButton.Activated:Connect(function()
 	if openMonsterId then
 		remotes.FeedMonster:FireServer(openMonsterId)
-	end
-end)
-ui.PlayButton.Activated:Connect(function()
-	if openMonsterId then
-		remotes.PlayMonster:FireServer(openMonsterId)
 	end
 end)
 ui.SellButton.Activated:Connect(function()
@@ -272,4 +275,4 @@ task.spawn(function()
 	end
 end)
 
-UI.Toast(ui, "Welcome to Raise a Monster! Hatch your egg, care for your monster and steal others' 👀", "info")
+UI.Toast(ui, "Welcome to Raise a Monster! Hatch your egg, hunt monsters with your bat and carry them home 🏃", "info")

@@ -25,7 +25,10 @@ export type PlayerData = {
 	SlotUpgrades: number,
 	LockUpgrades: number,
 	NextId: number,
-	Stats: { Hatched: number, Steals: number, TimesRobbed: number },
+	Stats: { Hatched: number, Steals: number, TimesRobbed: number, ArenaWins: number },
+	Accessories: { [string]: boolean }, -- الإكسسوارات اللي اللاعب اشتراها
+	Daily: { LastClaim: number, Streak: number },
+	LastSpin: number,
 }
 
 export type Profile = {
@@ -43,7 +46,10 @@ local DEFAULT_DATA: PlayerData = {
 	SlotUpgrades = 0,
 	LockUpgrades = 0,
 	NextId = 1,
-	Stats = { Hatched = 0, Steals = 0, TimesRobbed = 0 },
+	Stats = { Hatched = 0, Steals = 0, TimesRobbed = 0, ArenaWins = 0 },
+	Accessories = {},
+	Daily = { LastClaim = 0, Streak = 0 },
+	LastSpin = 0,
 }
 
 local MAX_RETRIES = 3

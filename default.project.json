@@ -2,6 +2,14 @@
   "name": "Raise-a-Monster",
   "tree": {
     "$className": "DataModel",
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "GlobalShadows": true,
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 1
+      }
+    },
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"

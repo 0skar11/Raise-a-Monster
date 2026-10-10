@@ -11,6 +11,8 @@ local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local Build = require(script.Parent.Build)
 local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
+local CombatService = require(script.Parent.CombatService)
+local CarryService = require(script.Parent.CarryService)
 
 local makePart = Build.MakePart
 local makeBillboard = Build.MakeBillboard
@@ -38,14 +40,18 @@ type Nest = {
 	HealthText: TextLabel?,
 	Babies: { BasePart },
 	Damagers: { [Player]: number },
+	Target: CombatService.Target?,
 }
 
 local ZoneService = {}
 
+-- حدود المناطق (الجبال بتلف حواليها)
+ZoneService.ZoneHalfZ = ZONE_HALF_Z
+ZoneService.ZonesEndX = PlotService.ZonesStartX + #Config.Zones * ZONE_LENGTH
+
 local zonesFolder: Folder
 local nests: { Nest } = {}
 local gateLabels: { { Label: TextLabel, Title: string } } = {}
-local lastAttack: { [Player]: number } = {}
 local nextResetAt = 0
 
 local function zoneStartX(index: number): number
@@ -276,6 +282,7 @@ local function buildZone(index: number, zone: Config.Zone)
 			HealthText = nil,
 			Babies = {},
 			Damagers = {},
+			Target = nil,
 		})
 	end
 
@@ -307,6 +314,8 @@ end
 local function killMother(nest: Nest, killer: Player)
 	nest.Alive = false
 	nest.Health = 0
+	CombatService.Unregister(nest.Target)
+	nest.Target = nil
 	if nest.Mother then
 		nest.Mother:Destroy()
 		nest.Mother = nil
@@ -336,25 +345,13 @@ local function killMother(nest: Nest, killer: Player)
 	end
 end
 
-local function attack(player: Player, nest: Nest)
+local function attack(player: Player, nest: Nest, damage: number)
 	if not nest.Alive then
 		return
 	end
-	local now = os.clock()
-	if lastAttack[player] and now - lastAttack[player] < Config.Combat.AttackCooldown then
-		return
-	end
-	lastAttack[player] = now
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then
-		return
-	end
-
-	local damage = MonsterService.GetAttackDamage(player)
 	nest.Health -= damage
 	nest.Damagers[player] = (nest.Damagers[player] or 0) + damage
-	nest.LastHit = now
+	nest.LastHit = os.clock()
 
 	local mother = nest.Mother
 	if mother then
@@ -373,6 +370,7 @@ local function attack(player: Player, nest: Nest)
 	end
 end
 
+-- الصغير بيتشال على ضهرك، ولازم توصله قاعدتك عشان يبقى بتاعك
 local function take(player: Player, nest: Nest, baby: BasePart)
 	if nest.Alive or not baby.Parent or not nest.Species then
 		return
@@ -381,7 +379,8 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 		MonsterService.Notify(player, "Help defeat the mother first to take her babies!", "error")
 		return
 	end
-	if MonsterService.GiveMonster(player, nest.Species :: string) then
+	local cargo: CarryService.Cargo = { Kind = "Monster", Species = nest.Species, Mutation = MonsterService.RollMutation(1) }
+	if CarryService.StartCarry(player, cargo) then
 		baby:Destroy()
 		local index = table.find(nest.Babies, baby)
 		if index then
@@ -391,6 +390,8 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 end
 
 local function clearNest(nest: Nest)
+	CombatService.Unregister(nest.Target)
+	nest.Target = nil
 	nest.Folder:ClearAllChildren()
 	nest.Mother = nil
 	nest.HealthFill = nil
@@ -434,7 +435,7 @@ local function spawnNest(nest: Nest)
 	gui.Name = "Info"
 	gui.AlwaysOnTop = false
 	label.Size = UDim2.fromScale(1, 0.6)
-	label.Text = string.format('<font color="%s">%s</font> · MOTHER', rarityHex(species), name)
+	label.Text = string.format('<font color="%s">%s</font> · MOTHER\n🏏 Hit her with your bat', rarityHex(species), name)
 
 	local bar = Instance.new("Frame")
 	bar.Name = "HealthBar"
@@ -463,12 +464,14 @@ local function spawnNest(nest: Nest)
 	nest.HealthText = hpText
 	updateHealthBar(nest)
 
-	local attackPrompt = makePrompt(mother, "AttackPrompt", "Attack", Enum.KeyCode.E, 0)
-	attackPrompt.ObjectText = name .. " (Mother)"
-	attackPrompt.MaxActivationDistance = 8 + size
-	attackPrompt.Triggered:Connect(function(player)
-		attack(player, nest)
-	end)
+	-- المضرب بيضربها لما تبقى قريب منها
+	nest.Target = CombatService.Register({
+		Part = mother,
+		Radius = size / 2,
+		OnHit = function(player: Player, damage: number)
+			attack(player, nest, damage)
+		end,
+	})
 
 	for i = 1, Config.BabiesPerNest do
 		local angle = (i / Config.BabiesPerNest) * math.pi * 2
@@ -541,7 +544,6 @@ local function updateGateTimers()
 end
 
 function ZoneService.CleanupPlayer(player: Player)
-	lastAttack[player] = nil
 	for _, nest in nests do
 		nest.Damagers[player] = nil
 	end

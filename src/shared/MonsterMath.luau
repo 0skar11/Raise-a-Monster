@@ -12,6 +12,8 @@ export type MonsterData = {
 	Hunger: number,
 	Happiness: number,
 	Slot: number,
+	Hat: string?, -- إكسسوارات (Config.Accessories)
+	Glasses: string?,
 }
 
 local MonsterMath = {}
@@ -47,6 +49,18 @@ function MonsterMath.GetMutationMultiplier(name: string?): number
 	return if mutation then mutation.Multiplier else 1
 end
 
+-- الزيادة في الإنتاج من القبعة والنضارة (0.15 = +15%)
+function MonsterMath.GetAccessoryBonus(monster: MonsterData): number
+	local bonus = 0
+	for _, name in { monster.Hat, monster.Glasses } do
+		local accessory = name and Config.Accessories[name]
+		if accessory then
+			bonus += accessory.Bonus
+		end
+	end
+	return bonus
+end
+
 -- Coins في الثانية
 function MonsterMath.GetProduction(monster: MonsterData): number
 	local species = Config.Species[monster.Species]
@@ -59,6 +73,7 @@ function MonsterMath.GetProduction(monster: MonsterData): number
 		* stage.ProductionMultiplier
 		* levelBonus
 		* MonsterMath.GetMutationMultiplier(monster.Mutation)
+		* (1 + MonsterMath.GetAccessoryBonus(monster))
 	if monster.Hunger < Config.LowNeedsThreshold or monster.Happiness < Config.LowNeedsThreshold then
 		production *= Config.LowNeedsProductionMultiplier
 	end
