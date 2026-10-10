@@ -30,6 +30,8 @@ export type UI = {
 	ShopButton: TextButton,
 	UpgradesButton: TextButton,
 	ShopFrame: Frame,
+	ShopScroll: ScrollingFrame,
+	ShopContentBottom: number,
 	EggButtons: { [string]: TextButton },
 	UpgradesFrame: Frame,
 	SlotsInfo: TextLabel,
@@ -45,6 +47,7 @@ export type UI = {
 	ProductionLabel: TextLabel,
 	FeedButton: TextButton,
 	PlayButton: TextButton,
+	AccessoriesButton: TextButton,
 	SellButton: TextButton,
 	Toasts: Frame,
 	Panels: { Frame },
@@ -189,8 +192,18 @@ function UI.Create(playerGui: PlayerGui): UI
 	local panels: { Frame } = {}
 
 	-- المتجر -------------------------------------------------------------------
-	local shopFrame = panel(gui, "Shop", UDim2.fromOffset(640, 380), "🥚 Egg Shop", COLORS.Pink)
+	local shopFrame = panel(gui, "Shop", UDim2.fromOffset(700, 560), "🥚 Shop", COLORS.Pink)
 	table.insert(panels, shopFrame)
+	local shopScroll = Instance.new("ScrollingFrame")
+	shopScroll.Name = "Content"
+	shopScroll.Position = UDim2.fromOffset(0, 56)
+	shopScroll.Size = UDim2.new(1, 0, 1, -64)
+	shopScroll.BackgroundTransparency = 1
+	shopScroll.BorderSizePixel = 0
+	shopScroll.ScrollBarThickness = 8
+	shopScroll.CanvasSize = UDim2.fromOffset(0, 0)
+	shopScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	shopScroll.Parent = shopFrame
 	local eggButtons: { [string]: TextButton } = {}
 	local sortedEggs = {}
 	for _, eggType in Config.ShopEggs do
@@ -200,16 +213,16 @@ function UI.Create(playerGui: PlayerGui): UI
 		end
 	end
 	if #sortedEggs == 0 then
-		local empty = label(shopFrame, "Coming soon...", UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, 0.5, -30), 32)
+		local empty = label(shopScroll, "🥚 Eggs: coming soon...", UDim2.new(1, -40, 0, 60), UDim2.fromOffset(20, 10), 28)
 		empty.TextColor3 = COLORS.SubText
 	end
 	for i, entry in sortedEggs do
 		local egg = entry.Egg
 		local card = Instance.new("Frame")
 		card.Size = UDim2.fromOffset(196, 300)
-		card.Position = UDim2.fromOffset(16 + (i - 1) * 206, 60)
+		card.Position = UDim2.fromOffset(16 + (i - 1) * 206, 4)
 		card.BackgroundColor3 = COLORS.PanelLight
-		card.Parent = shopFrame
+		card.Parent = shopScroll
 		corner(card, 12)
 		stroke(card, egg.Color, 2)
 
@@ -270,7 +283,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	local lockButton = button(upgradesFrame, "", COLORS.Green, UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 218))
 
 	-- لوحة الوحش ------------------------------------------------------------------
-	local monsterFrame, monsterName = panel(gui, "Monster", UDim2.fromOffset(440, 420), "", COLORS.Green)
+	local monsterFrame, monsterName = panel(gui, "Monster", UDim2.fromOffset(440, 468), "", COLORS.Green)
 	table.insert(panels, monsterFrame)
 	local monsterInfo = label(monsterFrame, "", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 52), 18)
 	monsterInfo.TextXAlignment = Enum.TextXAlignment.Left
@@ -290,7 +303,8 @@ function UI.Create(playerGui: PlayerGui): UI
 
 	local feedButton = button(monsterFrame, "", COLORS.Orange, UDim2.fromOffset(196, 48), UDim2.fromOffset(16, 304))
 	local playButton = button(monsterFrame, "", COLORS.Pink, UDim2.fromOffset(196, 48), UDim2.fromOffset(228, 304))
-	local sellButton = button(monsterFrame, "", COLORS.Red, UDim2.new(1, -32, 0, 44), UDim2.fromOffset(16, 362))
+	local accessoriesButton = button(monsterFrame, "👒 Accessories", COLORS.Blue, UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 362))
+	local sellButton = button(monsterFrame, "", COLORS.Red, UDim2.new(1, -32, 0, 44), UDim2.fromOffset(16, 412))
 
 	-- الإشعارات --------------------------------------------------------------------
 	local toasts = Instance.new("Frame")
@@ -313,6 +327,8 @@ function UI.Create(playerGui: PlayerGui): UI
 		ShopButton = shopButton,
 		UpgradesButton = upgradesButton,
 		ShopFrame = shopFrame,
+		ShopScroll = shopScroll,
+		ShopContentBottom = if #sortedEggs > 0 then 316 else 80,
 		EggButtons = eggButtons,
 		UpgradesFrame = upgradesFrame,
 		SlotsInfo = slotsInfo,
@@ -328,11 +344,20 @@ function UI.Create(playerGui: PlayerGui): UI
 		ProductionLabel = productionLabel,
 		FeedButton = feedButton,
 		PlayButton = playButton,
+		AccessoriesButton = accessoriesButton,
 		SellButton = sellButton,
 		Toasts = toasts,
 		Panels = panels,
 	}
 end
+
+-- أدوات البناء متاحة لباقي ملفات الواجهة
+UI.Corner = corner
+UI.Stroke = stroke
+UI.Label = label
+UI.Button = button
+UI.Panel = panel
+UI.Bar = bar
 
 function UI.Open(ui: UI, frame: Frame)
 	for _, other in ui.Panels do

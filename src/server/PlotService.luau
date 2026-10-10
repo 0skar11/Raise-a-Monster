@@ -109,6 +109,7 @@ local function buildGround()
 end
 
 local SHOP_ORIGIN = Vector3.new(20, 0, -100)
+PlotService.ShopPosition = SHOP_ORIGIN
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
@@ -647,6 +648,11 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	model.Name = monster.Id
 
 	local material = Enum.Material.SmoothPlastic
+	local isSecret = species.Rarity == "Secret"
+	if isSecret then
+		material = Enum.Material.Neon
+		scale *= 1.2
+	end
 	if monster.Mutation == "Golden" then
 		material = Enum.Material.Foil
 	elseif monster.Mutation == "Toxic" or monster.Mutation == "Rainbow" then
@@ -732,7 +738,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 			attach(wing, CFrame.new(side * 1.6 * scale, 0.3 * scale, 0.6 * scale) * CFrame.Angles(0, 0, side * 0.5))
 		end
 	end
-	if stage.Name == "Legendary" then
+	if stage.Name == "Legendary" and not monster.Hat then
 		local crown = makePart({
 			Name = "Crown",
 			Shape = Enum.PartType.Cylinder,
@@ -744,6 +750,53 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 		local sparkle = Instance.new("Sparkles")
 		sparkle.SparkleColor = Color3.fromRGB(255, 230, 120)
 		sparkle.Parent = body
+	end
+
+	-- إكسسوارات: القبعة فوق الراس، والنضارة على العينين
+	local top = 1.5 * scale
+	local hat = monster.Hat and Config.Accessories[monster.Hat]
+	if hat then
+		local hatProps = { Color = hat.Color, Material = Enum.Material.SmoothPlastic }
+		if monster.Hat == "TopHat" then
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.4, 2.4) * scale, Color = hat.Color }), CFrame.new(0, top + 0.1 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 1.5, 1.5) * scale, Color = hat.Color }), CFrame.new(0, top + 0.9 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
+		elseif monster.Hat == "WizardHat" then
+			for i, width in { 2.2, 1.5, 0.9, 0.4 } do
+				attach(makePart({ Name = "Hat", Size = Vector3.new(width, 0.6, width) * scale, Color = hat.Color, Material = hatProps.Material }), CFrame.new(0, top + (0.2 + (i - 1) * 0.55) * scale, 0) * CFrame.Angles(0, i * 0.3, 0))
+			end
+		elseif monster.Hat == "Crown" then
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 1.6, 1.6) * scale, Color = hat.Color, Material = Enum.Material.Foil }), CFrame.new(0, top + 0.3 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
+			for i = 0, 3 do
+				attach(makePart({ Name = "Hat", Size = Vector3.new(0.25, 0.6, 0.25) * scale, Color = hat.Color, Material = Enum.Material.Foil }), CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, top + 0.8 * scale, -0.65 * scale))
+			end
+		else -- PartyHat
+			attach(makePart({ Name = "Hat", Size = Vector3.new(1, 1.6, 1) * scale, Color = hat.Color }), CFrame.new(0, top + 0.8 * scale, 0) * CFrame.Angles(0, math.rad(45), 0))
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Ball, Size = Vector3.new(0.5, 0.5, 0.5) * scale, Color = Color3.new(1, 1, 1) }), CFrame.new(0, top + 1.75 * scale, 0))
+		end
+	end
+	local glasses = monster.Glasses and Config.Accessories[monster.Glasses]
+	if glasses then
+		local front = -1.7 * scale
+		local eyeY = 0.4 * scale
+		if monster.Glasses == "Monocle" then
+			attach(makePart({ Name = "Glasses", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 0.9, 0.9) * scale, Color = glasses.Color, Material = Enum.Material.Foil }), CFrame.new(0.6 * scale, eyeY, front) * CFrame.Angles(0, math.rad(90), 0))
+		else
+			for _, side in { -1, 1 } do
+				local lens = makePart({ Name = "Glasses", Size = Vector3.new(0.85, 0.6, 0.1) * scale, Color = glasses.Color, Material = if monster.Glasses == "StarGlasses" then Enum.Material.Neon else Enum.Material.Glass })
+				attach(lens, CFrame.new(side * 0.6 * scale, eyeY, front) * (if monster.Glasses == "StarGlasses" then CFrame.Angles(0, 0, math.rad(45)) else CFrame.new()))
+			end
+			attach(makePart({ Name = "Glasses", Size = Vector3.new(0.4, 0.12, 0.1) * scale, Color = glasses.Color }), CFrame.new(0, eyeY, front))
+		end
+	end
+
+	if isSecret then
+		local sparkle = Instance.new("Sparkles")
+		sparkle.SparkleColor = Color3.fromRGB(200, 120, 255)
+		sparkle.Parent = body
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(200, 120, 255)
+		light.Range = 12
+		light.Parent = body
 	end
 
 	if monster.Mutation == "Rainbow" then

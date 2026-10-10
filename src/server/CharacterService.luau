@@ -3,7 +3,10 @@
 -- بنحط Rig من نوع R6 كـ StarterCharacter، وبعدين نلبّسه شكل اللاعب نفسه (هدومه وإكسسواراته).
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local CharacterService = {}
 
@@ -47,8 +50,35 @@ function CharacterService.ApplyAppearance(player: Player, character: Model)
 	end
 end
 
+-- سرعة المشي = Config.WalkSpeed × كل العوامل (شايل وحش، Speed Boost، ...)
+local speedFactors: { [Player]: { [string]: number } } = {}
+
+function CharacterService.UpdateSpeed(player: Player)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	local speed = Config.WalkSpeed
+	for _, factor in speedFactors[player] or {} do
+		speed *= factor
+	end
+	humanoid.WalkSpeed = speed
+end
+
+function CharacterService.SetSpeedFactor(player: Player, reason: string, factor: number?)
+	local factors = speedFactors[player]
+	if not factors then
+		factors = {}
+		speedFactors[player] = factors
+	end
+	factors[reason] = factor
+	CharacterService.UpdateSpeed(player)
+end
+
 function CharacterService.Cleanup(player: Player)
 	descriptions[player] = nil
+	speedFactors[player] = nil
 end
 
 function CharacterService.Init()

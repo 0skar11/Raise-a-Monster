@@ -221,7 +221,9 @@ Config.Rarities = {
 	Common = { Name = "Common", Color = Color3.fromRGB(200, 200, 200), Order = 1 },
 	Rare = { Name = "Rare", Color = Color3.fromRGB(70, 150, 255), Order = 2 },
 	Epic = { Name = "Epic", Color = Color3.fromRGB(180, 80, 255), Order = 3 },
-	Mythic = { Name = "Mythic", Color = Color3.fromRGB(255, 70, 90), Order = 4 },
+	Legendary = { Name = "Legendary", Color = Color3.fromRGB(255, 170, 40), Order = 4 },
+	Mythic = { Name = "Mythic", Color = Color3.fromRGB(255, 70, 90), Order = 5 },
+	Secret = { Name = "Secret", Color = Color3.fromRGB(255, 255, 255), Order = 6 },
 } :: { [string]: Rarity }
 
 export type Species = {
@@ -267,6 +269,13 @@ for zoneIndex, stats in ZONE_SPECIES_STATS do
 	end
 end
 
+-- وحوش Secret: نادرة جداً (0.1% من أي بيضة، أو من بيضة الـ Big Boss)، وليها شكل خاص منوّر.
+-- السيرفر كله بيجيله إعلان لما حد يفقس واحد.
+Config.SecretChance = 0.001
+Config.SecretSpecies = { "Secret1", "Secret2" }
+Config.Species.Secret1 = { DisplayName = "Secret ???", Rarity = "Secret", BaseProduction = 500, SellValue = 250000, Color = Color3.fromRGB(20, 20, 25), Horns = true }
+Config.Species.Secret2 = { DisplayName = "Secret Void", Rarity = "Secret", BaseProduction = 650, SellValue = 320000, Color = Color3.fromRGB(240, 240, 255), Horns = true }
+
 -- البيض ----------------------------------------------------------------------
 export type Egg = {
 	DisplayName: string,
@@ -302,7 +311,27 @@ Config.Eggs = {
 		Order = 3,
 		Weights = { Frosty = 25, Shadowy = 35, Flamey = 30, Draco = 10 },
 	},
+	-- بيضة الحظ (Developer Product وعجلة الحظ): أندر من العادي، وفرصة الـ Secret فيها ×5
+	Lucky = {
+		DisplayName = "Lucky Egg",
+		Cost = 0,
+		HatchTime = 30,
+		Color = Color3.fromRGB(90, 230, 120),
+		Order = 4,
+		Weights = { Fangy = 25, Frosty = 25, Shadowy = 25, Flamey = 15, Draco = 10 },
+	},
+	-- بيضة الـ Big Boss: بتفقس وحش Secret مضمون
+	Secret = {
+		DisplayName = "Secret Egg",
+		Cost = 0,
+		HatchTime = 60,
+		Color = Color3.fromRGB(20, 20, 30),
+		Order = 5,
+		Weights = { Secret1 = 50, Secret2 = 50 },
+	},
 } :: { [string]: Egg }
+
+Config.LuckyEggSecretMultiplier = 5
 
 -- البيض اللي بيتباع في المتجر، بالترتيب. فاضي دلوقتي (البيضة المجانية في الأول شغالة عادي).
 -- عشان ترجّع البيض: { "Basic", "Rare", "Mythic" }
@@ -409,6 +438,23 @@ Config.ZoneResetInterval = 600 -- كل 10 دقايق الأعشاش بتتجدد
 Config.NestsPerZone = 3
 Config.BabiesPerNest = 3
 
+Config.WalkSpeed = 20 -- سرعة المشي (الافتراضي في Roblox 16)
+
+-- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
+Config.Carry = {
+	WalkSpeedMultiplier = 0.8, -- بتمشي أبطأ وانت شايل وحش
+	SecretEggSpeedMultiplier = 0.7, -- بيضة الـ Big Boss تقيلة شوية
+	KillCreditTime = 10, -- لو حد ضربك في آخر 10 ثواني وموتّ، هو اللي بياخد اللي شايله
+	DropLifetime = 60, -- الوحش اللي بيقع على الأرض بيختفي بعد المدة دي
+}
+
+-- ضرب اللاعبين بالمضرب (برّه القواعد بس)
+Config.PvP = {
+	BatDamage = 15,
+	SwordDamage = 30,
+	Reach = 7,
+}
+
 Config.Combat = {
 	BaseDamage = 10, -- ضرر اللاعب من غير وحوش
 	DamagePerProduction = 2, -- كل 1 Coin/s من وحوشك بيزوّد ضربتك 2
@@ -418,6 +464,116 @@ Config.Combat = {
 	MotherAttackRange = 24,
 	MotherRegenDelay = 20, -- لو محدش ضربها المدة دي الـ HP بيرجع كامل
 	TakeHoldDuration = 1,
+}
+
+-- Gamepasses و Developer Products -----------------------------------------------------
+-- حط الـ Id بتاع كل واحد بعد ما تعمله من Creator Dashboard (بعد الـ Publish).
+-- لو الـ Id = 0: في Studio الزرار بيدّيهولك مجاناً عشان التجربة، وفي اللعبة الحقيقية بيقول "Coming soon".
+export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number }
+Config.Gamepasses = {
+	VIP = { Id = 0, Name = "VIP", Description = "x2 coins from all your monsters", Price = 299, Order = 1 },
+	VIPSword = { Id = 0, Name = "VIP Sword", Description = "A strong sword for the monster zones", Price = 199, Order = 2 },
+	AutoCollect = { Id = 0, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
+	ExtraSlots = { Id = 0, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
+} :: { [string]: Gamepass }
+
+export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number }
+Config.Products = {
+	InstantHatch = { Id = 0, Name = "Instant Hatch", Description = "All your eggs hatch right now", Price = 25, Order = 1 },
+	LuckyEgg = { Id = 0, Name = "Lucky Egg", Description = "A rare egg with better odds", Price = 49, Order = 2 },
+	SpeedBoost = { Id = 0, Name = "Speed Boost", Description = "Run faster for 10 minutes", Price = 29, Order = 3 },
+} :: { [string]: Product }
+
+Config.VIPCoinMultiplier = 2
+Config.ExtraSlotsAmount = 2
+Config.VIPSword = { DamageMultiplier = 3, ExtraReach = 3 }
+Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
+
+-- أحداث الماب ---------------------------------------------------------------------------
+-- Monster Rain: كل ساعة وحش نادر بيقع في نص الماب، وأول واحد يمسكه ويوصله قاعدته ياخده.
+Config.MonsterRain = {
+	Interval = 3600,
+	Lifetime = 300, -- لو محدش مسكه بيختفي
+	Species = { "Shadowy", "Flamey", "Draco", "Monster9", "Monster10", "Monster11", "Monster12", "Monster13", "Monster14" },
+	MutationChanceMultiplier = 3,
+}
+
+-- Big Boss: أوقات بينزل في الماب ومعاه بيضة Secret. لازم الكل يتجمع يقتله.
+Config.Boss = {
+	MinInterval = 2400, -- بين 40 و 80 دقيقة
+	MaxInterval = 4800,
+	HealthPerPlayer = 60000,
+	MinHealth = 120000,
+	Damage = 30, -- كل ضربة، لكل اللي جنبه
+	AttackInterval = 1.5,
+	AttackRange = 30,
+	Size = 18,
+	Lifetime = 600, -- لو محدش قتله بيمشي
+	Position = Vector3.new(120, 0, 0), -- في الطريق جوه Zone 1
+}
+
+-- اللوحات اللي في الساحة (Leaderboards)
+Config.Leaderboards = {
+	UpdateInterval = 60,
+	TopCount = 10,
+}
+
+-- الهدية اليومية وعجلة الحظ ---------------------------------------------------------------
+Config.Daily = {
+	Cooldown = 20 * 3600, -- تقدر تاخدها كل 20 ساعة
+	StreakReset = 48 * 3600, -- لو غبت أكتر من كده الـ Streak يبدأ من الأول
+	CoinsPerDay = 150, -- بتتضرب في يوم الـ Streak (لحد 7)
+	MaxStreak = 7,
+	Day7Egg = "Rare", -- اليوم السابع بيدّيك بيضة كمان
+}
+
+export type SpinPrize = { Name: string, Weight: number, Coins: number?, Egg: string?, Color: Color3 }
+Config.Spin = {
+	Cooldown = 24 * 3600, -- لفة مجانية كل يوم
+	Prizes = {
+		{ Name = "100 Coins", Weight = 30, Coins = 100, Color = Color3.fromRGB(255, 210, 70) },
+		{ Name = "Rare Egg", Weight = 16, Egg = "Rare", Color = Color3.fromRGB(80, 160, 255) },
+		{ Name = "400 Coins", Weight = 24, Coins = 400, Color = Color3.fromRGB(255, 160, 50) },
+		{ Name = "Lucky Egg", Weight = 6, Egg = "Lucky", Color = Color3.fromRGB(90, 230, 120) },
+		{ Name = "1500 Coins", Weight = 14, Coins = 1500, Color = Color3.fromRGB(255, 110, 60) },
+		{ Name = "Mythic Egg", Weight = 10, Egg = "Mythic", Color = Color3.fromRGB(255, 60, 120) },
+	} :: { SpinPrize },
+}
+
+-- ألعاب صغيرة مع الوحش (بدل زرار Play) ------------------------------------------------------
+Config.MiniGames = {
+	Cooldown = 20, -- لكل وحش
+	Happiness = 40,
+	Catch = { Duration = 12, XpPerCatch = 4, MaxCatches = 30 },
+	Run = { Duration = 15, Target = 160, MaxXp = 60 }, -- XP على حسب المسافة اللي جريتها
+}
+
+-- إكسسوارات الوحوش -------------------------------------------------------------------------
+export type Accessory = { Name: string, Slot: string, Cost: number, Bonus: number, Color: Color3, Order: number }
+Config.Accessories = {
+	PartyHat = { Name = "Party Hat", Slot = "Hat", Cost = 300, Bonus = 0, Color = Color3.fromRGB(255, 90, 180), Order = 1 },
+	TopHat = { Name = "Top Hat", Slot = "Hat", Cost = 1500, Bonus = 0.03, Color = Color3.fromRGB(30, 30, 35), Order = 2 },
+	WizardHat = { Name = "Wizard Hat", Slot = "Hat", Cost = 8000, Bonus = 0.08, Color = Color3.fromRGB(90, 60, 200), Order = 3 },
+	Crown = { Name = "Crown", Slot = "Hat", Cost = 30000, Bonus = 0.15, Color = Color3.fromRGB(255, 205, 50), Order = 4 },
+	StarGlasses = { Name = "Star Glasses", Slot = "Glasses", Cost = 400, Bonus = 0, Color = Color3.fromRGB(255, 220, 60), Order = 5 },
+	CoolShades = { Name = "Cool Shades", Slot = "Glasses", Cost = 2500, Bonus = 0.05, Color = Color3.fromRGB(20, 20, 25), Order = 6 },
+	Monocle = { Name = "Monocle", Slot = "Glasses", Cost = 12000, Bonus = 0.1, Color = Color3.fromRGB(230, 190, 80), Order = 7 },
+} :: { [string]: Accessory }
+
+-- Monster Arena: معارك 1 ضد 1. الكسبان بياخد فلوس والوحش اللي خسر --------------------------
+Config.Arena = {
+	Position = Vector3.new(20, 0, 150), -- في الساحة
+	RequestTimeout = 60,
+	TurnTime = 0.8,
+	MaxTurns = 40,
+	PrizeCoins = 500, -- + 10% من قيمة الوحش اللي خسر
+	PrizeValueShare = 0.1,
+}
+
+-- Trading -------------------------------------------------------------------------------------
+Config.Trade = {
+	MaxOffer = 4,
+	RequestTimeout = 60,
 }
 
 return Config

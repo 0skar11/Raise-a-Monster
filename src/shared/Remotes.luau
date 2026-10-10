@@ -15,6 +15,30 @@ local EVENT_NAMES = {
 	"PlayMonster", -- (monsterId)
 	"SellMonster", -- (monsterId)
 	"BuyUpgrade", -- (upgradeName)
+	"Teleport", -- ("Home" | "Shop")
+	"BuyPass", -- (passName)
+	"BuyProduct", -- (productName)
+	"ClaimDaily", -- ()
+	"Spin", -- ()
+	"BuyAccessory", -- (accessoryName)
+	"EquipAccessory", -- (monsterId, slot, accessoryName?)
+	"MiniGameStart", -- (monsterId, gameName)
+	"MiniGameFinish", -- (score)
+	"TradeRequest", -- (targetUserId)
+	"TradeRespond", -- (fromUserId, accepted)
+	"TradeSetOffer", -- ({ monsterId })
+	"TradeReady", -- (ready)
+	"TradeCancel", -- ()
+	"ArenaChallenge", -- (targetUserId, monsterId)
+	"ArenaRespond", -- (fromUserId, monsterId?)  monsterId = nil يعني رفض
+	-- سيرفر → كلاينت (زيادة)
+	"Announce", -- (text, color)  إعلان كبير لكل السيرفر
+	"SpinResult", -- (prizeIndex)
+	"MiniGameState", -- ({ Game, TimeLeft, Progress, Done, Xp })
+	"TradeUpdate", -- (trade state | nil)
+	"TradeIncoming", -- (fromUserId, fromName)
+	"ArenaIncoming", -- (fromUserId, fromName, monsterName)
+	"ArenaUpdate", -- (battle state | nil)
 }
 
 local Remotes = {}

@@ -11,6 +11,8 @@ local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local Build = require(script.Parent.Build)
 local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
+local CombatService = require(script.Parent.CombatService)
+local CarryService = require(script.Parent.CarryService)
 
 local makePart = Build.MakePart
 local makeBillboard = Build.MakeBillboard
@@ -38,6 +40,7 @@ type Nest = {
 	HealthText: TextLabel?,
 	Babies: { BasePart },
 	Damagers: { [Player]: number },
+	Target: CombatService.Target?,
 }
 
 local ZoneService = {}
@@ -49,7 +52,6 @@ ZoneService.ZonesEndX = PlotService.ZonesStartX + #Config.Zones * ZONE_LENGTH
 local zonesFolder: Folder
 local nests: { Nest } = {}
 local gateLabels: { { Label: TextLabel, Title: string } } = {}
-local lastAttack: { [Player]: number } = {}
 local nextResetAt = 0
 
 local function zoneStartX(index: number): number
@@ -280,6 +282,7 @@ local function buildZone(index: number, zone: Config.Zone)
 			HealthText = nil,
 			Babies = {},
 			Damagers = {},
+			Target = nil,
 		})
 	end
 
@@ -311,6 +314,8 @@ end
 local function killMother(nest: Nest, killer: Player)
 	nest.Alive = false
 	nest.Health = 0
+	CombatService.Unregister(nest.Target)
+	nest.Target = nil
 	if nest.Mother then
 		nest.Mother:Destroy()
 		nest.Mother = nil
@@ -340,25 +345,13 @@ local function killMother(nest: Nest, killer: Player)
 	end
 end
 
-local function attack(player: Player, nest: Nest)
+local function attack(player: Player, nest: Nest, damage: number)
 	if not nest.Alive then
 		return
 	end
-	local now = os.clock()
-	if lastAttack[player] and now - lastAttack[player] < Config.Combat.AttackCooldown then
-		return
-	end
-	lastAttack[player] = now
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then
-		return
-	end
-
-	local damage = MonsterService.GetAttackDamage(player)
 	nest.Health -= damage
 	nest.Damagers[player] = (nest.Damagers[player] or 0) + damage
-	nest.LastHit = now
+	nest.LastHit = os.clock()
 
 	local mother = nest.Mother
 	if mother then
@@ -377,86 +370,7 @@ local function attack(player: Player, nest: Nest)
 	end
 end
 
--- المضرب الخشبي -------------------------------------------------------------------
-
--- أقرب أم عايشة في مدى ضربة المضرب
-local function nestInReach(player: Player): Nest?
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root then
-		return nil
-	end
-	local best: Nest? = nil
-	local bestDistance = math.huge
-	for _, nest in nests do
-		local mother = nest.Mother
-		if nest.Alive and mother then
-			local distance = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z).Magnitude
-			if distance <= nest.Zone.MotherSize / 2 + Config.Combat.BatReach and distance < bestDistance then
-				best = nest
-				bestDistance = distance
-			end
-		end
-	end
-	return best
-end
-
-local function makeBat(): Tool
-	local tool = Instance.new("Tool")
-	tool.Name = "Bat"
-	tool.ToolTip = "Hit the mother monsters!"
-	tool.CanBeDropped = false
-	tool.GripPos = Vector3.new(0, 0, 0.6) -- اللاعب ماسكه من آخره
-	local handle = makePart({
-		Name = "Handle",
-		Size = Vector3.new(0.5, 0.5, 2.2),
-		Color = Color3.fromRGB(140, 95, 55),
-		Material = Enum.Material.Wood,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	handle.Parent = tool
-	local barrel = makePart({
-		Name = "Barrel",
-		Size = Vector3.new(0.85, 0.85, 2.6),
-		CFrame = handle.CFrame * CFrame.new(0, 0, -2.3),
-		Color = Color3.fromRGB(170, 120, 70),
-		Material = Enum.Material.Wood,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	barrel.Parent = tool
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = handle
-	weld.Part1 = barrel
-	weld.Parent = barrel
-	return tool
-end
-
--- بيدّي اللاعب المضرب (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
-function ZoneService.GiveBat(player: Player)
-	local backpack = player:FindFirstChildOfClass("Backpack")
-	local character = player.Character
-	if not backpack or backpack:FindFirstChild("Bat") or (character and character:FindFirstChild("Bat")) then
-		return
-	end
-	local bat = makeBat()
-	bat.Activated:Connect(function()
-		-- أنيميشن الضربة بتاع R6
-		local animation = Instance.new("StringValue")
-		animation.Name = "toolanim"
-		animation.Value = "Slash"
-		animation.Parent = bat
-		local nest = nestInReach(player)
-		if nest then
-			attack(player, nest)
-		end
-	end)
-	bat.Parent = backpack
-end
-
+-- الصغير بيتشال على ضهرك، ولازم توصله قاعدتك عشان يبقى بتاعك
 local function take(player: Player, nest: Nest, baby: BasePart)
 	if nest.Alive or not baby.Parent or not nest.Species then
 		return
@@ -465,7 +379,8 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 		MonsterService.Notify(player, "Help defeat the mother first to take her babies!", "error")
 		return
 	end
-	if MonsterService.GiveMonster(player, nest.Species :: string) then
+	local cargo: CarryService.Cargo = { Kind = "Monster", Species = nest.Species, Mutation = MonsterService.RollMutation(1) }
+	if CarryService.StartCarry(player, cargo) then
 		baby:Destroy()
 		local index = table.find(nest.Babies, baby)
 		if index then
@@ -475,6 +390,8 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 end
 
 local function clearNest(nest: Nest)
+	CombatService.Unregister(nest.Target)
+	nest.Target = nil
 	nest.Folder:ClearAllChildren()
 	nest.Mother = nil
 	nest.HealthFill = nil
@@ -547,6 +464,15 @@ local function spawnNest(nest: Nest)
 	nest.HealthText = hpText
 	updateHealthBar(nest)
 
+	-- المضرب بيضربها لما تبقى قريب منها
+	nest.Target = CombatService.Register({
+		Part = mother,
+		Radius = size / 2,
+		OnHit = function(player: Player, damage: number)
+			attack(player, nest, damage)
+		end,
+	})
+
 	for i = 1, Config.BabiesPerNest do
 		local angle = (i / Config.BabiesPerNest) * math.pi * 2
 		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * (size / 2 + 6)
@@ -618,7 +544,6 @@ local function updateGateTimers()
 end
 
 function ZoneService.CleanupPlayer(player: Player)
-	lastAttack[player] = nil
 	for _, nest in nests do
 		nest.Damagers[player] = nil
 	end

@@ -1,13 +1,22 @@
 <roblox version="4">
-  <Item class="ReplicatedStorage" referent="0">
+  <Item class="Lighting" referent="0">
+    <Properties>
+      <string name="Name">Lighting</string>
+      <token name="Technology">4</token>
+      <bool name="GlobalShadows">true</bool>
+      <float name="EnvironmentDiffuseScale">1</float>
+      <float name="EnvironmentSpecularScale">1</float>
+    </Properties>
+  </Item>
+  <Item class="ReplicatedStorage" referent="1">
     <Properties>
       <string name="Name">ReplicatedStorage</string>
     </Properties>
-    <Item class="Folder" referent="1">
+    <Item class="Folder" referent="2">
       <Properties>
         <string name="Name">Shared</string>
       </Properties>
-      <Item class="ModuleScript" referent="2">
+      <Item class="ModuleScript" referent="3">
         <Properties>
           <string name="Name">Config</string>
           <string name="Source"><![CDATA[--!strict
@@ -233,7 +242,9 @@ Config.Rarities = {
 	Common = { Name = "Common", Color = Color3.fromRGB(200, 200, 200), Order = 1 },
 	Rare = { Name = "Rare", Color = Color3.fromRGB(70, 150, 255), Order = 2 },
 	Epic = { Name = "Epic", Color = Color3.fromRGB(180, 80, 255), Order = 3 },
-	Mythic = { Name = "Mythic", Color = Color3.fromRGB(255, 70, 90), Order = 4 },
+	Legendary = { Name = "Legendary", Color = Color3.fromRGB(255, 170, 40), Order = 4 },
+	Mythic = { Name = "Mythic", Color = Color3.fromRGB(255, 70, 90), Order = 5 },
+	Secret = { Name = "Secret", Color = Color3.fromRGB(255, 255, 255), Order = 6 },
 } :: { [string]: Rarity }
 
 export type Species = {
@@ -279,6 +290,13 @@ for zoneIndex, stats in ZONE_SPECIES_STATS do
 	end
 end
 
+-- وحوش Secret: نادرة جداً (0.1% من أي بيضة، أو من بيضة الـ Big Boss)، وليها شكل خاص منوّر.
+-- السيرفر كله بيجيله إعلان لما حد يفقس واحد.
+Config.SecretChance = 0.001
+Config.SecretSpecies = { "Secret1", "Secret2" }
+Config.Species.Secret1 = { DisplayName = "Secret ???", Rarity = "Secret", BaseProduction = 500, SellValue = 250000, Color = Color3.fromRGB(20, 20, 25), Horns = true }
+Config.Species.Secret2 = { DisplayName = "Secret Void", Rarity = "Secret", BaseProduction = 650, SellValue = 320000, Color = Color3.fromRGB(240, 240, 255), Horns = true }
+
 -- البيض ----------------------------------------------------------------------
 export type Egg = {
 	DisplayName: string,
@@ -314,7 +332,27 @@ Config.Eggs = {
 		Order = 3,
 		Weights = { Frosty = 25, Shadowy = 35, Flamey = 30, Draco = 10 },
 	},
+	-- بيضة الحظ (Developer Product وعجلة الحظ): أندر من العادي، وفرصة الـ Secret فيها ×5
+	Lucky = {
+		DisplayName = "Lucky Egg",
+		Cost = 0,
+		HatchTime = 30,
+		Color = Color3.fromRGB(90, 230, 120),
+		Order = 4,
+		Weights = { Fangy = 25, Frosty = 25, Shadowy = 25, Flamey = 15, Draco = 10 },
+	},
+	-- بيضة الـ Big Boss: بتفقس وحش Secret مضمون
+	Secret = {
+		DisplayName = "Secret Egg",
+		Cost = 0,
+		HatchTime = 60,
+		Color = Color3.fromRGB(20, 20, 30),
+		Order = 5,
+		Weights = { Secret1 = 50, Secret2 = 50 },
+	},
 } :: { [string]: Egg }
+
+Config.LuckyEggSecretMultiplier = 5
 
 -- البيض اللي بيتباع في المتجر، بالترتيب. فاضي دلوقتي (البيضة المجانية في الأول شغالة عادي).
 -- عشان ترجّع البيض: { "Basic", "Rare", "Mythic" }
@@ -421,6 +459,23 @@ Config.ZoneResetInterval = 600 -- كل 10 دقايق الأعشاش بتتجدد
 Config.NestsPerZone = 3
 Config.BabiesPerNest = 3
 
+Config.WalkSpeed = 20 -- سرعة المشي (الافتراضي في Roblox 16)
+
+-- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
+Config.Carry = {
+	WalkSpeedMultiplier = 0.8, -- بتمشي أبطأ وانت شايل وحش
+	SecretEggSpeedMultiplier = 0.7, -- بيضة الـ Big Boss تقيلة شوية
+	KillCreditTime = 10, -- لو حد ضربك في آخر 10 ثواني وموتّ، هو اللي بياخد اللي شايله
+	DropLifetime = 60, -- الوحش اللي بيقع على الأرض بيختفي بعد المدة دي
+}
+
+-- ضرب اللاعبين بالمضرب (برّه القواعد بس)
+Config.PvP = {
+	BatDamage = 15,
+	SwordDamage = 30,
+	Reach = 7,
+}
+
 Config.Combat = {
 	BaseDamage = 10, -- ضرر اللاعب من غير وحوش
 	DamagePerProduction = 2, -- كل 1 Coin/s من وحوشك بيزوّد ضربتك 2
@@ -432,11 +487,121 @@ Config.Combat = {
 	TakeHoldDuration = 1,
 }
 
+-- Gamepasses و Developer Products -----------------------------------------------------
+-- حط الـ Id بتاع كل واحد بعد ما تعمله من Creator Dashboard (بعد الـ Publish).
+-- لو الـ Id = 0: في Studio الزرار بيدّيهولك مجاناً عشان التجربة، وفي اللعبة الحقيقية بيقول "Coming soon".
+export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number }
+Config.Gamepasses = {
+	VIP = { Id = 0, Name = "VIP", Description = "x2 coins from all your monsters", Price = 299, Order = 1 },
+	VIPSword = { Id = 0, Name = "VIP Sword", Description = "A strong sword for the monster zones", Price = 199, Order = 2 },
+	AutoCollect = { Id = 0, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
+	ExtraSlots = { Id = 0, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
+} :: { [string]: Gamepass }
+
+export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number }
+Config.Products = {
+	InstantHatch = { Id = 0, Name = "Instant Hatch", Description = "All your eggs hatch right now", Price = 25, Order = 1 },
+	LuckyEgg = { Id = 0, Name = "Lucky Egg", Description = "A rare egg with better odds", Price = 49, Order = 2 },
+	SpeedBoost = { Id = 0, Name = "Speed Boost", Description = "Run faster for 10 minutes", Price = 29, Order = 3 },
+} :: { [string]: Product }
+
+Config.VIPCoinMultiplier = 2
+Config.ExtraSlotsAmount = 2
+Config.VIPSword = { DamageMultiplier = 3, ExtraReach = 3 }
+Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
+
+-- أحداث الماب ---------------------------------------------------------------------------
+-- Monster Rain: كل ساعة وحش نادر بيقع في نص الماب، وأول واحد يمسكه ويوصله قاعدته ياخده.
+Config.MonsterRain = {
+	Interval = 3600,
+	Lifetime = 300, -- لو محدش مسكه بيختفي
+	Species = { "Shadowy", "Flamey", "Draco", "Monster9", "Monster10", "Monster11", "Monster12", "Monster13", "Monster14" },
+	MutationChanceMultiplier = 3,
+}
+
+-- Big Boss: أوقات بينزل في الماب ومعاه بيضة Secret. لازم الكل يتجمع يقتله.
+Config.Boss = {
+	MinInterval = 2400, -- بين 40 و 80 دقيقة
+	MaxInterval = 4800,
+	HealthPerPlayer = 60000,
+	MinHealth = 120000,
+	Damage = 30, -- كل ضربة، لكل اللي جنبه
+	AttackInterval = 1.5,
+	AttackRange = 30,
+	Size = 18,
+	Lifetime = 600, -- لو محدش قتله بيمشي
+	Position = Vector3.new(120, 0, 0), -- في الطريق جوه Zone 1
+}
+
+-- اللوحات اللي في الساحة (Leaderboards)
+Config.Leaderboards = {
+	UpdateInterval = 60,
+	TopCount = 10,
+}
+
+-- الهدية اليومية وعجلة الحظ ---------------------------------------------------------------
+Config.Daily = {
+	Cooldown = 20 * 3600, -- تقدر تاخدها كل 20 ساعة
+	StreakReset = 48 * 3600, -- لو غبت أكتر من كده الـ Streak يبدأ من الأول
+	CoinsPerDay = 150, -- بتتضرب في يوم الـ Streak (لحد 7)
+	MaxStreak = 7,
+	Day7Egg = "Rare", -- اليوم السابع بيدّيك بيضة كمان
+}
+
+export type SpinPrize = { Name: string, Weight: number, Coins: number?, Egg: string?, Color: Color3 }
+Config.Spin = {
+	Cooldown = 24 * 3600, -- لفة مجانية كل يوم
+	Prizes = {
+		{ Name = "100 Coins", Weight = 30, Coins = 100, Color = Color3.fromRGB(255, 210, 70) },
+		{ Name = "Rare Egg", Weight = 16, Egg = "Rare", Color = Color3.fromRGB(80, 160, 255) },
+		{ Name = "400 Coins", Weight = 24, Coins = 400, Color = Color3.fromRGB(255, 160, 50) },
+		{ Name = "Lucky Egg", Weight = 6, Egg = "Lucky", Color = Color3.fromRGB(90, 230, 120) },
+		{ Name = "1500 Coins", Weight = 14, Coins = 1500, Color = Color3.fromRGB(255, 110, 60) },
+		{ Name = "Mythic Egg", Weight = 10, Egg = "Mythic", Color = Color3.fromRGB(255, 60, 120) },
+	} :: { SpinPrize },
+}
+
+-- ألعاب صغيرة مع الوحش (بدل زرار Play) ------------------------------------------------------
+Config.MiniGames = {
+	Cooldown = 20, -- لكل وحش
+	Happiness = 40,
+	Catch = { Duration = 12, XpPerCatch = 4, MaxCatches = 30 },
+	Run = { Duration = 15, Target = 160, MaxXp = 60 }, -- XP على حسب المسافة اللي جريتها
+}
+
+-- إكسسوارات الوحوش -------------------------------------------------------------------------
+export type Accessory = { Name: string, Slot: string, Cost: number, Bonus: number, Color: Color3, Order: number }
+Config.Accessories = {
+	PartyHat = { Name = "Party Hat", Slot = "Hat", Cost = 300, Bonus = 0, Color = Color3.fromRGB(255, 90, 180), Order = 1 },
+	TopHat = { Name = "Top Hat", Slot = "Hat", Cost = 1500, Bonus = 0.03, Color = Color3.fromRGB(30, 30, 35), Order = 2 },
+	WizardHat = { Name = "Wizard Hat", Slot = "Hat", Cost = 8000, Bonus = 0.08, Color = Color3.fromRGB(90, 60, 200), Order = 3 },
+	Crown = { Name = "Crown", Slot = "Hat", Cost = 30000, Bonus = 0.15, Color = Color3.fromRGB(255, 205, 50), Order = 4 },
+	StarGlasses = { Name = "Star Glasses", Slot = "Glasses", Cost = 400, Bonus = 0, Color = Color3.fromRGB(255, 220, 60), Order = 5 },
+	CoolShades = { Name = "Cool Shades", Slot = "Glasses", Cost = 2500, Bonus = 0.05, Color = Color3.fromRGB(20, 20, 25), Order = 6 },
+	Monocle = { Name = "Monocle", Slot = "Glasses", Cost = 12000, Bonus = 0.1, Color = Color3.fromRGB(230, 190, 80), Order = 7 },
+} :: { [string]: Accessory }
+
+-- Monster Arena: معارك 1 ضد 1. الكسبان بياخد فلوس والوحش اللي خسر --------------------------
+Config.Arena = {
+	Position = Vector3.new(20, 0, 150), -- في الساحة
+	RequestTimeout = 60,
+	TurnTime = 0.8,
+	MaxTurns = 40,
+	PrizeCoins = 500, -- + 10% من قيمة الوحش اللي خسر
+	PrizeValueShare = 0.1,
+}
+
+-- Trading -------------------------------------------------------------------------------------
+Config.Trade = {
+	MaxOffer = 4,
+	RequestTimeout = 60,
+}
+
 return Config
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="3">
+      <Item class="ModuleScript" referent="4">
         <Properties>
           <string name="Name">MonsterMath</string>
           <string name="Source"><![CDATA[--!strict
@@ -453,6 +618,8 @@ export type MonsterData = {
 	Hunger: number,
 	Happiness: number,
 	Slot: number,
+	Hat: string?, -- إكسسوارات (Config.Accessories)
+	Glasses: string?,
 }
 
 local MonsterMath = {}
@@ -488,6 +655,18 @@ function MonsterMath.GetMutationMultiplier(name: string?): number
 	return if mutation then mutation.Multiplier else 1
 end
 
+-- الزيادة في الإنتاج من القبعة والنضارة (0.15 = +15%)
+function MonsterMath.GetAccessoryBonus(monster: MonsterData): number
+	local bonus = 0
+	for _, name in { monster.Hat, monster.Glasses } do
+		local accessory = name and Config.Accessories[name]
+		if accessory then
+			bonus += accessory.Bonus
+		end
+	end
+	return bonus
+end
+
 -- Coins في الثانية
 function MonsterMath.GetProduction(monster: MonsterData): number
 	local species = Config.Species[monster.Species]
@@ -500,6 +679,7 @@ function MonsterMath.GetProduction(monster: MonsterData): number
 		* stage.ProductionMultiplier
 		* levelBonus
 		* MonsterMath.GetMutationMultiplier(monster.Mutation)
+		* (1 + MonsterMath.GetAccessoryBonus(monster))
 	if monster.Hunger < Config.LowNeedsThreshold or monster.Happiness < Config.LowNeedsThreshold then
 		production *= Config.LowNeedsProductionMultiplier
 	end
@@ -550,7 +730,7 @@ return MonsterMath
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="4">
+      <Item class="ModuleScript" referent="5">
         <Properties>
           <string name="Name">Remotes</string>
           <string name="Source"><![CDATA[--!strict
@@ -570,6 +750,30 @@ local EVENT_NAMES = {
 	"PlayMonster", -- (monsterId)
 	"SellMonster", -- (monsterId)
 	"BuyUpgrade", -- (upgradeName)
+	"Teleport", -- ("Home" | "Shop")
+	"BuyPass", -- (passName)
+	"BuyProduct", -- (productName)
+	"ClaimDaily", -- ()
+	"Spin", -- ()
+	"BuyAccessory", -- (accessoryName)
+	"EquipAccessory", -- (monsterId, slot, accessoryName?)
+	"MiniGameStart", -- (monsterId, gameName)
+	"MiniGameFinish", -- (score)
+	"TradeRequest", -- (targetUserId)
+	"TradeRespond", -- (fromUserId, accepted)
+	"TradeSetOffer", -- ({ monsterId })
+	"TradeReady", -- (ready)
+	"TradeCancel", -- ()
+	"ArenaChallenge", -- (targetUserId, monsterId)
+	"ArenaRespond", -- (fromUserId, monsterId?)  monsterId = nil يعني رفض
+	-- سيرفر → كلاينت (زيادة)
+	"Announce", -- (text, color)  إعلان كبير لكل السيرفر
+	"SpinResult", -- (prizeIndex)
+	"MiniGameState", -- ({ Game, TimeLeft, Progress, Done, Xp })
+	"TradeUpdate", -- (trade state | nil)
+	"TradeIncoming", -- (fromUserId, fromName)
+	"ArenaIncoming", -- (fromUserId, fromName, monsterName)
+	"ArenaUpdate", -- (battle state | nil)
 }
 
 local Remotes = {}
@@ -611,11 +815,11 @@ return Remotes
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="5">
+  <Item class="ServerScriptService" referent="6">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="6">
+    <Item class="Script" referent="7">
       <Properties>
         <string name="Name">Server</string>
         <token name="RunContext">0</token>
@@ -625,24 +829,52 @@ return Remotes
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local CharacterService = require(script.CharacterService)
 local DataService = require(script.DataService)
 local PlotService = require(script.PlotService)
 local MonsterService = require(script.MonsterService)
 local StealService = require(script.StealService)
+local CombatService = require(script.CombatService)
+local CarryService = require(script.CarryService)
 local ZoneService = require(script.ZoneService)
 local TerrainService = require(script.TerrainService)
+local MonetizationService = require(script.MonetizationService)
+local EventService = require(script.EventService)
+local LeaderboardService = require(script.LeaderboardService)
+local RewardService = require(script.RewardService)
+local TradeService = require(script.TradeService)
+local ArenaService = require(script.ArenaService)
 
 local remotes = Remotes.Get()
+
+-- Hooks (عشان MonsterService مايحتاجش يعمل require للخدمات اللي بتعتمد عليه)
+MonsterService.HasPass = MonetizationService.HasPass
+MonsterService.ExtraState = function(player: Player): { [string]: any }
+	local profile = DataService.Get(player)
+	return {
+		Passes = MonetizationService.GetOwnedPasses(player),
+		BoostLeft = MonetizationService.BoostLeft(player),
+		DailyReadyIn = RewardService.DailyReadyIn(player),
+		SpinReadyIn = RewardService.SpinReadyIn(player),
+		DailyStreak = if profile then profile.Data.Daily.Streak else 0,
+		Carrying = CarryService.IsCarrying(player),
+	}
+end
 
 CharacterService.Init()
 PlotService.Init()
 MonsterService.Init(remotes)
 StealService.Init()
+CarryService.Init()
 ZoneService.Init()
 TerrainService.Init()
+MonetizationService.Init(remotes)
+EventService.Init()
+LeaderboardService.Init()
+RewardService.Init(remotes)
+TradeService.Init(remotes)
+ArenaService.Init(remotes)
 DataService.StartAutosave()
 
 PlotService.Callbacks.Collect = MonsterService.Collect
@@ -650,6 +882,49 @@ PlotService.Callbacks.Lock = MonsterService.Lock
 PlotService.Callbacks.Care = MonsterService.OpenMonster
 PlotService.Callbacks.OpenShop = function(player)
 	remotes.OpenShop:FireClient(player)
+end
+
+-- تليبورت للبيت أو المتجر (مش شغال جوه مناطق الوحوش، ولا وانت شايل وحش)
+local lastTeleport: { [Player]: number } = {}
+remotes.Teleport.OnServerEvent:Connect(function(player: Player, where: unknown)
+	if where ~= "Home" and where ~= "Shop" then
+		return
+	end
+	local now = os.clock()
+	if lastTeleport[player] and now - lastTeleport[player] < 2 then
+		return
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not character or not root or not humanoid or humanoid.Health <= 0 then
+		return
+	end
+	if root.Position.X >= PlotService.ZonesStartX then
+		MonsterService.Notify(player, "🚫 You can't teleport from inside the monster zones!", "error")
+		return
+	end
+	if CarryService.IsCarrying(player) then
+		MonsterService.Notify(player, "🚫 You can't teleport while carrying something! Walk it home.", "error")
+		return
+	end
+	lastTeleport[player] = now
+	if where == "Home" then
+		PlotService.SendHome(player)
+	else
+		character:PivotTo(CFrame.new(PlotService.ShopPosition + Vector3.new(0, 4, 10)))
+	end
+end)
+
+local function onCharacter(player: Player, character: Model)
+	PlotService.SendHome(player)
+	CharacterService.UpdateSpeed(player)
+	CombatService.GiveWeapons(player, MonetizationService.HasPass(player, "VIPSword"))
+	MonetizationService.OnCharacter(player)
+	task.spawn(function()
+		CharacterService.ApplyAppearance(player, character)
+		CharacterService.UpdateSpeed(player)
+	end)
 end
 
 local function onPlayerAdded(player: Player)
@@ -666,46 +941,39 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 
+	MonetizationService.SetupPlayer(player)
+
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	local coins = Instance.new("IntValue")
 	coins.Name = "Coins"
 	coins.Value = profile.Data.Coins
 	coins.Parent = leaderstats
-	local steals: IntValue? = nil
-	if Config.Steal.Enabled then
-		local value = Instance.new("IntValue")
-		value.Name = "Steals"
-		value.Value = profile.Data.Stats.Steals
-		value.Parent = leaderstats
-		steals = value
-	end
+	-- الـ Steals: لما تموّت حد شايل وحش وتاخده منه
+	local steals = Instance.new("IntValue")
+	steals.Name = "Steals"
+	steals.Value = profile.Data.Stats.Steals
+	steals.Parent = leaderstats
 	leaderstats.Parent = player
 
 	task.spawn(function()
 		while player.Parent and DataService.Get(player) == profile do
 			coins.Value = math.floor(profile.Data.Coins)
-			if steals then
-				steals.Value = profile.Data.Stats.Steals
-			end
+			steals.Value = profile.Data.Stats.Steals
 			task.wait(0.5)
 		end
 	end)
 
 	player.CharacterAdded:Connect(function(character)
 		task.wait()
-		PlotService.SendHome(player)
-		ZoneService.GiveBat(player)
-		task.spawn(CharacterService.ApplyAppearance, player, character)
+		onCharacter(player, character)
 	end)
 	local character = player.Character
 	if character and not CharacterService.IsR6(character) then
 		-- اتولد قبل ما الـ R6 يجهز: نولّده تاني
 		player:LoadCharacter()
 	elseif character then
-		PlotService.SendHome(player)
-		ZoneService.GiveBat(player)
-		task.spawn(CharacterService.ApplyAppearance, player, character)
+		onCharacter(player, character)
 	end
 
 	MonsterService.SetupPlayer(player)
@@ -721,8 +989,14 @@ for _, player in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+	lastTeleport[player] = nil
 	StealService.CleanupPlayer(player)
+	CombatService.CleanupPlayer(player)
+	TradeService.CleanupPlayer(player)
+	ArenaService.CleanupPlayer(player)
+	RewardService.CleanupPlayer(player)
 	ZoneService.CleanupPlayer(player)
+	MonetizationService.CleanupPlayer(player)
 	CharacterService.Cleanup(player)
 	MonsterService.CleanupPlayer(player)
 	PlotService.Release(player)
@@ -730,7 +1004,358 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 ]]></string>
       </Properties>
-      <Item class="ModuleScript" referent="7">
+      <Item class="ModuleScript" referent="8">
+        <Properties>
+          <string name="Name">ArenaService</string>
+          <string name="Source"><![CDATA[--!strict
+-- Monster Arena: معارك وحوش 1 ضد 1.
+-- لاعب بيتحدى لاعب بوحش، التاني يقبل ويختار وحشه، والمعركة بتتعرض في الـ Arena اللي في الساحة.
+-- الكسبان بياخد فلوس + الوحش اللي خسر.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local Build = require(script.Parent.Build)
+local DataService = require(script.Parent.DataService)
+local PlotService = require(script.Parent.PlotService)
+local MonsterService = require(script.Parent.MonsterService)
+
+type Fighter = {
+	Player: Player,
+	MonsterId: string,
+	Name: string,
+	Health: number,
+	MaxHealth: number,
+	Attack: number,
+	Model: Model?,
+	Label: TextLabel?,
+}
+
+type Challenge = { From: Player, MonsterId: string, Time: number }
+
+local ArenaService = {}
+
+local remotes: { [string]: RemoteEvent }
+local challenges: { [Player]: { [Player]: Challenge } } = {} -- challenges[target][from]
+local fighting: { [Player]: boolean } = {}
+local battleRunning = false
+local pedestals: { BasePart } = {}
+local arenaSign: TextLabel
+
+-- قوة الوحش في المعركة: الندرة والـ Level والمرحلة والطفرة
+local function fighterStats(monster: MonsterMath.MonsterData): (number, number)
+	local species = Config.Species[monster.Species]
+	local rarity = Config.Rarities[species.Rarity]
+	local score = (rarity.Order * 10 + monster.Level * 2 + MonsterMath.GetStageIndex(monster.Level) * 15)
+		* MonsterMath.GetMutationMultiplier(monster.Mutation)
+	return math.floor(100 + score * 5), 8 + score * 0.6
+end
+
+local function setCarried(player: Player, monsterId: string, value: boolean)
+	local set = MonsterService.Carried[player]
+	if not set then
+		set = {}
+		MonsterService.Carried[player] = set
+	end
+	set[monsterId] = if value then true else nil
+end
+
+local function buildArena()
+	local center = Config.Arena.Position
+	local folder = Instance.new("Folder")
+	folder.Name = "MonsterArena"
+	folder.Parent = workspace
+	Build.MakePart({
+		Name = "ArenaFloor",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.6, 36, 36),
+		CFrame = CFrame.new(center + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(150, 60, 60),
+		Material = Enum.Material.Slate,
+		Parent = folder,
+	})
+	Build.MakePart({
+		Name = "ArenaRing",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.7, 30, 30),
+		CFrame = CFrame.new(center + Vector3.new(0, 0.35, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(200, 170, 120),
+		Material = Enum.Material.Sand,
+		Parent = folder,
+	})
+	for _, side in { -1, 1 } do
+		local pedestal = Build.MakePart({
+			Name = "ArenaPedestal",
+			Size = Vector3.new(7, 1.5, 7),
+			Position = center + Vector3.new(0, 1.2, side * 9),
+			Color = if side < 0 then Color3.fromRGB(70, 130, 255) else Color3.fromRGB(255, 80, 80),
+			Material = Enum.Material.Neon,
+			Parent = folder,
+		})
+		table.insert(pedestals, pedestal)
+	end
+	for i = 0, 7 do
+		local angle = i / 8 * math.pi * 2
+		Build.MakePart({
+			Name = "ArenaPillar",
+			Size = Vector3.new(2, 8, 2),
+			Position = center + Vector3.new(math.cos(angle) * 17, 4, math.sin(angle) * 17),
+			Color = Color3.fromRGB(120, 110, 100),
+			Material = Enum.Material.Cobblestone,
+			Parent = folder,
+		})
+	end
+	local signPart = Build.MakePart({
+		Name = "ArenaSign",
+		Size = Vector3.new(1, 1, 1),
+		Position = center + Vector3.new(0, 14, 0),
+		Transparency = 1,
+		CanCollide = false,
+		Parent = folder,
+	})
+	local gui, label = Build.MakeBillboard(signPart, UDim2.fromScale(28, 7), Vector3.zero, 220)
+	gui.AlwaysOnTop = false
+	label.Text = '<font color="#FF6060">⚔️ MONSTER ARENA ⚔️</font>\nChallenge someone from the Arena button'
+	arenaSign = label
+end
+
+local function fighterLabel(fighter: Fighter): string
+	return string.format("%s\n❤️ %d / %d", fighter.Name, math.max(0, math.floor(fighter.Health)), fighter.MaxHealth)
+end
+
+local function showFighter(fighter: Fighter, pedestal: BasePart, monster: MonsterMath.MonsterData)
+	local model = PlotService.BuildMonsterModel(monster)
+	local body = model.PrimaryPart :: BasePart
+	local facing = Config.Arena.Position + Vector3.new(0, pedestal.Position.Y, 0)
+	model:PivotTo(CFrame.lookAt(pedestal.Position + Vector3.new(0, 0.75 + body.Size.Y / 2 + 0.6, 0), facing))
+	local info = body:FindFirstChild("Info")
+	local label = info and info:FindFirstChild("Label") :: TextLabel?
+	model.Parent = pedestal.Parent
+	fighter.Model = model
+	fighter.Label = label
+	if label then
+		label.Text = fighterLabel(fighter)
+	end
+end
+
+local function sendState(a: Fighter, b: Fighter, log: string, done: boolean, winner: Player?)
+	for _, pair in { { a, b }, { b, a } } do
+		local me, them = pair[1], pair[2]
+		if me.Player.Parent then
+			remotes.ArenaUpdate:FireClient(me.Player, {
+				MyName = me.Name,
+				TheirName = them.Name,
+				MyHealth = math.max(0, me.Health),
+				MyMax = me.MaxHealth,
+				TheirHealth = math.max(0, them.Health),
+				TheirMax = them.MaxHealth,
+				Log = log,
+				Done = done,
+				Won = winner == me.Player,
+			})
+		end
+	end
+end
+
+local function finishBattle(a: Fighter, b: Fighter, winner: Fighter, loser: Fighter)
+	setCarried(a.Player, a.MonsterId, false)
+	setCarried(b.Player, b.MonsterId, false)
+	fighting[a.Player] = nil
+	fighting[b.Player] = nil
+
+	local winnerProfile = DataService.Get(winner.Player)
+	local lostMonster = if loser.Player.Parent then MonsterService.TakeMonsterData(loser.Player, loser.MonsterId) else nil
+	local prize = Config.Arena.PrizeCoins
+	if lostMonster then
+		prize += math.floor(MonsterMath.GetSellValue(lostMonster) * Config.Arena.PrizeValueShare)
+	end
+	if winner.Player.Parent and winnerProfile then
+		DataService.AddCoins(winner.Player, prize)
+		winnerProfile.Data.Stats.ArenaWins += 1
+		if lostMonster and not MonsterService.InsertMonsterData(winner.Player, lostMonster) then
+			-- مفيش مكان: بياخد قيمته فلوس
+			DataService.AddCoins(winner.Player, MonsterMath.GetSellValue(lostMonster))
+			MonsterService.Notify(winner.Player, "Your base was full, so you got the monster's value in coins.", "info")
+		end
+		MonsterService.Notify(winner.Player, "🏆 You won the battle! +" .. MonsterMath.FormatNumber(prize) .. " coins and " .. loser.Name .. "!", "success")
+	end
+	if loser.Player.Parent then
+		MonsterService.Notify(loser.Player, "💔 You lost the battle and " .. loser.Name .. ".", "error")
+	end
+	MonsterService.Announce("⚔️ " .. winner.Player.DisplayName .. "'s " .. winner.Name .. " beat " .. loser.Player.DisplayName .. "'s " .. loser.Name .. " in the Arena!", Color3.fromRGB(255, 120, 120))
+	for _, fighter in { a, b } do
+		if fighter.Player.Parent then
+			MonsterService.PushState(fighter.Player)
+			task.spawn(DataService.Save, fighter.Player)
+		end
+	end
+
+	task.delay(4, function()
+		for _, fighter in { a, b } do
+			if fighter.Model then
+				fighter.Model:Destroy()
+			end
+		end
+		battleRunning = false
+		arenaSign.Text = '<font color="#FF6060">⚔️ MONSTER ARENA ⚔️</font>\nChallenge someone from the Arena button'
+	end)
+end
+
+local function runBattle(a: Fighter, b: Fighter)
+	battleRunning = true
+	arenaSign.Text = string.format('<font color="#FF6060">⚔️ %s vs %s ⚔️</font>', a.Player.DisplayName, b.Player.DisplayName)
+	sendState(a, b, "The battle begins!", false, nil)
+	task.wait(1.5)
+	local attacker, defender = a, b
+	if math.random() < 0.5 then
+		attacker, defender = b, a
+	end
+	for _ = 1, Config.Arena.MaxTurns do
+		if not a.Player.Parent or not b.Player.Parent then
+			break
+		end
+		local damage = math.floor(attacker.Attack * (0.75 + math.random() * 0.5))
+		defender.Health -= damage
+		if defender.Label then
+			defender.Label.Text = fighterLabel(defender)
+		end
+		local model = defender.Model
+		if model and model.PrimaryPart then
+			local body = model.PrimaryPart
+			local original = body.Color
+			body.Color = Color3.fromRGB(255, 80, 80)
+			task.delay(0.15, function()
+				if body.Parent then
+					body.Color = original
+				end
+			end)
+		end
+		sendState(a, b, attacker.Name .. " hits for " .. damage .. "!", false, nil)
+		if defender.Health <= 0 then
+			break
+		end
+		attacker, defender = defender, attacker
+		task.wait(Config.Arena.TurnTime)
+	end
+
+	-- لو حد خرج من السيرفر، التاني هو الكسبان. غير كده الأعلى في نسبة الـ HP.
+	local winner: Fighter
+	if not a.Player.Parent then
+		winner = b
+	elseif not b.Player.Parent then
+		winner = a
+	else
+		winner = if a.Health / a.MaxHealth >= b.Health / b.MaxHealth then a else b
+	end
+	local loser = if winner == a then b else a
+	sendState(a, b, winner.Name .. " wins!", true, winner.Player)
+	finishBattle(a, b, winner, loser)
+end
+
+local function ownMonster(player: Player, monsterId: unknown): MonsterMath.MonsterData?
+	if type(monsterId) ~= "string" then
+		return nil
+	end
+	local profile = DataService.Get(player)
+	local monster = profile and profile.Data.Monsters[monsterId]
+	if not monster or MonsterService.IsCarried(player, monsterId) then
+		return nil
+	end
+	return monster
+end
+
+local function onChallenge(player: Player, targetUserId: unknown, monsterId: unknown)
+	if type(targetUserId) ~= "number" or fighting[player] then
+		return
+	end
+	local target = Players:GetPlayerByUserId(targetUserId)
+	local monster = ownMonster(player, monsterId)
+	if not target or target == player or not monster then
+		return
+	end
+	challenges[target] = challenges[target] or {}
+	challenges[target][player] = { From = player, MonsterId = monsterId :: string, Time = os.clock() }
+	remotes.ArenaIncoming:FireClient(target, player.UserId, player.DisplayName, MonsterMath.GetDisplayName(monster))
+	MonsterService.Notify(player, "⚔️ Challenge sent to " .. target.DisplayName .. "!", "info")
+end
+
+local function onRespond(player: Player, fromUserId: unknown, monsterId: unknown)
+	if type(fromUserId) ~= "number" then
+		return
+	end
+	local from = Players:GetPlayerByUserId(fromUserId)
+	local pending = challenges[player]
+	local challenge = from and pending and pending[from]
+	if not from or not pending or not challenge then
+		return
+	end
+	pending[from] = nil
+	if monsterId == nil then
+		MonsterService.Notify(from, player.DisplayName .. " declined your Arena challenge.", "info")
+		return
+	end
+	if os.clock() - challenge.Time > Config.Arena.RequestTimeout then
+		MonsterService.Notify(player, "That challenge expired.", "error")
+		return
+	end
+	if battleRunning then
+		MonsterService.Notify(player, "The Arena is busy, try again in a moment!", "error")
+		MonsterService.Notify(from, "The Arena is busy, try again in a moment!", "error")
+		return
+	end
+	local mine = ownMonster(player, monsterId)
+	local theirs = ownMonster(from, challenge.MonsterId)
+	if not mine or not theirs or fighting[player] or fighting[from] then
+		MonsterService.Notify(player, "This battle can't start right now.", "error")
+		return
+	end
+
+	local function makeFighter(owner: Player, id: string, monster: MonsterMath.MonsterData): Fighter
+		local health, attack = fighterStats(monster)
+		return {
+			Player = owner,
+			MonsterId = id,
+			Name = MonsterMath.GetDisplayName(monster),
+			Health = health,
+			MaxHealth = health,
+			Attack = attack,
+			Model = nil,
+			Label = nil,
+		}
+	end
+	local a = makeFighter(from, challenge.MonsterId, theirs)
+	local b = makeFighter(player, monsterId :: string, mine)
+	-- الوحوش مقفولة لحد ما المعركة تخلص (مفيش بيع ولا Trade)
+	fighting[from] = true
+	fighting[player] = true
+	setCarried(from, a.MonsterId, true)
+	setCarried(player, b.MonsterId, true)
+	showFighter(a, pedestals[1], theirs)
+	showFighter(b, pedestals[2], mine)
+	task.spawn(runBattle, a, b)
+end
+
+function ArenaService.CleanupPlayer(player: Player)
+	challenges[player] = nil
+	for _, pending in challenges do
+		pending[player] = nil
+	end
+end
+
+function ArenaService.Init(allRemotes: { [string]: RemoteEvent })
+	remotes = allRemotes
+	buildArena()
+	remotes.ArenaChallenge.OnServerEvent:Connect(onChallenge)
+	remotes.ArenaRespond.OnServerEvent:Connect(onRespond)
+end
+
+return ArenaService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="9">
         <Properties>
           <string name="Name">Build</string>
           <string name="Source"><![CDATA[--!strict
@@ -805,7 +1430,317 @@ return Build
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="8">
+      <Item class="ModuleScript" referent="10">
+        <Properties>
+          <string name="Name">CarryService</string>
+          <string name="Source"><![CDATA[--!strict
+-- لما تاخد وحش (من عش، من Monster Rain، أو بيضة الـ Big Boss) بيتشال على ضهرك،
+-- ولازم ترجع بيه لقاعدتك عشان يبقى بتاعك. لو حد ضربك وموّتك بياخده منك
+-- ولازم يرجع بيه هو كمان. لو موتّ من حاجة تانية بيقع على الأرض وأي حد يقدر ياخده.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local Build = require(script.Parent.Build)
+local DataService = require(script.Parent.DataService)
+local PlotService = require(script.Parent.PlotService)
+local MonsterService = require(script.Parent.MonsterService)
+local CombatService = require(script.Parent.CombatService)
+local CharacterService = require(script.Parent.CharacterService)
+
+export type Cargo = {
+	Kind: string, -- "Monster" أو "Egg"
+	Species: string?,
+	Mutation: string?,
+	EggType: string?,
+}
+
+type Carry = {
+	Cargo: Cargo,
+	Model: Model,
+	DiedConnection: RBXScriptConnection?,
+	LastFullWarning: number,
+}
+
+local CarryService = {}
+
+local carries: { [Player]: Carry } = {}
+local pickupsFolder: Folder
+
+function CarryService.CargoName(cargo: Cargo): string
+	if cargo.Kind == "Egg" then
+		local egg = Config.Eggs[cargo.EggType :: string]
+		return if egg then egg.DisplayName else "Egg"
+	end
+	local species = Config.Species[cargo.Species :: string]
+	local name = if species then species.DisplayName else "Monster"
+	return if cargo.Mutation then cargo.Mutation .. " " .. name else name
+end
+
+local function cargoColor(cargo: Cargo): string
+	if cargo.Kind == "Egg" then
+		return "#FFFFFF"
+	end
+	local species = Config.Species[cargo.Species :: string]
+	local rarity = species and Config.Rarities[species.Rarity]
+	return if rarity then "#" .. rarity.Color:ToHex() else "#FFFFFF"
+end
+
+-- شكل الحاجة اللي بتتشال (وحش صغير أو بيضة)
+local function buildCargoModel(cargo: Cargo): Model
+	if cargo.Kind == "Monster" then
+		local fake: MonsterMath.MonsterData = {
+			Id = "Carried",
+			Species = cargo.Species :: string,
+			Mutation = cargo.Mutation,
+			Level = 1,
+			Xp = 0,
+			Hunger = 100,
+			Happiness = 100,
+			Slot = 0,
+		}
+		local model = PlotService.BuildMonsterModel(fake)
+		local info = model.PrimaryPart and model.PrimaryPart:FindFirstChild("Info")
+		if info then
+			info:Destroy()
+		end
+		return model
+	end
+	local egg = Config.Eggs[cargo.EggType :: string]
+	local model = Instance.new("Model")
+	local part = Build.MakePart({
+		Name = "Body",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(3, 3, 3),
+		Color = if egg then egg.Color else Color3.new(1, 1, 1),
+		Material = if cargo.EggType == "Secret" then Enum.Material.Neon else Enum.Material.SmoothPlastic,
+		CanCollide = false,
+		Parent = model,
+	})
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Scale = Vector3.new(1, 1.3, 1)
+	mesh.Parent = part
+	if cargo.EggType == "Secret" then
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = Color3.fromRGB(200, 120, 255)
+		sparkles.Parent = part
+	end
+	model.PrimaryPart = part
+	return model
+end
+
+function CarryService.IsCarrying(player: Player): boolean
+	return carries[player] ~= nil
+end
+
+local function speedFor(cargo: Cargo): number
+	return if cargo.Kind == "Egg" and cargo.EggType == "Secret"
+		then Config.Carry.SecretEggSpeedMultiplier
+		else Config.Carry.WalkSpeedMultiplier
+end
+
+local function stopCarry(player: Player): Cargo?
+	local carry = carries[player]
+	if not carry then
+		return nil
+	end
+	carries[player] = nil
+	if carry.DiedConnection then
+		carry.DiedConnection:Disconnect()
+	end
+	carry.Model:Destroy()
+	CharacterService.SetSpeedFactor(player, "Carry", nil)
+	return carry.Cargo
+end
+
+-- بيحط حاجة على الأرض وأي حد يقدر ياخدها (بيستخدمها الـ Monster Rain وبيضة الـ Boss والوقعات)
+function CarryService.SpawnPickup(cargo: Cargo, position: Vector3, lifetime: number, title: string?, fallHeight: number?): Model
+	local model = buildCargoModel(cargo)
+	model.Name = "Pickup"
+	local body = model.PrimaryPart :: BasePart
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+			part.CanCollide = false
+		end
+	end
+	local ground = position + Vector3.new(0, body.Size.Y / 2 + 0.5, 0)
+	model:PivotTo(CFrame.new(ground + Vector3.new(0, fallHeight or 0, 0)))
+	model.Parent = pickupsFolder
+
+	local gui, label = Build.MakeBillboard(body, UDim2.fromOffset(240, 60), Vector3.new(0, body.Size.Y / 2 + 3, 0), 250)
+	gui.Name = "Info"
+	label.Text = string.format('<font color="%s">%s</font>\n%s', cargoColor(cargo), CarryService.CargoName(cargo), title or "✋ Take it to your base!")
+
+	local prompt = Build.MakePrompt(body, "PickupPrompt", "Take", Enum.KeyCode.E, Config.Combat.TakeHoldDuration)
+	prompt.ObjectText = CarryService.CargoName(cargo)
+	prompt.MaxActivationDistance = 12
+	prompt.Enabled = fallHeight == nil
+	prompt.Triggered:Connect(function(player)
+		if model.Parent and CarryService.StartCarry(player, cargo) then
+			model:Destroy()
+		end
+	end)
+
+	-- بيقع من السما
+	if fallHeight then
+		task.spawn(function()
+			local steps = 40
+			for i = 1, steps do
+				if not model.Parent then
+					return
+				end
+				model:PivotTo(CFrame.new(ground + Vector3.new(0, fallHeight * (1 - i / steps), 0)))
+				task.wait(0.05)
+			end
+			prompt.Enabled = true
+		end)
+	end
+
+	task.delay(lifetime, function()
+		if model.Parent then
+			model:Destroy()
+		end
+	end)
+	return model
+end
+
+local function onCarrierDied(player: Player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local position = if root then root.Position else nil
+	local cargo = stopCarry(player)
+	if not cargo then
+		return
+	end
+	local name = CarryService.CargoName(cargo)
+
+	-- اللي قتلك بياخده منك
+	local killer = CombatService.GetKiller(player)
+	if killer and not CarryService.IsCarrying(killer) and CarryService.StartCarry(killer, cargo) then
+		local profile = DataService.Get(killer)
+		if profile then
+			profile.Data.Stats.Steals += 1
+		end
+		MonsterService.Notify(killer, "🦹 You took " .. name .. " from " .. player.DisplayName .. "! Run home!", "warning")
+		MonsterService.Notify(player, "😱 " .. killer.DisplayName .. " knocked you out and took your " .. name .. "!", "error")
+		return
+	end
+
+	if position then
+		CarryService.SpawnPickup(cargo, position - Vector3.new(0, 3, 0), Config.Carry.DropLifetime, "💥 Dropped! Grab it!")
+		MonsterService.Notify(player, "You dropped " .. name .. "! Go back and grab it.", "error")
+	end
+end
+
+-- بيشيّل اللاعب حاجة على ضهره. بيرجع false لو مش هينفع (شايل حاجة أو قاعدته مليانة).
+function CarryService.StartCarry(player: Player, cargo: Cargo): boolean
+	if carries[player] then
+		MonsterService.Notify(player, "You are already carrying something! Take it home first.", "error")
+		return false
+	end
+	if not MonsterService.GetFreeSlot(player) then
+		MonsterService.Notify(player, "Your base is full! Sell a monster or buy a new slot.", "error")
+		return false
+	end
+	local character = player.Character
+	local torso = character and (character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")) :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not character or not torso or not humanoid or humanoid.Health <= 0 then
+		return false
+	end
+
+	local model = buildCargoModel(cargo)
+	model.Name = "CarriedCargo"
+	local body = model.PrimaryPart :: BasePart
+	local scale = math.min(1, 2.6 / math.max(body.Size.Y, 0.1))
+	if scale < 1 then
+		model:ScaleTo(scale)
+	end
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = false
+			part.CanCollide = false
+			part.Massless = true
+		end
+	end
+	model:PivotTo(torso.CFrame * CFrame.new(0, 0.4, 0.6 + body.Size.Y / 2))
+	local weldConstraint = Instance.new("WeldConstraint")
+	weldConstraint.Part0 = torso
+	weldConstraint.Part1 = body
+	weldConstraint.Parent = body
+	model.Parent = character
+
+	local carry: Carry = { Cargo = cargo, Model = model, DiedConnection = nil, LastFullWarning = 0 }
+	carry.DiedConnection = humanoid.Died:Connect(function()
+		if carries[player] == carry then
+			onCarrierDied(player)
+		end
+	end)
+	carries[player] = carry
+	CharacterService.SetSpeedFactor(player, "Carry", speedFor(cargo))
+	MonsterService.Notify(player, "🎒 You picked up " .. CarryService.CargoName(cargo) .. "! Carry it back to your base!", "warning")
+	return true
+end
+
+local function deliver(player: Player, carry: Carry)
+	local cargo = carry.Cargo
+	local ok = if cargo.Kind == "Egg"
+		then MonsterService.AddEgg(player, cargo.EggType :: string)
+		else MonsterService.AddMonster(player, cargo.Species :: string, cargo.Mutation)
+	if ok then
+		stopCarry(player)
+	elseif os.clock() - carry.LastFullWarning > 5 then
+		carry.LastFullWarning = os.clock()
+		MonsterService.Notify(player, "Your base is full! Free up a slot to keep it.", "error")
+	end
+end
+
+local function update()
+	for player, carry in carries do
+		local plot = PlotService.GetPlot(player)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not carry.Model.Parent then
+			-- الشخصية اتشالت (Respawn مثلاً) من غير Died
+			onCarrierDied(player)
+		elseif plot and root and PlotService.IsInsidePlot(plot, root.Position) then
+			deliver(player, carry)
+		end
+	end
+end
+
+function CarryService.CleanupPlayer(player: Player)
+	if carries[player] then
+		onCarrierDied(player)
+	end
+end
+
+function CarryService.Init()
+	pickupsFolder = Instance.new("Folder")
+	pickupsFolder.Name = "Pickups"
+	pickupsFolder.Parent = workspace
+
+	local accumulator = 0
+	RunService.Heartbeat:Connect(function(dt)
+		accumulator += dt
+		if accumulator >= 0.2 then
+			accumulator = 0
+			update()
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		CarryService.CleanupPlayer(player)
+	end)
+end
+
+return CarryService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="11">
         <Properties>
           <string name="Name">CharacterService</string>
           <string name="Source"><![CDATA[--!strict
@@ -813,7 +1748,10 @@ return Build
 -- بنحط Rig من نوع R6 كـ StarterCharacter، وبعدين نلبّسه شكل اللاعب نفسه (هدومه وإكسسواراته).
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local CharacterService = {}
 
@@ -857,8 +1795,35 @@ function CharacterService.ApplyAppearance(player: Player, character: Model)
 	end
 end
 
+-- سرعة المشي = Config.WalkSpeed × كل العوامل (شايل وحش، Speed Boost، ...)
+local speedFactors: { [Player]: { [string]: number } } = {}
+
+function CharacterService.UpdateSpeed(player: Player)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	local speed = Config.WalkSpeed
+	for _, factor in speedFactors[player] or {} do
+		speed *= factor
+	end
+	humanoid.WalkSpeed = speed
+end
+
+function CharacterService.SetSpeedFactor(player: Player, reason: string, factor: number?)
+	local factors = speedFactors[player]
+	if not factors then
+		factors = {}
+		speedFactors[player] = factors
+	end
+	factors[reason] = factor
+	CharacterService.UpdateSpeed(player)
+end
+
 function CharacterService.Cleanup(player: Player)
 	descriptions[player] = nil
+	speedFactors[player] = nil
 end
 
 function CharacterService.Init()
@@ -880,7 +1845,265 @@ return CharacterService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="9">
+      <Item class="ModuleScript" referent="12">
+        <Properties>
+          <string name="Name">CombatService</string>
+          <string name="Source"><![CDATA[--!strict
+-- الأسلحة والضرب: المضرب الخشبي لكل الناس، وسيف الـ VIP لأصحاب الـ Gamepass.
+-- أي حاجة ممكن تتضرب (الوحوش الأم، الـ Big Boss) بتتسجل هنا كـ Target،
+-- ولو مفيش Target قريب السلاح بيضرب أقرب لاعب (برّه القواعد بس).
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local Build = require(script.Parent.Build)
+local PlotService = require(script.Parent.PlotService)
+local MonsterService = require(script.Parent.MonsterService)
+
+export type Target = {
+	Part: BasePart,
+	Radius: number, -- نص عرض الهدف، عشان المدى يتحسب من حرفه
+	OnHit: (player: Player, damage: number) -> (),
+}
+
+type Tag = { Attacker: Player, Time: number }
+
+local CombatService = {}
+
+local targets: { [Target]: boolean } = {}
+local lastSwing: { [Player]: number } = {}
+local tags: { [Player]: Tag } = {}
+
+function CombatService.Register(target: Target): Target
+	targets[target] = true
+	return target
+end
+
+function CombatService.Unregister(target: Target?)
+	if target then
+		targets[target] = nil
+	end
+end
+
+local function getRoot(player: Player): BasePart?
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+local function getHumanoid(player: Player): Humanoid?
+	local character = player.Character
+	return character and character:FindFirstChildOfClass("Humanoid")
+end
+
+local function flatDistance(a: Vector3, b: Vector3): number
+	return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
+end
+
+-- اللاعب جوه أي قاعدة؟ (القواعد أمان: مفيش ضرب لاعبين فيها)
+function CombatService.IsInSafeZone(position: Vector3): boolean
+	for _, plot in PlotService.GetPlots() do
+		if PlotService.IsInsidePlot(plot, position) then
+			return true
+		end
+	end
+	return false
+end
+
+-- مين آخر حد ضرب اللاعب ده في آخر شوية ثواني (عشان ياخد اللي كان شايله لو مات)
+function CombatService.GetKiller(victim: Player): Player?
+	local tag = tags[victim]
+	if tag and os.clock() - tag.Time <= Config.Carry.KillCreditTime and tag.Attacker.Parent then
+		return tag.Attacker
+	end
+	return nil
+end
+
+local function swing(player: Player, tool: Tool, damageMultiplier: number, extraReach: number, pvpDamage: number)
+	local now = os.clock()
+	if lastSwing[player] and now - lastSwing[player] < Config.Combat.AttackCooldown then
+		return
+	end
+	lastSwing[player] = now
+	local root = getRoot(player)
+	local humanoid = getHumanoid(player)
+	if not root or not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	-- أنيميشن الضربة بتاع R6
+	local animation = Instance.new("StringValue")
+	animation.Name = "toolanim"
+	animation.Value = "Slash"
+	animation.Parent = tool
+
+	-- الأول: أقرب وحش أم أو Boss في المدى
+	local best: Target? = nil
+	local bestDistance = math.huge
+	for target in targets do
+		if target.Part.Parent then
+			local distance = flatDistance(root.Position, target.Part.Position) - target.Radius
+			if distance <= Config.Combat.BatReach + extraReach and distance < bestDistance then
+				best = target
+				bestDistance = distance
+			end
+		end
+	end
+	if best then
+		best.OnHit(player, math.floor(MonsterService.GetAttackDamage(player) * damageMultiplier))
+		return
+	end
+
+	-- مفيش: نضرب أقرب لاعب (برّه القواعد)
+	if CombatService.IsInSafeZone(root.Position) then
+		return
+	end
+	local victim: Player? = nil
+	local victimDistance = math.huge
+	for _, other in Players:GetPlayers() do
+		if other ~= player then
+			local otherRoot = getRoot(other)
+			local otherHumanoid = getHumanoid(other)
+			if otherRoot and otherHumanoid and otherHumanoid.Health > 0 then
+				local distance = (otherRoot.Position - root.Position).Magnitude
+				if distance <= Config.PvP.Reach + extraReach and distance < victimDistance and not CombatService.IsInSafeZone(otherRoot.Position) then
+					victim = other
+					victimDistance = distance
+				end
+			end
+		end
+	end
+	if victim then
+		local victimHumanoid = getHumanoid(victim)
+		if victimHumanoid then
+			tags[victim] = { Attacker = player, Time = now }
+			victimHumanoid:TakeDamage(pvpDamage)
+		end
+	end
+end
+
+local function weld(part0: BasePart, part1: BasePart)
+	local constraint = Instance.new("WeldConstraint")
+	constraint.Part0 = part0
+	constraint.Part1 = part1
+	constraint.Parent = part1
+end
+
+local function makeBat(): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = "Bat"
+	tool.ToolTip = "Hit the mother monsters!"
+	tool.CanBeDropped = false
+	tool.GripPos = Vector3.new(0, 0, 0.6) -- اللاعب ماسكه من آخره
+	local handle = Build.MakePart({
+		Name = "Handle",
+		Size = Vector3.new(0.5, 0.5, 2.2),
+		Color = Color3.fromRGB(140, 95, 55),
+		Material = Enum.Material.Wood,
+		Anchored = false,
+		CanCollide = false,
+		Massless = true,
+	})
+	handle.Parent = tool
+	local barrel = Build.MakePart({
+		Name = "Barrel",
+		Size = Vector3.new(0.85, 0.85, 2.6),
+		CFrame = handle.CFrame * CFrame.new(0, 0, -2.3),
+		Color = Color3.fromRGB(170, 120, 70),
+		Material = Enum.Material.Wood,
+		Anchored = false,
+		CanCollide = false,
+		Massless = true,
+	})
+	barrel.Parent = tool
+	weld(handle, barrel)
+	return tool
+end
+
+local function makeSword(): Tool
+	local tool = Instance.new("Tool")
+	tool.Name = "VIP Sword"
+	tool.ToolTip = "VIP: hits much harder!"
+	tool.CanBeDropped = false
+	tool.GripPos = Vector3.new(0, 0, 0.4)
+	local handle = Build.MakePart({
+		Name = "Handle",
+		Size = Vector3.new(0.4, 0.4, 1.4),
+		Color = Color3.fromRGB(60, 40, 30),
+		Material = Enum.Material.Wood,
+		Anchored = false,
+		CanCollide = false,
+		Massless = true,
+	})
+	handle.Parent = tool
+	local guard = Build.MakePart({
+		Name = "Guard",
+		Size = Vector3.new(1.8, 0.3, 0.3),
+		CFrame = handle.CFrame * CFrame.new(0, 0, -0.85),
+		Color = Color3.fromRGB(255, 205, 50),
+		Material = Enum.Material.Foil,
+		Anchored = false,
+		CanCollide = false,
+		Massless = true,
+	})
+	guard.Parent = tool
+	weld(handle, guard)
+	local blade = Build.MakePart({
+		Name = "Blade",
+		Size = Vector3.new(0.25, 0.6, 4.2),
+		CFrame = handle.CFrame * CFrame.new(0, 0, -3.1),
+		Color = Color3.fromRGB(120, 220, 255),
+		Material = Enum.Material.Neon,
+		Anchored = false,
+		CanCollide = false,
+		Massless = true,
+	})
+	blade.Parent = tool
+	weld(handle, blade)
+	return tool
+end
+
+-- بيدّي اللاعب أسلحته (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
+function CombatService.GiveWeapons(player: Player, hasSword: boolean)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if not backpack then
+		return
+	end
+	local character = player.Character
+	local function has(name: string): boolean
+		return backpack:FindFirstChild(name) ~= nil or (character ~= nil and character:FindFirstChild(name) ~= nil)
+	end
+	if not has("Bat") then
+		local bat = makeBat()
+		bat.Activated:Connect(function()
+			swing(player, bat, 1, 0, Config.PvP.BatDamage)
+		end)
+		bat.Parent = backpack
+	end
+	if hasSword and not has("VIP Sword") then
+		local sword = makeSword()
+		sword.Activated:Connect(function()
+			swing(player, sword, Config.VIPSword.DamageMultiplier, Config.VIPSword.ExtraReach, Config.PvP.SwordDamage)
+		end)
+		sword.Parent = backpack
+	end
+end
+
+function CombatService.CleanupPlayer(player: Player)
+	lastSwing[player] = nil
+	tags[player] = nil
+	for victim, tag in tags do
+		if tag.Attacker == player then
+			tags[victim] = nil
+		end
+	end
+end
+
+return CombatService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="13">
         <Properties>
           <string name="Name">DataService</string>
           <string name="Source"><![CDATA[--!strict
@@ -910,7 +2133,10 @@ export type PlayerData = {
 	SlotUpgrades: number,
 	LockUpgrades: number,
 	NextId: number,
-	Stats: { Hatched: number, Steals: number, TimesRobbed: number },
+	Stats: { Hatched: number, Steals: number, TimesRobbed: number, ArenaWins: number },
+	Accessories: { [string]: boolean }, -- الإكسسوارات اللي اللاعب اشتراها
+	Daily: { LastClaim: number, Streak: number },
+	LastSpin: number,
 }
 
 export type Profile = {
@@ -928,7 +2154,10 @@ local DEFAULT_DATA: PlayerData = {
 	SlotUpgrades = 0,
 	LockUpgrades = 0,
 	NextId = 1,
-	Stats = { Hatched = 0, Steals = 0, TimesRobbed = 0 },
+	Stats = { Hatched = 0, Steals = 0, TimesRobbed = 0, ArenaWins = 0 },
+	Accessories = {},
+	Daily = { LastClaim = 0, Streak = 0 },
+	LastSpin = 0,
 }
 
 local MAX_RETRIES = 3
@@ -1101,7 +2330,680 @@ return DataService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="10">
+      <Item class="ModuleScript" referent="14">
+        <Properties>
+          <string name="Name">EventService</string>
+          <string name="Source"><![CDATA[--!strict
+-- أحداث الماب:
+--  • Monster Rain كل ساعة: وحش نادر بيقع في نص الماب، وأول واحد يمسكه ويوصله قاعدته ياخده.
+--  • Big Boss كل شوية (عشوائي): وحش ضخم دمه وضربته عاليين، لازم الكل يتجمع يقتله،
+--    ولما يموت بيسيب بيضة Secret. اللي يشيلها بيمشي أبطأ شوية لحد ما يوصلها قاعدته.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local Build = require(script.Parent.Build)
+local MonsterService = require(script.Parent.MonsterService)
+local CombatService = require(script.Parent.CombatService)
+local CarryService = require(script.Parent.CarryService)
+
+local EventService = {}
+
+local RAIN_POSITION = Vector3.new(20, 0.2, 0) -- نص الساحة قدام القواعد
+local BOSS_COLOR = Color3.fromRGB(40, 20, 50)
+
+type Boss = {
+	Part: BasePart,
+	Health: number,
+	MaxHealth: number,
+	Fill: Frame,
+	Text: TextLabel,
+	Target: CombatService.Target,
+	Dead: boolean,
+}
+
+local eventsFolder: Folder
+local boss: Boss? = nil
+
+-- Monster Rain ----------------------------------------------------------------------------
+
+function EventService.MonsterRain()
+	local pool = Config.MonsterRain.Species
+	local species = pool[math.random(1, #pool)]
+	local cargo: CarryService.Cargo = {
+		Kind = "Monster",
+		Species = species,
+		Mutation = MonsterService.RollMutation(Config.MonsterRain.MutationChanceMultiplier),
+	}
+	CarryService.SpawnPickup(cargo, RAIN_POSITION, Config.MonsterRain.Lifetime, "🌧️ MONSTER RAIN! Grab it and run home!", 140)
+	MonsterService.Announce("🌧️ MONSTER RAIN! A " .. CarryService.CargoName(cargo) .. " is falling in the middle of the map!", Color3.fromRGB(120, 200, 255))
+end
+
+-- Big Boss ---------------------------------------------------------------------------------
+
+local function updateBossBar(current: Boss)
+	current.Fill.Size = UDim2.fromScale(math.clamp(current.Health / current.MaxHealth, 0, 1), 1)
+	current.Text.Text = MonsterMath.FormatNumber(math.max(0, current.Health)) .. " / " .. MonsterMath.FormatNumber(current.MaxHealth)
+end
+
+local function removeBoss(current: Boss)
+	current.Dead = true
+	CombatService.Unregister(current.Target)
+	current.Part:Destroy()
+	if boss == current then
+		boss = nil
+	end
+end
+
+local function killBoss(current: Boss, killer: Player)
+	local position = current.Part.Position
+	removeBoss(current)
+	MonsterService.Announce("💀 " .. killer.DisplayName .. " landed the final hit on the BIG BOSS! A SECRET EGG dropped!", Color3.fromRGB(200, 120, 255))
+	CarryService.SpawnPickup(
+		{ Kind = "Egg", EggType = "Secret" },
+		Vector3.new(position.X, 0.2, position.Z),
+		Config.Boss.Lifetime,
+		"🌌 SECRET EGG! Carry it home (it's heavy)"
+	)
+end
+
+function EventService.SpawnBoss()
+	if boss then
+		return
+	end
+	local settings = Config.Boss
+	local maxHealth = math.max(settings.MinHealth, settings.HealthPerPlayer * #Players:GetPlayers())
+	local part = Build.MakePart({
+		Name = "BigBoss",
+		Size = Vector3.one * settings.Size,
+		Position = settings.Position + Vector3.new(0, settings.Size / 2, 0),
+		Color = BOSS_COLOR,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = eventsFolder,
+	})
+	local fire = Instance.new("Fire")
+	fire.Color = Color3.fromRGB(170, 60, 255)
+	fire.SecondaryColor = Color3.fromRGB(60, 20, 120)
+	fire.Size = 14
+	fire.Parent = part
+
+	local gui, label = Build.MakeBillboard(part, UDim2.fromScale(30, 8), Vector3.new(0, settings.Size / 2 + 5, 0), 400)
+	gui.AlwaysOnTop = false
+	label.Size = UDim2.fromScale(1, 0.55)
+	label.Text = '<font color="#C878FF">💀 BIG BOSS 💀</font>\nTeam up to defeat it!'
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.fromScale(1, 0.35)
+	bar.Position = UDim2.fromScale(0, 0.62)
+	bar.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+	bar.BorderSizePixel = 0
+	bar.Parent = gui
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = Color3.fromRGB(190, 60, 255)
+	fill.BorderSizePixel = 0
+	fill.Parent = bar
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Font = Enum.Font.FredokaOne
+	text.TextScaled = true
+	text.TextColor3 = Color3.new(1, 1, 1)
+	text.TextStrokeTransparency = 0.3
+	text.ZIndex = 2
+	text.Parent = bar
+
+	local current: Boss
+	current = {
+		Part = part,
+		Health = maxHealth,
+		MaxHealth = maxHealth,
+		Fill = fill,
+		Text = text,
+		Dead = false,
+		Target = CombatService.Register({
+			Part = part,
+			Radius = settings.Size / 2,
+			OnHit = function(player: Player, damage: number)
+				if current.Dead then
+					return
+				end
+				current.Health -= damage
+				part.Color = Color3.fromRGB(255, 90, 90)
+				task.delay(0.1, function()
+					if part.Parent then
+						part.Color = BOSS_COLOR
+					end
+				end)
+				if current.Health <= 0 then
+					killBoss(current, player)
+				else
+					updateBossBar(current)
+				end
+			end,
+		}),
+	}
+	boss = current
+	updateBossBar(current)
+	MonsterService.Announce("💀 A BIG BOSS appeared in Zone 1! Everyone team up to defeat it and win a SECRET EGG!", Color3.fromRGB(200, 120, 255))
+
+	-- بيضرب كل اللي جنبه
+	task.spawn(function()
+		while not current.Dead do
+			task.wait(settings.AttackInterval)
+			if current.Dead then
+				break
+			end
+			for _, player in Players:GetPlayers() do
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if root and humanoid and humanoid.Health > 0 then
+					local flat = Vector3.new(root.Position.X - part.Position.X, 0, root.Position.Z - part.Position.Z)
+					if flat.Magnitude <= settings.AttackRange then
+						humanoid:TakeDamage(settings.Damage)
+					end
+				end
+			end
+		end
+	end)
+
+	-- لو محدش قتله بيمشي
+	task.delay(settings.Lifetime, function()
+		if boss == current and not current.Dead then
+			removeBoss(current)
+			MonsterService.Announce("The Big Boss got away... maybe next time!", Color3.fromRGB(200, 200, 200))
+		end
+	end)
+end
+
+function EventService.Init()
+	eventsFolder = Instance.new("Folder")
+	eventsFolder.Name = "Events"
+	eventsFolder.Parent = workspace
+
+	task.spawn(function()
+		while true do
+			task.wait(Config.MonsterRain.Interval)
+			EventService.MonsterRain()
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(math.random(Config.Boss.MinInterval, Config.Boss.MaxInterval))
+			EventService.SpawnBoss()
+		end
+	end)
+
+	-- في Studio بس: تقدر تشغّل الأحداث من الـ Command Bar عشان تجرّبها:
+	--   game.ServerStorage.RaiseAMonsterDebug.MonsterRain:Fire()
+	--   game.ServerStorage.RaiseAMonsterDebug.Boss:Fire()
+	if RunService:IsStudio() then
+		local folder = Instance.new("Folder")
+		folder.Name = "RaiseAMonsterDebug"
+		-- KillBoss: آخر ضربة باسم أول لاعب (عشان تجرّب بيضة الـ Secret من غير مئات الضربات)
+		local function killBossForTest()
+			local current = boss
+			local first = Players:GetPlayers()[1]
+			if current and first then
+				current.Target.OnHit(first, current.Health + 1)
+			end
+		end
+		for name, callback in { MonsterRain = EventService.MonsterRain, Boss = EventService.SpawnBoss, KillBoss = killBossForTest } do
+			local event = Instance.new("BindableEvent")
+			event.Name = name
+			event.Event:Connect(callback)
+			event.Parent = folder
+		end
+		folder.Parent = game:GetService("ServerStorage")
+	end
+end
+
+return EventService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="15">
+        <Properties>
+          <string name="Name">LeaderboardService</string>
+          <string name="Source"><![CDATA[--!strict
+-- لوحات في الساحة: الأغنى، أكتر حرامي، وأكتر وحوش Legendary.
+-- بتستخدم OrderedDataStore عشان تبقى لكل اللاعبين (بعد الـ Publish)،
+-- ولو مش متاحة (زي في Studio قبل الـ Publish) بتعرض اللاعبين اللي في السيرفر بس.
+
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local Build = require(script.Parent.Build)
+local DataService = require(script.Parent.DataService)
+
+type Board = {
+	Key: string,
+	Title: string,
+	Color: Color3,
+	Value: (data: DataService.PlayerData) -> number,
+	Store: OrderedDataStore?,
+	Rows: { TextLabel },
+	Position: Vector3,
+}
+
+local LeaderboardService = {}
+
+local function countLegendary(data: DataService.PlayerData): number
+	local count = 0
+	for _, monster in data.Monsters do
+		if MonsterMath.GetStage(monster.Level).Name == "Legendary" then
+			count += 1
+		end
+	end
+	return count
+end
+
+local boards: { Board } = {
+	{
+		Key = "Richest",
+		Title = "💰 Richest",
+		Color = Color3.fromRGB(255, 210, 70),
+		Value = function(data)
+			return math.floor(data.Coins)
+		end,
+		Store = nil,
+		Rows = {},
+		Position = Vector3.new(44, 0, 55),
+	},
+	{
+		Key = "Thief",
+		Title = "🦹 Top Thief",
+		Color = Color3.fromRGB(255, 100, 100),
+		Value = function(data)
+			return data.Stats.Steals
+		end,
+		Store = nil,
+		Rows = {},
+		Position = Vector3.new(44, 0, 80),
+	},
+	{
+		Key = "Legendary",
+		Title = "👑 Most Legendary",
+		Color = Color3.fromRGB(255, 170, 40),
+		Value = countLegendary,
+		Store = nil,
+		Rows = {},
+		Position = Vector3.new(44, 0, 105),
+	},
+}
+
+local names: { [number]: string } = {}
+
+local function nameOf(userId: number): string
+	if names[userId] then
+		return names[userId]
+	end
+	local player = Players:GetPlayerByUserId(userId)
+	if player then
+		names[userId] = player.DisplayName
+		return player.DisplayName
+	end
+	local ok, result = pcall(function()
+		return Players:GetNameFromUserIdAsync(userId)
+	end)
+	local name = if ok and result then result else "Player"
+	names[userId] = name
+	return name
+end
+
+local function buildBoard(folder: Folder, board: Board)
+	local cframe = CFrame.lookAt(board.Position, board.Position + Vector3.new(-1, 0, 0))
+	for _, side in { -1, 1 } do
+		Build.MakePart({
+			Name = "Post",
+			Size = Vector3.new(0.8, 16, 0.8),
+			CFrame = cframe * CFrame.new(side * 5.6, 8, 0.4),
+			Color = Color3.fromRGB(70, 50, 35),
+			Material = Enum.Material.Wood,
+			Parent = folder,
+		})
+	end
+	local panel = Build.MakePart({
+		Name = board.Key .. "Board",
+		Size = Vector3.new(11, 12, 0.6),
+		CFrame = cframe * CFrame.new(0, 9.5, 0),
+		Color = Color3.fromRGB(30, 30, 45),
+		Material = Enum.Material.SmoothPlastic,
+		Parent = folder,
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.CanvasSize = Vector2.new(440, 480)
+	gui.LightInfluence = 0
+	gui.Parent = panel
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, 0, 0, 60)
+	title.BackgroundTransparency = 1
+	title.Font = Enum.Font.FredokaOne
+	title.TextScaled = true
+	title.TextColor3 = board.Color
+	title.Text = board.Title
+	title.Parent = gui
+	for i = 1, Config.Leaderboards.TopCount do
+		local row = Instance.new("TextLabel")
+		row.Size = UDim2.new(1, -20, 0, 38)
+		row.Position = UDim2.fromOffset(10, 62 + (i - 1) * 41)
+		row.BackgroundColor3 = if i % 2 == 0 then Color3.fromRGB(40, 40, 60) else Color3.fromRGB(48, 48, 70)
+		row.Font = Enum.Font.FredokaOne
+		row.TextSize = 26
+		row.TextXAlignment = Enum.TextXAlignment.Left
+		row.TextColor3 = Color3.new(1, 1, 1)
+		row.Text = ""
+		row.Parent = gui
+		table.insert(board.Rows, row)
+	end
+end
+
+local function show(board: Board, entries: { { Name: string, Value: number } })
+	for i, row in board.Rows do
+		local entry = entries[i]
+		if entry then
+			local medal = if i == 1 then "🥇" elseif i == 2 then "🥈" elseif i == 3 then "🥉" else "#" .. i
+			row.Text = string.format("  %s  %s  ·  %s", medal, entry.Name, MonsterMath.FormatNumber(entry.Value))
+		else
+			row.Text = ""
+		end
+	end
+end
+
+local function refreshBoard(board: Board)
+	-- نحدّث أرقام اللاعبين اللي في السيرفر
+	local local_entries = {}
+	for _, player in Players:GetPlayers() do
+		local profile = DataService.Get(player)
+		if profile then
+			local value = board.Value(profile.Data)
+			table.insert(local_entries, { Name = player.DisplayName, Value = value })
+			local store = board.Store
+			if store and not profile.LoadFailed then
+				pcall(function()
+					store:SetAsync(tostring(player.UserId), value)
+				end)
+			end
+		end
+	end
+
+	local store = board.Store
+	if store then
+		local ok, pages = pcall(function()
+			return store:GetSortedAsync(false, Config.Leaderboards.TopCount)
+		end)
+		if ok and pages then
+			local entries = {}
+			for _, item in (pages :: DataStorePages):GetCurrentPage() do
+				table.insert(entries, { Name = nameOf(tonumber(item.key) or 0), Value = item.value })
+			end
+			show(board, entries)
+			return
+		end
+	end
+	table.sort(local_entries, function(a, b)
+		return a.Value > b.Value
+	end)
+	show(board, local_entries)
+end
+
+function LeaderboardService.Init()
+	local folder = Instance.new("Folder")
+	folder.Name = "Leaderboards"
+	folder.Parent = workspace
+	for _, board in boards do
+		buildBoard(folder, board)
+		local ok, store = pcall(function()
+			return DataStoreService:GetOrderedDataStore("Leaderboard_" .. board.Key .. "_v1")
+		end)
+		if ok then
+			board.Store = store
+		end
+	end
+	task.spawn(function()
+		task.wait(5)
+		while true do
+			for _, board in boards do
+				refreshBoard(board)
+			end
+			task.wait(Config.Leaderboards.UpdateInterval)
+		end
+	end)
+end
+
+return LeaderboardService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="16">
+        <Properties>
+          <string name="Name">MonetizationService</string>
+          <string name="Source"><![CDATA[--!strict
+-- Gamepasses و Developer Products.
+-- الـ Ids بتتحط في Config.Gamepasses و Config.Products بعد ما تعملهم من Creator Dashboard.
+-- لو Id = 0 وانت في Studio، الزرار بيدّيك الحاجة مجاناً عشان تقدر تجرّبها.
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local DataService = require(script.Parent.DataService)
+local PlotService = require(script.Parent.PlotService)
+local MonsterService = require(script.Parent.MonsterService)
+local CharacterService = require(script.Parent.CharacterService)
+local CombatService = require(script.Parent.CombatService)
+
+local MonetizationService = {}
+
+local owned: { [Player]: { [string]: boolean } } = {}
+local boostUntil: { [Player]: number } = {}
+local lastPrompt: { [Player]: number } = {}
+
+function MonetizationService.HasPass(player: Player, name: string): boolean
+	local set = owned[player]
+	return set ~= nil and set[name] == true
+end
+
+function MonetizationService.GetOwnedPasses(player: Player): { [string]: boolean }
+	return owned[player] or {}
+end
+
+function MonetizationService.BoostLeft(player: Player): number
+	return math.max(0, (boostUntil[player] or 0) - os.clock())
+end
+
+-- لما الـ Pass يتفعّل (اشترى أو دخل وهو معاه)
+local function onPassGranted(player: Player, name: string)
+	if name == "VIPSword" then
+		CombatService.GiveWeapons(player, true)
+	elseif name == "ExtraSlots" then
+		PlotService.SetUnlockedSlots(player, MonsterService.GetUnlockedSlots(player))
+	end
+	MonsterService.PushState(player)
+end
+
+local function grantPass(player: Player, name: string)
+	owned[player] = owned[player] or {}
+	if owned[player][name] then
+		return
+	end
+	owned[player][name] = true
+	onPassGranted(player, name)
+end
+
+-- Developer Products: بيرجع true لو اتنفذ
+local function grantProduct(player: Player, name: string): boolean
+	if name == "InstantHatch" then
+		if not MonsterService.HatchAllNow(player) then
+			MonsterService.Notify(player, "You have no eggs to hatch right now!", "error")
+			return false
+		end
+		MonsterService.Notify(player, "⚡ All your eggs are hatching now!", "success")
+		return true
+	elseif name == "LuckyEgg" then
+		if not MonsterService.AddEgg(player, "Lucky") then
+			MonsterService.Notify(player, "Your base is full! Free a slot first.", "error")
+			return false
+		end
+		return true
+	elseif name == "SpeedBoost" then
+		local start = math.max(os.clock(), boostUntil[player] or 0)
+		boostUntil[player] = start + Config.SpeedBoost.Duration
+		CharacterService.SetSpeedFactor(player, "Boost", Config.SpeedBoost.Multiplier)
+		MonsterService.Notify(player, "💨 Speed Boost for 10 minutes!", "success")
+		return true
+	end
+	return false
+end
+
+local function buyPass(player: Player, name: unknown)
+	if type(name) ~= "string" then
+		return
+	end
+	local pass = Config.Gamepasses[name]
+	if not pass then
+		return
+	end
+	if MonetizationService.HasPass(player, name) then
+		MonsterService.Notify(player, "You already own " .. pass.Name .. "!", "info")
+		return
+	end
+	if pass.Id == 0 then
+		if RunService:IsStudio() then
+			grantPass(player, name)
+			MonsterService.Notify(player, "🧪 Studio test: you got " .. pass.Name .. " for free.", "success")
+		else
+			MonsterService.Notify(player, pass.Name .. " is coming soon!", "info")
+		end
+		return
+	end
+	MarketplaceService:PromptGamePassPurchase(player, pass.Id)
+end
+
+local function buyProduct(player: Player, name: unknown)
+	if type(name) ~= "string" then
+		return
+	end
+	local product = Config.Products[name]
+	if not product then
+		return
+	end
+	local now = os.clock()
+	if lastPrompt[player] and now - lastPrompt[player] < 1 then
+		return
+	end
+	lastPrompt[player] = now
+	if product.Id == 0 then
+		if RunService:IsStudio() then
+			if grantProduct(player, name) then
+				MonsterService.Notify(player, "🧪 Studio test: " .. product.Name .. " for free.", "success")
+			end
+		else
+			MonsterService.Notify(player, product.Name .. " is coming soon!", "info")
+		end
+		MonsterService.PushState(player)
+		return
+	end
+	MarketplaceService:PromptProductPurchase(player, product.Id)
+end
+
+local function loadPasses(player: Player)
+	for name, pass in Config.Gamepasses do
+		if pass.Id ~= 0 then
+			local ok, has = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.Id)
+			end)
+			if ok and has then
+				grantPass(player, name)
+			end
+		end
+	end
+end
+
+function MonetizationService.SetupPlayer(player: Player)
+	owned[player] = owned[player] or {}
+	task.spawn(loadPasses, player)
+end
+
+-- بيتنادى كل ما الشخصية تتولد
+function MonetizationService.OnCharacter(player: Player)
+	if MonetizationService.BoostLeft(player) > 0 then
+		CharacterService.SetSpeedFactor(player, "Boost", Config.SpeedBoost.Multiplier)
+	end
+end
+
+function MonetizationService.CleanupPlayer(player: Player)
+	owned[player] = nil
+	boostUntil[player] = nil
+	lastPrompt[player] = nil
+end
+
+function MonetizationService.Init(remotes: { [string]: RemoteEvent })
+	remotes.BuyPass.OnServerEvent:Connect(buyPass)
+	remotes.BuyProduct.OnServerEvent:Connect(buyProduct)
+
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+		if not purchased then
+			return
+		end
+		for name, pass in Config.Gamepasses do
+			if pass.Id == passId then
+				grantPass(player, name)
+				MonsterService.Notify(player, "🎉 Thanks! You now own " .. pass.Name .. "!", "success")
+			end
+		end
+	end)
+
+	MarketplaceService.ProcessReceipt = function(receipt)
+		local player = Players:GetPlayerByUserId(receipt.PlayerId)
+		if not player or not DataService.Get(player) then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		for name, product in Config.Products do
+			if product.Id == receipt.ProductId then
+				if grantProduct(player, name) then
+					MonsterService.PushState(player)
+					task.spawn(DataService.Save, player)
+					return Enum.ProductPurchaseDecision.PurchaseGranted
+				end
+				return Enum.ProductPurchaseDecision.NotProcessedYet
+			end
+		end
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+
+	-- الـ Speed Boost بيخلص
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			for player, untilTime in boostUntil do
+				if os.clock() >= untilTime then
+					boostUntil[player] = nil
+					CharacterService.SetSpeedFactor(player, "Boost", nil)
+					if player.Parent then
+						MonsterService.Notify(player, "Your Speed Boost ended.", "info")
+					end
+				end
+			end
+		end
+	end)
+end
+
+return MonetizationService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="17">
         <Properties>
           <string name="Name">MonsterService</string>
           <string name="Source"><![CDATA[--!strict
@@ -1121,6 +3023,14 @@ local MonsterService = {}
 
 -- الوحوش اللي حد شايلها دلوقتي (بيتملى من StealService): carried[owner][monsterId] = true
 MonsterService.Carried = {} :: { [Player]: { [string]: boolean } }
+
+-- Hooks بتتربط في init.server (عشان مايبقاش فيه require دايري بين الخدمات)
+MonsterService.HasPass = function(_player: Player, _name: string): boolean
+	return false
+end
+MonsterService.ExtraState = function(_player: Player): { [string]: any }
+	return {}
+end
 
 local remotes: Remotes
 local lastPlay: { [Player]: { [string]: number } } = {}
@@ -1150,7 +3060,8 @@ function MonsterService.GetUnlockedSlots(player: Player): number
 	if not profile then
 		return 0
 	end
-	return math.min(Config.MaxSlots, Config.BaseSlots + profile.Data.SlotUpgrades)
+	local extra = if MonsterService.HasPass(player, "ExtraSlots") then Config.ExtraSlotsAmount else 0
+	return math.min(Config.MaxSlots, Config.BaseSlots + profile.Data.SlotUpgrades + extra)
 end
 
 function MonsterService.GetFreeSlot(player: Player): number?
@@ -1215,8 +3126,10 @@ function MonsterService.PushState(player: Player)
 			Production = MonsterMath.GetProduction(monster),
 			SellValue = MonsterMath.GetSellValue(monster),
 			FoodCost = MonsterMath.GetFoodCost(monster),
-			PlayReadyIn = math.max(0, Config.Play.Cooldown - (now - played)),
+			PlayReadyIn = math.max(0, Config.MiniGames.Cooldown - (now - played)),
 			Slot = monster.Slot,
+			Hat = monster.Hat,
+			Glasses = monster.Glasses,
 			Carried = MonsterService.IsCarried(player, id),
 		})
 	end
@@ -1234,7 +3147,7 @@ function MonsterService.PushState(player: Player)
 	local nextSlotCost = Config.SlotUpgradeCosts[data.SlotUpgrades + 1]
 	local nextLockCost = Config.LockUpgradeCosts[data.LockUpgrades + 1]
 
-	remotes.StateUpdate:FireClient(player, {
+	local state: { [string]: any } = {
 		Coins = data.Coins,
 		PendingCoins = data.PendingCoins,
 		UnlockedSlots = MonsterService.GetUnlockedSlots(player),
@@ -1248,7 +3161,18 @@ function MonsterService.PushState(player: Player)
 		Eggs = eggs,
 		Stats = data.Stats,
 		SaveDisabled = profile.LoadFailed,
-	})
+		Accessories = data.Accessories,
+		CoinMultiplier = MonsterService.GetCoinMultiplier(player),
+	}
+	for key, value in MonsterService.ExtraState(player) do
+		state[key] = value
+	end
+	remotes.StateUpdate:FireClient(player, state)
+end
+
+-- VIP بيضاعف الفلوس
+function MonsterService.GetCoinMultiplier(player: Player): number
+	return if MonsterService.HasPass(player, "VIP") then Config.VIPCoinMultiplier else 1
 end
 
 -- البيض والفقس --------------------------------------------------------------------
@@ -1270,13 +3194,20 @@ local function rollWeighted(weights: { [string]: number }): string
 	return last
 end
 
-local function rollMutation(): string?
+-- multiplier بيكبّر فرصة الطفرة (الـ Monster Rain مثلاً)
+function MonsterService.RollMutation(multiplier: number?): string?
 	for _, mutation in Config.Mutations do
-		if math.random() < mutation.Chance then
+		if math.random() < mutation.Chance * (multiplier or 1) then
 			return mutation.Name
 		end
 	end
 	return nil
+end
+local rollMutation = MonsterService.RollMutation
+
+-- إعلان كبير لكل اللي في السيرفر
+function MonsterService.Announce(text: string, color: Color3?)
+	remotes.Announce:FireAllClients(text, color or Color3.fromRGB(255, 220, 90))
 end
 
 local function buyEgg(player: Player, eggType: unknown)
@@ -1288,14 +3219,24 @@ local function buyEgg(player: Player, eggType: unknown)
 	if not egg or not profile or not table.find(Config.ShopEggs, eggType) then
 		return
 	end
-	local slot = MonsterService.GetFreeSlot(player)
-	if not slot then
+	if not MonsterService.GetFreeSlot(player) then
 		MonsterService.Notify(player, "Your base is full! Sell a monster or buy a new slot.", "error")
 		return
 	end
 	if not DataService.TrySpend(player, egg.Cost) then
 		MonsterService.Notify(player, "Not enough coins!", "error")
 		return
+	end
+	MonsterService.AddEgg(player, eggType)
+end
+
+-- بيحط بيضة في أول مكان فاضي في القاعدة
+function MonsterService.AddEgg(player: Player, eggType: string): boolean
+	local egg = Config.Eggs[eggType]
+	local profile = DataService.Get(player)
+	local slot = MonsterService.GetFreeSlot(player)
+	if not egg or not profile or not slot then
+		return false
 	end
 	local id = DataService.NewId(player)
 	profile.Data.Eggs[id] = {
@@ -1305,8 +3246,21 @@ local function buyEgg(player: Player, eggType: unknown)
 		HatchAt = os.time() + egg.HatchTime,
 	}
 	PlotService.RenderEgg(player, id, eggType, slot)
-	MonsterService.Notify(player, egg.DisplayName .. " placed in your base! Wait for it to hatch.", "success")
+	MonsterService.Notify(player, "🥚 " .. egg.DisplayName .. " placed in your base! Wait for it to hatch.", "success")
 	MonsterService.PushState(player)
+	return true
+end
+
+-- بيفقس كل البيض دلوقتي (Developer Product)
+function MonsterService.HatchAllNow(player: Player): boolean
+	local profile = DataService.Get(player)
+	if not profile or next(profile.Data.Eggs) == nil then
+		return false
+	end
+	for _, egg in profile.Data.Eggs do
+		egg.HatchAt = 0
+	end
+	return true
 end
 
 local function hatch(player: Player, eggData: DataService.EggData)
@@ -1316,6 +3270,11 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	end
 	local egg = Config.Eggs[eggData.EggType]
 	local species = if egg then rollWeighted(egg.Weights) else "Blobby"
+	-- وحوش Secret: فرصة صغيرة جداً من أي بيضة (وأكبر شوية من بيضة الحظ)
+	local secretChance = Config.SecretChance * (if eggData.EggType == "Lucky" then Config.LuckyEggSecretMultiplier else 1)
+	if math.random() < secretChance then
+		species = Config.SecretSpecies[math.random(1, #Config.SecretSpecies)]
+	end
 	local monster: MonsterMath.MonsterData = {
 		Id = eggData.Id,
 		Species = species,
@@ -1335,23 +3294,22 @@ local function hatch(player: Player, eggData: DataService.EggData)
 
 	local rarity = Config.Species[species].Rarity
 	MonsterService.Notify(player, "🐣 Hatched! You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")", "success")
+	if rarity == "Secret" then
+		MonsterService.Announce("🌌 " .. player.DisplayName .. " hatched a SECRET monster: " .. MonsterMath.GetDisplayName(monster) .. "!", Color3.fromRGB(200, 120, 255))
+	end
 end
 
--- بيدّي اللاعب وحش جديد Level 1 في أول مكان فاضي (من مناطق الوحوش مثلاً).
-function MonsterService.GiveMonster(player: Player, species: string): boolean
+-- بيدّي اللاعب وحش جديد Level 1 في أول مكان فاضي (لما يوصّل وحش شايله لقاعدته مثلاً).
+function MonsterService.AddMonster(player: Player, species: string, mutation: string?): boolean
 	local profile = DataService.Get(player)
 	local slot = MonsterService.GetFreeSlot(player)
-	if not profile or not Config.Species[species] then
-		return false
-	end
-	if not slot then
-		MonsterService.Notify(player, "Your base is full! Sell a monster or buy a new slot.", "error")
+	if not profile or not Config.Species[species] or not slot then
 		return false
 	end
 	local monster: MonsterMath.MonsterData = {
 		Id = DataService.NewId(player),
 		Species = species,
-		Mutation = rollMutation(),
+		Mutation = mutation,
 		Level = 1,
 		Xp = 0,
 		Hunger = 100,
@@ -1362,8 +3320,54 @@ function MonsterService.GiveMonster(player: Player, species: string): boolean
 	PlotService.RenderMonster(player, monster)
 	local rarity = Config.Species[species].Rarity
 	MonsterService.Notify(player, "🐾 You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")! It's in your base.", "success")
+	if rarity == "Secret" then
+		MonsterService.Announce("🌌 " .. player.DisplayName .. " got a SECRET monster: " .. MonsterMath.GetDisplayName(monster) .. "!", Color3.fromRGB(200, 120, 255))
+	end
 	MonsterService.PushState(player)
 	return true
+end
+
+-- بيشيل وحش من بيانات اللاعب ويرجّعه (للـ Trading والـ Arena)
+function MonsterService.TakeMonsterData(player: Player, monsterId: string): MonsterMath.MonsterData?
+	local profile = DataService.Get(player)
+	local monster = profile and profile.Data.Monsters[monsterId]
+	if not profile or not monster or MonsterService.IsCarried(player, monsterId) then
+		return nil
+	end
+	profile.Data.Monsters[monsterId] = nil
+	PlotService.RemoveMonster(player, monsterId)
+	return monster
+end
+
+-- بيحط وحش (جاي من لاعب تاني) في أول مكان فاضي، بنفس الـ Level والطفرة
+function MonsterService.InsertMonsterData(player: Player, monster: MonsterMath.MonsterData): boolean
+	local profile = DataService.Get(player)
+	local slot = MonsterService.GetFreeSlot(player)
+	if not profile or not slot then
+		return false
+	end
+	local copy: MonsterMath.MonsterData = table.clone(monster)
+	copy.Id = DataService.NewId(player)
+	copy.Slot = slot
+	profile.Data.Monsters[copy.Id] = copy
+	PlotService.RenderMonster(player, copy)
+	return true
+end
+
+-- عدد الأماكن الفاضية (عشان نتأكد قبل الـ Trading)
+function MonsterService.CountFreeSlots(player: Player): number
+	local profile = DataService.Get(player)
+	if not profile then
+		return 0
+	end
+	local used = 0
+	for _ in profile.Data.Monsters do
+		used += 1
+	end
+	for _ in profile.Data.Eggs do
+		used += 1
+	end
+	return math.max(0, MonsterService.GetUnlockedSlots(player) - used)
 end
 
 -- قوة ضربة اللاعب في الوحوش الأم: كل ما وحوشك تنتج أكتر ضربتك بتبقى أقوى.
@@ -1454,24 +3458,150 @@ local function feed(player: Player, monsterId: unknown)
 	MonsterService.PushState(player)
 end
 
-local function play(player: Player, monsterId: unknown)
-	if rateLimited(player) then
+-- ألعاب صغيرة مع الوحش (بدل زرار Play) ----------------------------------------------------
+-- Catch: كور بتظهر على الشاشة وانت بتمسكها (الكلاينت بيعدّ والسيرفر بيتأكد من الوقت والحد الأقصى).
+-- Run: بتجري مع وحشك، والسيرفر بيقيس المسافة اللي مشيتها بنفسه.
+
+type ActiveGame = { MonsterId: string, Game: string, StartedAt: number, Distance: number }
+local activeGames: { [Player]: ActiveGame } = {}
+
+local function finishGame(player: Player, game: ActiveGame, xp: number)
+	if activeGames[player] ~= game then
+		return
+	end
+	activeGames[player] = nil
+	local profile = DataService.Get(player)
+	local monster = profile and profile.Data.Monsters[game.MonsterId]
+	if monster then
+		monster.Happiness = math.min(100, monster.Happiness + Config.MiniGames.Happiness)
+		addXp(player, monster, xp)
+		PlotService.UpdateMonster(player, monster, false)
+	end
+	remotes.MiniGameState:FireClient(player, { Game = game.Game, Done = true, Xp = xp })
+	MonsterService.Notify(player, string.format("🎮 Great game! +%d XP", xp), "success")
+	MonsterService.PushState(player)
+end
+
+local function startMiniGame(player: Player, monsterId: unknown, gameName: unknown)
+	if rateLimited(player) or (gameName ~= "Catch" and gameName ~= "Run") then
 		return
 	end
 	local monster = getOwnMonster(player, monsterId)
-	if not monster then
+	if not monster or activeGames[player] then
 		return
 	end
 	lastPlay[player] = lastPlay[player] or {}
 	local now = os.clock()
-	local last = lastPlay[player][monster.Id] or 0
-	if now - last < Config.Play.Cooldown then
+	if now - (lastPlay[player][monster.Id] or 0) < Config.MiniGames.Cooldown then
+		MonsterService.Notify(player, "Your monster needs a little rest first!", "info")
 		return
 	end
 	lastPlay[player][monster.Id] = now
-	monster.Happiness = math.min(100, monster.Happiness + Config.Play.Happiness)
-	addXp(player, monster, Config.Play.Xp)
-	PlotService.UpdateMonster(player, monster, false)
+
+	local game: ActiveGame = { MonsterId = monster.Id, Game = gameName :: string, StartedAt = now, Distance = 0 }
+	activeGames[player] = game
+	if gameName == "Catch" then
+		local duration = Config.MiniGames.Catch.Duration
+		remotes.MiniGameState:FireClient(player, { Game = "Catch", TimeLeft = duration })
+		-- لو الكلاينت مابعتش النتيجة، اللعبة بتخلص لوحدها
+		task.delay(duration + 6, function()
+			finishGame(player, game, 0)
+		end)
+		return
+	end
+
+	-- Run: نقيس المسافة كل ربع ثانية
+	local settings = Config.MiniGames.Run
+	remotes.MiniGameState:FireClient(player, { Game = "Run", TimeLeft = settings.Duration, Progress = 0, Target = settings.Target })
+	task.spawn(function()
+		local lastPosition: Vector3? = nil
+		while activeGames[player] == game and os.clock() - game.StartedAt < settings.Duration do
+			task.wait(0.25)
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root then
+				local position = Vector3.new(root.Position.X, 0, root.Position.Z)
+				if lastPosition then
+					-- حد أقصى للخطوة عشان التليبورت مايتحسبش
+					game.Distance += math.min((position - lastPosition).Magnitude, 10)
+				end
+				lastPosition = position
+			end
+			remotes.MiniGameState:FireClient(player, {
+				Game = "Run",
+				TimeLeft = math.max(0, settings.Duration - (os.clock() - game.StartedAt)),
+				Progress = math.floor(game.Distance),
+				Target = settings.Target,
+			})
+		end
+		local xp = math.floor(math.clamp(game.Distance / settings.Target, 0, 1) * settings.MaxXp)
+		finishGame(player, game, xp)
+	end)
+end
+
+local function finishCatch(player: Player, score: unknown)
+	local game = activeGames[player]
+	if not game or game.Game ~= "Catch" or type(score) ~= "number" then
+		return
+	end
+	local settings = Config.MiniGames.Catch
+	local elapsed = os.clock() - game.StartedAt
+	if elapsed < settings.Duration - 1.5 then
+		return -- بدري أوي
+	end
+	local catches = math.clamp(math.floor(score), 0, settings.MaxCatches)
+	finishGame(player, game, catches * settings.XpPerCatch)
+end
+
+-- الإكسسوارات ------------------------------------------------------------------------------
+
+local function buyAccessory(player: Player, name: unknown)
+	if rateLimited(player) or type(name) ~= "string" then
+		return
+	end
+	local accessory = Config.Accessories[name]
+	local profile = DataService.Get(player)
+	if not accessory or not profile then
+		return
+	end
+	if profile.Data.Accessories[name] then
+		MonsterService.Notify(player, "You already own " .. accessory.Name .. "!", "info")
+		return
+	end
+	if not DataService.TrySpend(player, accessory.Cost) then
+		MonsterService.Notify(player, "Not enough coins!", "error")
+		return
+	end
+	profile.Data.Accessories[name] = true
+	MonsterService.Notify(player, "👒 You bought " .. accessory.Name .. "! Put it on any monster.", "success")
+	MonsterService.PushState(player)
+end
+
+local function equipAccessory(player: Player, monsterId: unknown, slot: unknown, name: unknown)
+	if rateLimited(player) or (slot ~= "Hat" and slot ~= "Glasses") then
+		return
+	end
+	local monster = getOwnMonster(player, monsterId)
+	local profile = DataService.Get(player)
+	if not monster or not profile then
+		return
+	end
+	local chosen: string? = nil
+	if name ~= nil then
+		if type(name) ~= "string" then
+			return
+		end
+		local accessory = Config.Accessories[name]
+		if not accessory or accessory.Slot ~= slot or not profile.Data.Accessories[name] then
+			return
+		end
+		chosen = name
+	end
+	if slot == "Hat" then
+		monster.Hat = chosen
+	else
+		monster.Glasses = chosen
+	end
+	PlotService.UpdateMonster(player, monster, true)
 	MonsterService.PushState(player)
 end
 
@@ -1600,12 +3730,13 @@ local function tickPlayer(player: Player, dt: number)
 		return
 	end
 	local data = profile.Data
+	local multiplier = MonsterService.GetCoinMultiplier(player)
 
 	for id, monster in data.Monsters do
 		monster.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * dt)
 		monster.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * dt)
 		if not MonsterService.IsCarried(player, id) then
-			data.PendingCoins += MonsterMath.GetProduction(monster) * dt
+			data.PendingCoins += MonsterMath.GetProduction(monster) * multiplier * dt
 			if monster.Hunger >= 50 and monster.Happiness >= 50 then
 				addXp(player, monster, Config.PassiveXpPerSecond * dt)
 			end
@@ -1628,6 +3759,13 @@ local function tickPlayer(player: Player, dt: number)
 		data.Eggs[id] = { Id = id, EggType = "Basic", Slot = 1, HatchAt = os.time() + 5 }
 		PlotService.RenderEgg(player, id, "Basic", 1)
 		MonsterService.Notify(player, "🎁 Here is a free egg to get you back on your feet!", "success")
+	end
+
+	-- Auto-Collect: الفلوس بتروح المحفظة لوحدها
+	if MonsterService.HasPass(player, "AutoCollect") and data.PendingCoins >= 1 then
+		local amount = math.floor(data.PendingCoins)
+		data.PendingCoins -= amount
+		DataService.AddCoins(player, amount)
 	end
 
 	PlotService.SetPending(player, data.PendingCoins)
@@ -1662,6 +3800,7 @@ end
 
 function MonsterService.CleanupPlayer(player: Player)
 	lastPlay[player] = nil
+	activeGames[player] = nil
 	lastAction[player] = nil
 	lastCollect[player] = nil
 	MonsterService.Carried[player] = nil
@@ -1678,7 +3817,10 @@ function MonsterService.Init(allRemotes: Remotes)
 	remotes = allRemotes
 	remotes.BuyEgg.OnServerEvent:Connect(buyEgg)
 	remotes.FeedMonster.OnServerEvent:Connect(feed)
-	remotes.PlayMonster.OnServerEvent:Connect(play)
+	remotes.MiniGameStart.OnServerEvent:Connect(startMiniGame)
+	remotes.MiniGameFinish.OnServerEvent:Connect(finishCatch)
+	remotes.BuyAccessory.OnServerEvent:Connect(buyAccessory)
+	remotes.EquipAccessory.OnServerEvent:Connect(equipAccessory)
 	remotes.SellMonster.OnServerEvent:Connect(sell)
 	remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 
@@ -1700,7 +3842,7 @@ return MonsterService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="11">
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">PlotService</string>
           <string name="Source"><![CDATA[--!strict
@@ -1814,6 +3956,7 @@ local function buildGround()
 end
 
 local SHOP_ORIGIN = Vector3.new(20, 0, -100)
+PlotService.ShopPosition = SHOP_ORIGIN
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
@@ -2352,6 +4495,11 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 	model.Name = monster.Id
 
 	local material = Enum.Material.SmoothPlastic
+	local isSecret = species.Rarity == "Secret"
+	if isSecret then
+		material = Enum.Material.Neon
+		scale *= 1.2
+	end
 	if monster.Mutation == "Golden" then
 		material = Enum.Material.Foil
 	elseif monster.Mutation == "Toxic" or monster.Mutation == "Rainbow" then
@@ -2437,7 +4585,7 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 			attach(wing, CFrame.new(side * 1.6 * scale, 0.3 * scale, 0.6 * scale) * CFrame.Angles(0, 0, side * 0.5))
 		end
 	end
-	if stage.Name == "Legendary" then
+	if stage.Name == "Legendary" and not monster.Hat then
 		local crown = makePart({
 			Name = "Crown",
 			Shape = Enum.PartType.Cylinder,
@@ -2449,6 +4597,53 @@ function PlotService.BuildMonsterModel(monster: MonsterMath.MonsterData): Model
 		local sparkle = Instance.new("Sparkles")
 		sparkle.SparkleColor = Color3.fromRGB(255, 230, 120)
 		sparkle.Parent = body
+	end
+
+	-- إكسسوارات: القبعة فوق الراس، والنضارة على العينين
+	local top = 1.5 * scale
+	local hat = monster.Hat and Config.Accessories[monster.Hat]
+	if hat then
+		local hatProps = { Color = hat.Color, Material = Enum.Material.SmoothPlastic }
+		if monster.Hat == "TopHat" then
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.2, 2.4, 2.4) * scale, Color = hat.Color }), CFrame.new(0, top + 0.1 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 1.5, 1.5) * scale, Color = hat.Color }), CFrame.new(0, top + 0.9 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
+		elseif monster.Hat == "WizardHat" then
+			for i, width in { 2.2, 1.5, 0.9, 0.4 } do
+				attach(makePart({ Name = "Hat", Size = Vector3.new(width, 0.6, width) * scale, Color = hat.Color, Material = hatProps.Material }), CFrame.new(0, top + (0.2 + (i - 1) * 0.55) * scale, 0) * CFrame.Angles(0, i * 0.3, 0))
+			end
+		elseif monster.Hat == "Crown" then
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 1.6, 1.6) * scale, Color = hat.Color, Material = Enum.Material.Foil }), CFrame.new(0, top + 0.3 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)))
+			for i = 0, 3 do
+				attach(makePart({ Name = "Hat", Size = Vector3.new(0.25, 0.6, 0.25) * scale, Color = hat.Color, Material = Enum.Material.Foil }), CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, top + 0.8 * scale, -0.65 * scale))
+			end
+		else -- PartyHat
+			attach(makePart({ Name = "Hat", Size = Vector3.new(1, 1.6, 1) * scale, Color = hat.Color }), CFrame.new(0, top + 0.8 * scale, 0) * CFrame.Angles(0, math.rad(45), 0))
+			attach(makePart({ Name = "Hat", Shape = Enum.PartType.Ball, Size = Vector3.new(0.5, 0.5, 0.5) * scale, Color = Color3.new(1, 1, 1) }), CFrame.new(0, top + 1.75 * scale, 0))
+		end
+	end
+	local glasses = monster.Glasses and Config.Accessories[monster.Glasses]
+	if glasses then
+		local front = -1.7 * scale
+		local eyeY = 0.4 * scale
+		if monster.Glasses == "Monocle" then
+			attach(makePart({ Name = "Glasses", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.1, 0.9, 0.9) * scale, Color = glasses.Color, Material = Enum.Material.Foil }), CFrame.new(0.6 * scale, eyeY, front) * CFrame.Angles(0, math.rad(90), 0))
+		else
+			for _, side in { -1, 1 } do
+				local lens = makePart({ Name = "Glasses", Size = Vector3.new(0.85, 0.6, 0.1) * scale, Color = glasses.Color, Material = if monster.Glasses == "StarGlasses" then Enum.Material.Neon else Enum.Material.Glass })
+				attach(lens, CFrame.new(side * 0.6 * scale, eyeY, front) * (if monster.Glasses == "StarGlasses" then CFrame.Angles(0, 0, math.rad(45)) else CFrame.new()))
+			end
+			attach(makePart({ Name = "Glasses", Size = Vector3.new(0.4, 0.12, 0.1) * scale, Color = glasses.Color }), CFrame.new(0, eyeY, front))
+		end
+	end
+
+	if isSecret then
+		local sparkle = Instance.new("Sparkles")
+		sparkle.SparkleColor = Color3.fromRGB(200, 120, 255)
+		sparkle.Parent = body
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(200, 120, 255)
+		light.Range = 12
+		light.Parent = body
 	end
 
 	if monster.Mutation == "Rainbow" then
@@ -2719,7 +4914,139 @@ return PlotService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="12">
+      <Item class="ModuleScript" referent="19">
+        <Properties>
+          <string name="Name">RewardService</string>
+          <string name="Source"><![CDATA[--!strict
+-- الهدية اليومية (بتكبر مع الـ Streak) وعجلة الحظ (لفة مجانية كل يوم وفيها بيض نادر).
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local DataService = require(script.Parent.DataService)
+local MonsterService = require(script.Parent.MonsterService)
+
+local RewardService = {}
+
+local remotes: { [string]: RemoteEvent }
+local busy: { [Player]: boolean } = {}
+
+function RewardService.DailyReadyIn(player: Player): number
+	local profile = DataService.Get(player)
+	if not profile then
+		return 0
+	end
+	return math.max(0, profile.Data.Daily.LastClaim + Config.Daily.Cooldown - os.time())
+end
+
+function RewardService.SpinReadyIn(player: Player): number
+	local profile = DataService.Get(player)
+	if not profile then
+		return 0
+	end
+	return math.max(0, profile.Data.LastSpin + Config.Spin.Cooldown - os.time())
+end
+
+-- البيضة بتروح القاعدة، ولو مفيش مكان بتتحول فلوس
+local function giveEgg(player: Player, eggType: string)
+	if not MonsterService.AddEgg(player, eggType) then
+		local fallback = 1000
+		DataService.AddCoins(player, fallback)
+		MonsterService.Notify(player, "Your base is full, so you got 💰 " .. MonsterMath.FormatNumber(fallback) .. " instead!", "coins")
+	end
+end
+
+local function claimDaily(player: Player)
+	local profile = DataService.Get(player)
+	if not profile or busy[player] then
+		return
+	end
+	if RewardService.DailyReadyIn(player) > 0 then
+		MonsterService.Notify(player, "Come back later for your next daily reward!", "info")
+		return
+	end
+	local daily = profile.Data.Daily
+	local now = os.time()
+	if daily.LastClaim > 0 and now - daily.LastClaim <= Config.Daily.StreakReset then
+		daily.Streak = math.min(daily.Streak + 1, Config.Daily.MaxStreak)
+	else
+		daily.Streak = 1
+	end
+	daily.LastClaim = now
+	local coins = Config.Daily.CoinsPerDay * daily.Streak
+	DataService.AddCoins(player, coins)
+	MonsterService.Notify(player, string.format("🎁 Day %d reward: +%s coins!", daily.Streak, MonsterMath.FormatNumber(coins)), "coins")
+	if daily.Streak >= Config.Daily.MaxStreak then
+		giveEgg(player, Config.Daily.Day7Egg)
+		daily.Streak = 0 -- بعد اليوم السابع بتبدأ من الأول
+	end
+	MonsterService.PushState(player)
+end
+
+local function pickPrize(): number
+	local total = 0
+	for _, prize in Config.Spin.Prizes do
+		total += prize.Weight
+	end
+	local roll = math.random() * total
+	for index, prize in Config.Spin.Prizes do
+		roll -= prize.Weight
+		if roll <= 0 then
+			return index
+		end
+	end
+	return 1
+end
+
+local function spin(player: Player)
+	local profile = DataService.Get(player)
+	if not profile or busy[player] then
+		return
+	end
+	if RewardService.SpinReadyIn(player) > 0 then
+		MonsterService.Notify(player, "Your free spin isn't ready yet!", "info")
+		return
+	end
+	busy[player] = true
+	profile.Data.LastSpin = os.time()
+	local index = pickPrize()
+	local prize = Config.Spin.Prizes[index]
+	remotes.SpinResult:FireClient(player, index)
+	MonsterService.PushState(player)
+
+	-- نستنى العجلة تخلص لفّ قبل ما ندّي الجايزة
+	task.delay(4.5, function()
+		busy[player] = nil
+		if not player.Parent then
+			return
+		end
+		if prize.Coins then
+			DataService.AddCoins(player, prize.Coins)
+			MonsterService.Notify(player, "🎡 You won " .. prize.Name .. "!", "coins")
+		elseif prize.Egg then
+			MonsterService.Notify(player, "🎡 You won a " .. prize.Name .. "!", "success")
+			giveEgg(player, prize.Egg)
+		end
+		MonsterService.PushState(player)
+	end)
+end
+
+function RewardService.CleanupPlayer(player: Player)
+	busy[player] = nil
+end
+
+function RewardService.Init(allRemotes: { [string]: RemoteEvent })
+	remotes = allRemotes
+	remotes.ClaimDaily.OnServerEvent:Connect(claimDaily)
+	remotes.Spin.OnServerEvent:Connect(spin)
+end
+
+return RewardService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="20">
         <Properties>
           <string name="Name">StealService</string>
           <string name="Source"><![CDATA[--!strict
@@ -2978,7 +5305,7 @@ return StealService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="13">
+      <Item class="ModuleScript" referent="21">
         <Properties>
           <string name="Name">TerrainService</string>
           <string name="Source"><![CDATA[--!strict
@@ -3163,7 +5490,242 @@ return TerrainService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="22">
+        <Properties>
+          <string name="Name">TradeService</string>
+          <string name="Source"><![CDATA[--!strict
+-- تبديل وحوش بين لاعبين: واحد يبعت طلب، التاني يقبل، كل واحد يختار وحوشه،
+-- والتبديل بيحصل بس لما الاتنين يدوسوا "Ready" (شاشة تأكيد من الطرفين).
+-- أي تغيير في العرض بيلغي الـ Ready عند الاتنين عشان محدش يتخدع.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local DataService = require(script.Parent.DataService)
+local MonsterService = require(script.Parent.MonsterService)
+
+type Trade = {
+	Players: { Player },
+	Offers: { [Player]: { string } },
+	Ready: { [Player]: boolean },
+}
+
+local TradeService = {}
+
+local remotes: { [string]: RemoteEvent }
+local trades: { [Player]: Trade } = {}
+local requests: { [Player]: { [Player]: number } } = {} -- requests[target][from] = وقت الطلب
+
+local function partnerOf(trade: Trade, player: Player): Player
+	return if trade.Players[1] == player then trade.Players[2] else trade.Players[1]
+end
+
+local function summarize(player: Player, ids: { string }): { any }
+	local profile = DataService.Get(player)
+	local result = {}
+	for _, id in ids do
+		local monster = profile and profile.Data.Monsters[id]
+		if monster then
+			local species = Config.Species[monster.Species]
+			table.insert(result, {
+				Id = id,
+				Name = MonsterMath.GetDisplayName(monster),
+				Rarity = species and species.Rarity or "Common",
+				Level = monster.Level,
+			})
+		end
+	end
+	return result
+end
+
+local function sendUpdate(trade: Trade)
+	for _, player in trade.Players do
+		local partner = partnerOf(trade, player)
+		remotes.TradeUpdate:FireClient(player, {
+			PartnerName = partner.DisplayName,
+			MyOffer = summarize(player, trade.Offers[player]),
+			TheirOffer = summarize(partner, trade.Offers[partner]),
+			MyReady = trade.Ready[player] == true,
+			TheirReady = trade.Ready[partner] == true,
+		})
+	end
+end
+
+local function closeTrade(trade: Trade, message: string?)
+	for _, player in trade.Players do
+		if trades[player] == trade then
+			trades[player] = nil
+		end
+		if player.Parent then
+			remotes.TradeUpdate:FireClient(player, nil)
+			if message then
+				MonsterService.Notify(player, message, "info")
+			end
+		end
+	end
+end
+
+local function validOffer(player: Player, ids: { string }): boolean
+	local profile = DataService.Get(player)
+	if not profile then
+		return false
+	end
+	local seen: { [string]: boolean } = {}
+	for _, id in ids do
+		if seen[id] or not profile.Data.Monsters[id] or MonsterService.IsCarried(player, id) then
+			return false
+		end
+		seen[id] = true
+	end
+	return true
+end
+
+local function execute(trade: Trade)
+	local a, b = trade.Players[1], trade.Players[2]
+	local offerA, offerB = trade.Offers[a], trade.Offers[b]
+	if not validOffer(a, offerA) or not validOffer(b, offerB) then
+		closeTrade(trade, "Trade cancelled: a monster is not available anymore.")
+		return
+	end
+	-- كل واحد لازم يبقى عنده مكان للي جاي له
+	if MonsterService.CountFreeSlots(a) + #offerA < #offerB or MonsterService.CountFreeSlots(b) + #offerB < #offerA then
+		closeTrade(trade, "Trade cancelled: not enough free slots in a base.")
+		return
+	end
+	local fromA, fromB = {}, {}
+	for _, id in offerA do
+		local monster = MonsterService.TakeMonsterData(a, id)
+		if monster then
+			table.insert(fromA, monster)
+		end
+	end
+	for _, id in offerB do
+		local monster = MonsterService.TakeMonsterData(b, id)
+		if monster then
+			table.insert(fromB, monster)
+		end
+	end
+	for _, monster in fromA do
+		MonsterService.InsertMonsterData(b, monster)
+	end
+	for _, monster in fromB do
+		MonsterService.InsertMonsterData(a, monster)
+	end
+	closeTrade(trade)
+	for _, player in trade.Players do
+		MonsterService.Notify(player, "🤝 Trade complete!", "success")
+		MonsterService.PushState(player)
+		task.spawn(DataService.Save, player)
+	end
+end
+
+local function onRequest(player: Player, targetUserId: unknown)
+	if type(targetUserId) ~= "number" or trades[player] then
+		return
+	end
+	local target = Players:GetPlayerByUserId(targetUserId)
+	if not target or target == player then
+		return
+	end
+	if trades[target] then
+		MonsterService.Notify(player, target.DisplayName .. " is already trading.", "error")
+		return
+	end
+	requests[target] = requests[target] or {}
+	requests[target][player] = os.clock()
+	remotes.TradeIncoming:FireClient(target, player.UserId, player.DisplayName)
+	MonsterService.Notify(player, "📨 Trade request sent to " .. target.DisplayName, "info")
+end
+
+local function onRespond(player: Player, fromUserId: unknown, accepted: unknown)
+	if type(fromUserId) ~= "number" then
+		return
+	end
+	local from = Players:GetPlayerByUserId(fromUserId)
+	local pending = requests[player]
+	local sentAt = from and pending and pending[from]
+	if not from or not pending or not sentAt then
+		return
+	end
+	pending[from] = nil
+	if accepted ~= true then
+		MonsterService.Notify(from, player.DisplayName .. " declined your trade.", "info")
+		return
+	end
+	if os.clock() - sentAt > Config.Trade.RequestTimeout or trades[player] or trades[from] then
+		MonsterService.Notify(player, "That trade request expired.", "error")
+		return
+	end
+	local trade: Trade = { Players = { from, player }, Offers = { [from] = {}, [player] = {} }, Ready = {} }
+	trades[from] = trade
+	trades[player] = trade
+	sendUpdate(trade)
+end
+
+local function onSetOffer(player: Player, ids: unknown)
+	local trade = trades[player]
+	if not trade or type(ids) ~= "table" then
+		return
+	end
+	local clean: { string } = {}
+	for _, id in ids :: { any } do
+		if type(id) == "string" and #clean < Config.Trade.MaxOffer then
+			table.insert(clean, id)
+		end
+	end
+	if not validOffer(player, clean) then
+		return
+	end
+	trade.Offers[player] = clean
+	trade.Ready = {} -- أي تغيير بيلغي التأكيد
+	sendUpdate(trade)
+end
+
+local function onReady(player: Player, ready: unknown)
+	local trade = trades[player]
+	if not trade then
+		return
+	end
+	trade.Ready[player] = ready == true
+	local partner = partnerOf(trade, player)
+	if trade.Ready[player] and trade.Ready[partner] then
+		execute(trade)
+	else
+		sendUpdate(trade)
+	end
+end
+
+local function onCancel(player: Player)
+	local trade = trades[player]
+	if trade then
+		closeTrade(trade, player.DisplayName .. " cancelled the trade.")
+	end
+end
+
+function TradeService.CleanupPlayer(player: Player)
+	onCancel(player)
+	requests[player] = nil
+	for _, pending in requests do
+		pending[player] = nil
+	end
+end
+
+function TradeService.Init(allRemotes: { [string]: RemoteEvent })
+	remotes = allRemotes
+	remotes.TradeRequest.OnServerEvent:Connect(onRequest)
+	remotes.TradeRespond.OnServerEvent:Connect(onRespond)
+	remotes.TradeSetOffer.OnServerEvent:Connect(onSetOffer)
+	remotes.TradeReady.OnServerEvent:Connect(onReady)
+	remotes.TradeCancel.OnServerEvent:Connect(onCancel)
+end
+
+return TradeService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="23">
         <Properties>
           <string name="Name">ZoneService</string>
           <string name="Source"><![CDATA[--!strict
@@ -3179,6 +5741,8 @@ local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local Build = require(script.Parent.Build)
 local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
+local CombatService = require(script.Parent.CombatService)
+local CarryService = require(script.Parent.CarryService)
 
 local makePart = Build.MakePart
 local makeBillboard = Build.MakeBillboard
@@ -3206,6 +5770,7 @@ type Nest = {
 	HealthText: TextLabel?,
 	Babies: { BasePart },
 	Damagers: { [Player]: number },
+	Target: CombatService.Target?,
 }
 
 local ZoneService = {}
@@ -3217,7 +5782,6 @@ ZoneService.ZonesEndX = PlotService.ZonesStartX + #Config.Zones * ZONE_LENGTH
 local zonesFolder: Folder
 local nests: { Nest } = {}
 local gateLabels: { { Label: TextLabel, Title: string } } = {}
-local lastAttack: { [Player]: number } = {}
 local nextResetAt = 0
 
 local function zoneStartX(index: number): number
@@ -3448,6 +6012,7 @@ local function buildZone(index: number, zone: Config.Zone)
 			HealthText = nil,
 			Babies = {},
 			Damagers = {},
+			Target = nil,
 		})
 	end
 
@@ -3479,6 +6044,8 @@ end
 local function killMother(nest: Nest, killer: Player)
 	nest.Alive = false
 	nest.Health = 0
+	CombatService.Unregister(nest.Target)
+	nest.Target = nil
 	if nest.Mother then
 		nest.Mother:Destroy()
 		nest.Mother = nil
@@ -3508,25 +6075,13 @@ local function killMother(nest: Nest, killer: Player)
 	end
 end
 
-local function attack(player: Player, nest: Nest)
+local function attack(player: Player, nest: Nest, damage: number)
 	if not nest.Alive then
 		return
 	end
-	local now = os.clock()
-	if lastAttack[player] and now - lastAttack[player] < Config.Combat.AttackCooldown then
-		return
-	end
-	lastAttack[player] = now
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then
-		return
-	end
-
-	local damage = MonsterService.GetAttackDamage(player)
 	nest.Health -= damage
 	nest.Damagers[player] = (nest.Damagers[player] or 0) + damage
-	nest.LastHit = now
+	nest.LastHit = os.clock()
 
 	local mother = nest.Mother
 	if mother then
@@ -3545,86 +6100,7 @@ local function attack(player: Player, nest: Nest)
 	end
 end
 
--- المضرب الخشبي -------------------------------------------------------------------
-
--- أقرب أم عايشة في مدى ضربة المضرب
-local function nestInReach(player: Player): Nest?
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not root then
-		return nil
-	end
-	local best: Nest? = nil
-	local bestDistance = math.huge
-	for _, nest in nests do
-		local mother = nest.Mother
-		if nest.Alive and mother then
-			local distance = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z).Magnitude
-			if distance <= nest.Zone.MotherSize / 2 + Config.Combat.BatReach and distance < bestDistance then
-				best = nest
-				bestDistance = distance
-			end
-		end
-	end
-	return best
-end
-
-local function makeBat(): Tool
-	local tool = Instance.new("Tool")
-	tool.Name = "Bat"
-	tool.ToolTip = "Hit the mother monsters!"
-	tool.CanBeDropped = false
-	tool.GripPos = Vector3.new(0, 0, 0.6) -- اللاعب ماسكه من آخره
-	local handle = makePart({
-		Name = "Handle",
-		Size = Vector3.new(0.5, 0.5, 2.2),
-		Color = Color3.fromRGB(140, 95, 55),
-		Material = Enum.Material.Wood,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	handle.Parent = tool
-	local barrel = makePart({
-		Name = "Barrel",
-		Size = Vector3.new(0.85, 0.85, 2.6),
-		CFrame = handle.CFrame * CFrame.new(0, 0, -2.3),
-		Color = Color3.fromRGB(170, 120, 70),
-		Material = Enum.Material.Wood,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	barrel.Parent = tool
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = handle
-	weld.Part1 = barrel
-	weld.Parent = barrel
-	return tool
-end
-
--- بيدّي اللاعب المضرب (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
-function ZoneService.GiveBat(player: Player)
-	local backpack = player:FindFirstChildOfClass("Backpack")
-	local character = player.Character
-	if not backpack or backpack:FindFirstChild("Bat") or (character and character:FindFirstChild("Bat")) then
-		return
-	end
-	local bat = makeBat()
-	bat.Activated:Connect(function()
-		-- أنيميشن الضربة بتاع R6
-		local animation = Instance.new("StringValue")
-		animation.Name = "toolanim"
-		animation.Value = "Slash"
-		animation.Parent = bat
-		local nest = nestInReach(player)
-		if nest then
-			attack(player, nest)
-		end
-	end)
-	bat.Parent = backpack
-end
-
+-- الصغير بيتشال على ضهرك، ولازم توصله قاعدتك عشان يبقى بتاعك
 local function take(player: Player, nest: Nest, baby: BasePart)
 	if nest.Alive or not baby.Parent or not nest.Species then
 		return
@@ -3633,7 +6109,8 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 		MonsterService.Notify(player, "Help defeat the mother first to take her babies!", "error")
 		return
 	end
-	if MonsterService.GiveMonster(player, nest.Species :: string) then
+	local cargo: CarryService.Cargo = { Kind = "Monster", Species = nest.Species, Mutation = MonsterService.RollMutation(1) }
+	if CarryService.StartCarry(player, cargo) then
 		baby:Destroy()
 		local index = table.find(nest.Babies, baby)
 		if index then
@@ -3643,6 +6120,8 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 end
 
 local function clearNest(nest: Nest)
+	CombatService.Unregister(nest.Target)
+	nest.Target = nil
 	nest.Folder:ClearAllChildren()
 	nest.Mother = nil
 	nest.HealthFill = nil
@@ -3715,6 +6194,15 @@ local function spawnNest(nest: Nest)
 	nest.HealthText = hpText
 	updateHealthBar(nest)
 
+	-- المضرب بيضربها لما تبقى قريب منها
+	nest.Target = CombatService.Register({
+		Part = mother,
+		Radius = size / 2,
+		OnHit = function(player: Player, damage: number)
+			attack(player, nest, damage)
+		end,
+	})
+
 	for i = 1, Config.BabiesPerNest do
 		local angle = (i / Config.BabiesPerNest) * math.pi * 2
 		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * (size / 2 + 6)
@@ -3786,7 +6274,6 @@ local function updateGateTimers()
 end
 
 function ZoneService.CleanupPlayer(player: Player)
-	lastAttack[player] = nil
 	for _, nest in nests do
 		nest.Damagers[player] = nil
 	end
@@ -3830,15 +6317,15 @@ return ZoneService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="15">
+  <Item class="StarterPlayer" referent="24">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="16">
+    <Item class="StarterPlayerScripts" referent="25">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="17">
+      <Item class="LocalScript" referent="26">
         <Properties>
           <string name="Name">Client</string>
           <string name="Source"><![CDATA[--!strict
@@ -3853,6 +6340,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UI = require(script.UI)
+local Features = require(script.Features)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -3861,6 +6349,12 @@ local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
 local state: any = nil
 local openMonsterId: string? = nil
 local sellConfirmUntil = 0
+
+Features.Init(ui, remotes, function()
+	return state
+end, function()
+	return openMonsterId
+end)
 
 -- تحديث الواجهة ---------------------------------------------------------------------
 
@@ -3929,10 +6423,10 @@ local function refreshMonsterPanel()
 	ui.FeedButton.BackgroundColor3 = if state.Coins >= monster.FoodCost then UI.Colors.Orange else UI.Colors.Gray
 
 	if monster.PlayReadyIn > 0 then
-		ui.PlayButton.Text = string.format("🎾 Play (%ds)", math.ceil(monster.PlayReadyIn))
+		ui.PlayButton.Text = string.format("🎮 Play (%ds)", math.ceil(monster.PlayReadyIn))
 		ui.PlayButton.BackgroundColor3 = UI.Colors.Gray
 	else
-		ui.PlayButton.Text = "🎾 Play"
+		ui.PlayButton.Text = "🎮 Mini-game"
 		ui.PlayButton.BackgroundColor3 = UI.Colors.Pink
 	end
 
@@ -3985,6 +6479,7 @@ local function refresh()
 	end
 
 	refreshMonsterPanel()
+	Features.Refresh()
 end
 
 -- الأحداث -------------------------------------------------------------------------------
@@ -4032,11 +6527,6 @@ end)
 ui.FeedButton.Activated:Connect(function()
 	if openMonsterId then
 		remotes.FeedMonster:FireServer(openMonsterId)
-	end
-end)
-ui.PlayButton.Activated:Connect(function()
-	if openMonsterId then
-		remotes.PlayMonster:FireServer(openMonsterId)
 	end
 end)
 ui.SellButton.Activated:Connect(function()
@@ -4115,10 +6605,881 @@ task.spawn(function()
 	end
 end)
 
-UI.Toast(ui, "Welcome to Raise a Monster! Hatch your egg, care for your monster and steal others' 👀", "info")
+UI.Toast(ui, "Welcome to Raise a Monster! Hatch your egg, hunt monsters with your bat and carry them home 🏃", "info")
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="18">
+        <Item class="ModuleScript" referent="27">
+          <Properties>
+            <string name="Name">Features</string>
+            <string name="Source"><![CDATA[--!strict
+-- واجهة الأنظمة الجديدة: تليبورت، الهدية اليومية، عجلة الحظ، الـ Gamepasses في المتجر،
+-- الإكسسوارات، الألعاب الصغيرة، الـ Trading، الـ Arena، والإعلانات الكبيرة.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local UI = require(script.Parent.UI)
+
+local COLORS = UI.Colors
+local player = Players.LocalPlayer
+
+local Features = {}
+
+local ui: UI.UI
+local remotes: { [string]: RemoteEvent }
+local getState: () -> any
+local getOpenMonster: () -> string?
+
+-- عناصر بتتحدث مع كل StateUpdate
+local statusLabel: TextLabel
+local dailyButton: TextButton
+local spinButton: TextButton
+local dailyInfo: TextLabel
+local dailyClaim: TextButton
+local spinGo: TextButton
+local passButtons: { [string]: TextButton } = {}
+local accessoryRows: { [string]: { Button: TextButton, Info: TextLabel } } = {}
+local accessoriesFrame: Frame
+local miniGameFrame: Frame
+
+-- أدوات ------------------------------------------------------------------------------------
+
+local function formatTime(seconds: number): string
+	seconds = math.max(0, math.floor(seconds))
+	local hours = seconds // 3600
+	local minutes = (seconds % 3600) // 60
+	local secs = seconds % 60
+	if hours > 0 then
+		return string.format("%d:%02d:%02d", hours, minutes, secs)
+	end
+	return string.format("%d:%02d", minutes, secs)
+end
+
+local function rarityHex(rarity: string): string
+	local info = Config.Rarities[rarity]
+	return if info then "#" .. info.Color:ToHex() else "#FFFFFF"
+end
+
+local function makeList(parent: Instance, size: UDim2, position: UDim2): ScrollingFrame
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Size = size
+	scroll.Position = position
+	scroll.BackgroundColor3 = COLORS.PanelLight
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 6
+	scroll.CanvasSize = UDim2.fromOffset(0, 0)
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.Parent = parent
+	UI.Corner(scroll, 10)
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = scroll
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 6)
+	padding.PaddingLeft = UDim.new(0, 6)
+	padding.PaddingRight = UDim.new(0, 12)
+	padding.Parent = scroll
+	return scroll
+end
+
+local function clearList(scroll: ScrollingFrame)
+	for _, child in scroll:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+end
+
+local function sortedMonsters(): { any }
+	local state = getState()
+	local list = {}
+	if state then
+		for _, monster in state.Monsters do
+			if not monster.Carried then
+				table.insert(list, monster)
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.Production > b.Production
+	end)
+	return list
+end
+
+local function monsterText(monster: any): string
+	-- وحوشك جاية بـ DisplayName، وعرض اللاعب التاني في الـ Trade جاي بـ Name
+	local name = monster.DisplayName or monster.Name or "?"
+	return string.format('<font color="%s">%s</font>  Lv %d', rarityHex(monster.Rarity), name, monster.Level)
+end
+
+local function fillMonsters(scroll: ScrollingFrame, isSelected: (any) -> boolean, onClick: (any) -> ())
+	clearList(scroll)
+	for index, monster in sortedMonsters() do
+		local entry = UI.Button(scroll, monsterText(monster), if isSelected(monster) then COLORS.Green else COLORS.Panel, UDim2.new(1, 0, 0, 38), UDim2.new())
+		entry.LayoutOrder = index
+		entry.TextSize = 17
+		entry.Activated:Connect(function()
+			onClick(monster)
+		end)
+	end
+end
+
+local function fillPlayers(scroll: ScrollingFrame, onClick: (Player) -> ())
+	clearList(scroll)
+	local count = 0
+	for _, other in Players:GetPlayers() do
+		if other ~= player then
+			count += 1
+			local entry = UI.Button(scroll, other.DisplayName, COLORS.Panel, UDim2.new(1, 0, 0, 38), UDim2.new())
+			entry.LayoutOrder = count
+			entry.Activated:Connect(function()
+				onClick(other)
+			end)
+		end
+	end
+	if count == 0 then
+		local empty = UI.Label(scroll, "No other players in this server yet.", UDim2.new(1, 0, 0, 40), UDim2.new(), 16)
+		empty.TextColor3 = COLORS.SubText
+	end
+end
+
+local function newPanel(name: string, size: UDim2, title: string, color: Color3): Frame
+	local frame = UI.Panel(ui.Gui, name, size, title, color)
+	table.insert(ui.Panels, frame)
+	return frame
+end
+
+-- إعلانات كبيرة -----------------------------------------------------------------------------
+
+local banner: TextLabel
+local bannerToken = 0
+local function buildBanner()
+	banner = Instance.new("TextLabel")
+	banner.AnchorPoint = Vector2.new(0.5, 0)
+	banner.Position = UDim2.new(0.5, 0, 0, 132)
+	banner.Size = UDim2.fromOffset(760, 64)
+	banner.BackgroundColor3 = COLORS.Panel
+	banner.BackgroundTransparency = 0.1
+	banner.Font = Enum.Font.FredokaOne
+	banner.TextSize = 24
+	banner.TextWrapped = true
+	banner.TextColor3 = COLORS.Yellow
+	banner.Visible = false
+	banner.ZIndex = 20
+	banner.Parent = ui.Gui
+	UI.Corner(banner, 14)
+	UI.Stroke(banner, COLORS.Yellow, 3)
+end
+
+local function announce(text: string, color: Color3?)
+	bannerToken += 1
+	local token = bannerToken
+	banner.Text = text
+	banner.TextColor3 = color or COLORS.Yellow
+	local stroke = banner:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = color or COLORS.Yellow
+	end
+	banner.Visible = true
+	task.delay(6, function()
+		if bannerToken == token then
+			banner.Visible = false
+		end
+	end)
+end
+
+-- Popup (طلبات الـ Trade والـ Arena) ----------------------------------------------------------
+
+local popup: Frame
+local popupTitle: TextLabel
+local popupBody: Frame
+local popupToken = 0
+
+local function buildPopup()
+	popup = Instance.new("Frame")
+	-- في النص تحت (اليمين بتغطيه لستة اللاعبين بتاعة Roblox)
+	popup.AnchorPoint = Vector2.new(0.5, 1)
+	popup.Position = UDim2.new(0.5, 0, 1, -206)
+	popup.Size = UDim2.fromOffset(340, 300)
+	popup.BackgroundColor3 = COLORS.Panel
+	popup.Visible = false
+	popup.ZIndex = 10
+	popup.Parent = ui.Gui
+	UI.Corner(popup, 14)
+	UI.Stroke(popup, COLORS.Orange, 3)
+	popupTitle = UI.Label(popup, "", UDim2.new(1, -20, 0, 54), UDim2.fromOffset(10, 6), 20)
+	popupBody = Instance.new("Frame")
+	popupBody.BackgroundTransparency = 1
+	popupBody.Position = UDim2.fromOffset(10, 64)
+	popupBody.Size = UDim2.new(1, -20, 1, -74)
+	popupBody.Parent = popup
+end
+
+local function showPopup(title: string, timeout: number, build: (body: Frame, close: () -> ()) -> ())
+	popupToken += 1
+	local token = popupToken
+	for _, child in popupBody:GetChildren() do
+		child:Destroy()
+	end
+	popupTitle.Text = title
+	local function close()
+		if popupToken == token then
+			popup.Visible = false
+		end
+	end
+	build(popupBody, close)
+	popup.Visible = true
+	task.delay(timeout, close)
+end
+
+-- تليبورت وأزرار جانبية -----------------------------------------------------------------------
+
+local function buildButtons()
+	-- ZIndex 0 عشان أي لوحة تتفتح تبقى فوقهم
+	local home = UI.Button(ui.Gui, "🏠 Home", COLORS.Green, UDim2.fromOffset(150, 44), UDim2.new(0.5, -160, 1, -150))
+	home.ZIndex = 0
+	home.Activated:Connect(function()
+		remotes.Teleport:FireServer("Home")
+	end)
+	local shop = UI.Button(ui.Gui, "🥚 To Shop", COLORS.Pink, UDim2.fromOffset(150, 44), UDim2.new(0.5, 10, 1, -150))
+	shop.ZIndex = 0
+	shop.Activated:Connect(function()
+		remotes.Teleport:FireServer("Shop")
+	end)
+
+	-- عمود تاني على الشمال (اليمين بتغطيه لستة اللاعبين بتاعة Roblox وبتاكل الضغطات)
+	dailyButton = UI.Button(ui.Gui, "🎁\nDaily", COLORS.Yellow, UDim2.fromOffset(84, 84), UDim2.new(0, 104, 0.5, -92))
+	dailyButton.TextSize = 18
+	spinButton = UI.Button(ui.Gui, "🎡\nSpin", COLORS.Orange, UDim2.fromOffset(84, 84), UDim2.new(0, 104, 0.5, 8))
+	spinButton.TextSize = 18
+
+	statusLabel = UI.Label(ui.Gui, "", UDim2.fromOffset(420, 26), UDim2.new(0.5, -210, 0, 76), 18)
+	statusLabel.TextStrokeTransparency = 0.3
+	statusLabel.ZIndex = 0
+end
+
+-- المتجر: Gamepasses و Boosts تحت خالص --------------------------------------------------------
+
+local function buildShopExtras()
+	local y = ui.ShopContentBottom
+	local function section(title: string)
+		local header = UI.Label(ui.ShopScroll, title, UDim2.new(1, -32, 0, 34), UDim2.fromOffset(16, y), 24)
+		header.TextXAlignment = Enum.TextXAlignment.Left
+		header.TextColor3 = COLORS.Yellow
+		y += 40
+	end
+	local function card(index: number, perRow: number, name: string, description: string, price: number, color: Color3, onBuy: () -> ()): TextButton
+		local width = math.floor((640 - (perRow - 1) * 10) / perRow)
+		local frame = Instance.new("Frame")
+		frame.Size = UDim2.fromOffset(width, 156)
+		frame.Position = UDim2.fromOffset(16 + (index - 1) * (width + 10), y)
+		frame.BackgroundColor3 = COLORS.PanelLight
+		frame.Parent = ui.ShopScroll
+		UI.Corner(frame, 12)
+		UI.Stroke(frame, color, 2)
+		local title = UI.Label(frame, name, UDim2.new(1, -10, 0, 30), UDim2.fromOffset(5, 6), 20)
+		title.TextColor3 = color
+		local desc = UI.Label(frame, description, UDim2.new(1, -10, 0, 60), UDim2.fromOffset(5, 38), 15)
+		desc.TextColor3 = COLORS.SubText
+		local buy = UI.Button(frame, "R$ " .. price, COLORS.Green, UDim2.new(1, -16, 0, 40), UDim2.fromOffset(8, 106))
+		buy.Activated:Connect(onBuy)
+		return buy
+	end
+
+	section("⭐ Gamepasses")
+	local passes = {}
+	for name, pass in Config.Gamepasses do
+		table.insert(passes, { Name = name, Pass = pass })
+	end
+	table.sort(passes, function(a, b)
+		return a.Pass.Order < b.Pass.Order
+	end)
+	for i, entry in passes do
+		passButtons[entry.Name] = card(i, #passes, entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, COLORS.Yellow, function()
+			remotes.BuyPass:FireServer(entry.Name)
+		end)
+	end
+	y += 168
+
+	section("⚡ Boosts")
+	local products = {}
+	for name, product in Config.Products do
+		table.insert(products, { Name = name, Product = product })
+	end
+	table.sort(products, function(a, b)
+		return a.Product.Order < b.Product.Order
+	end)
+	for i, entry in products do
+		card(i, #products, entry.Product.Name, entry.Product.Description, entry.Product.Price, COLORS.Blue, function()
+			remotes.BuyProduct:FireServer(entry.Name)
+		end)
+	end
+	y += 168
+	local spacer = Instance.new("Frame")
+	spacer.BackgroundTransparency = 1
+	spacer.Size = UDim2.fromOffset(1, 10)
+	spacer.Position = UDim2.fromOffset(0, y)
+	spacer.Parent = ui.ShopScroll
+end
+
+-- الهدية اليومية -------------------------------------------------------------------------------
+
+local function buildDaily()
+	local frame = newPanel("Daily", UDim2.fromOffset(420, 260), "🎁 Daily Reward", COLORS.Yellow)
+	dailyInfo = UI.Label(frame, "", UDim2.new(1, -32, 0, 110), UDim2.fromOffset(16, 60), 20)
+	dailyClaim = UI.Button(frame, "Claim", COLORS.Green, UDim2.new(1, -32, 0, 50), UDim2.fromOffset(16, 190))
+	dailyClaim.Activated:Connect(function()
+		remotes.ClaimDaily:FireServer()
+	end)
+	dailyButton.Activated:Connect(function()
+		UI.Toggle(ui, frame)
+	end)
+end
+
+-- عجلة الحظ -------------------------------------------------------------------------------------
+
+local function buildSpin()
+	local frame = newPanel("Spin", UDim2.fromOffset(460, 470), "🎡 Spin Wheel", COLORS.Orange)
+	local wheel = Instance.new("Frame")
+	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
+	wheel.Position = UDim2.new(0.5, 0, 0, 220)
+	wheel.Size = UDim2.fromOffset(300, 300)
+	wheel.BackgroundColor3 = COLORS.PanelLight
+	wheel.Parent = frame
+	UI.Corner(wheel, 150)
+	UI.Stroke(wheel, COLORS.Orange, 4)
+	local prizes = Config.Spin.Prizes
+	local step = 360 / #prizes
+	for i, prize in prizes do
+		local angle = math.rad((i - 1) * step)
+		local chip = UI.Label(wheel, prize.Name, UDim2.fromOffset(104, 40), UDim2.new(0.5, math.sin(angle) * 100 - 52, 0.5, -math.cos(angle) * 100 - 20), 16)
+		chip.BackgroundTransparency = 0
+		chip.BackgroundColor3 = prize.Color
+		chip.TextColor3 = Color3.fromRGB(25, 25, 30)
+		chip.Rotation = (i - 1) * step
+		UI.Corner(chip, 10)
+	end
+	local pointer = UI.Label(frame, "▼", UDim2.fromOffset(40, 40), UDim2.new(0.5, -20, 0, 52), 34)
+	pointer.TextColor3 = COLORS.Red
+	pointer.ZIndex = 3
+	spinGo = UI.Button(frame, "SPIN!", COLORS.Green, UDim2.new(1, -32, 0, 50), UDim2.fromOffset(16, 400))
+	spinGo.Activated:Connect(function()
+		remotes.Spin:FireServer()
+	end)
+	spinButton.Activated:Connect(function()
+		UI.Toggle(ui, frame)
+	end)
+
+	remotes.SpinResult.OnClientEvent:Connect(function(index: number)
+		UI.Open(ui, frame)
+		local current = wheel.Rotation % 360
+		wheel.Rotation = current
+		-- الجايزة رقم index لازم توقف تحت السهم اللي فوق
+		local target = 360 * 5 - (index - 1) * step
+		TweenService:Create(wheel, TweenInfo.new(4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Rotation = target }):Play()
+	end)
+end
+
+-- الإكسسوارات -----------------------------------------------------------------------------------
+
+local function buildAccessories()
+	accessoriesFrame = newPanel("Accessories", UDim2.fromOffset(500, 470), "👒 Accessories", COLORS.Blue)
+	local list = makeList(accessoriesFrame, UDim2.new(1, -32, 1, -76), UDim2.fromOffset(16, 60))
+	local sorted = {}
+	for name, accessory in Config.Accessories do
+		table.insert(sorted, { Name = name, Accessory = accessory })
+	end
+	table.sort(sorted, function(a, b)
+		return a.Accessory.Order < b.Accessory.Order
+	end)
+	for index, entry in sorted do
+		local accessory = entry.Accessory
+		local row = Instance.new("Frame")
+		row.Size = UDim2.new(1, 0, 0, 52)
+		row.BackgroundColor3 = COLORS.Panel
+		row.LayoutOrder = index
+		row.Parent = list
+		UI.Corner(row, 10)
+		local swatch = Instance.new("Frame")
+		swatch.Size = UDim2.fromOffset(30, 30)
+		swatch.Position = UDim2.fromOffset(10, 11)
+		swatch.BackgroundColor3 = accessory.Color
+		swatch.Parent = row
+		UI.Corner(swatch, 8)
+		local bonus = if accessory.Bonus > 0 then string.format(" · +%d%% coins", math.floor(accessory.Bonus * 100 + 0.5)) else ""
+		local info = UI.Label(row, accessory.Name .. "  (" .. accessory.Slot .. ")" .. bonus, UDim2.new(1, -200, 1, 0), UDim2.fromOffset(50, 0), 17)
+		info.TextXAlignment = Enum.TextXAlignment.Left
+		local action = UI.Button(row, "", COLORS.Green, UDim2.fromOffset(130, 38), UDim2.new(1, -138, 0, 7))
+		action.TextSize = 16
+		action.Activated:Connect(function()
+			local state = getState()
+			local monsterId = getOpenMonster()
+			if not state then
+				return
+			end
+			if not state.Accessories[entry.Name] then
+				remotes.BuyAccessory:FireServer(entry.Name)
+				return
+			end
+			if not monsterId then
+				return
+			end
+			local monster = nil
+			for _, m in state.Monsters do
+				if m.Id == monsterId then
+					monster = m
+				end
+			end
+			if not monster then
+				return
+			end
+			local wearing = monster[accessory.Slot] == entry.Name
+			remotes.EquipAccessory:FireServer(monsterId, accessory.Slot, if wearing then nil else entry.Name)
+		end)
+		accessoryRows[entry.Name] = { Button = action, Info = info }
+	end
+	ui.AccessoriesButton.Activated:Connect(function()
+		UI.Open(ui, accessoriesFrame)
+		Features.Refresh()
+	end)
+end
+
+local function refreshAccessories(state: any)
+	local monsterId = getOpenMonster()
+	local monster = nil
+	for _, m in state.Monsters do
+		if m.Id == monsterId then
+			monster = m
+		end
+	end
+	for name, row in accessoryRows do
+		local accessory = Config.Accessories[name]
+		if not state.Accessories[name] then
+			row.Button.Text = "💰 " .. MonsterMath.FormatNumber(accessory.Cost)
+			row.Button.BackgroundColor3 = if state.Coins >= accessory.Cost then COLORS.Green else COLORS.Gray
+		elseif monster and monster[accessory.Slot] == name then
+			row.Button.Text = "Take off"
+			row.Button.BackgroundColor3 = COLORS.Red
+		else
+			row.Button.Text = "Wear"
+			row.Button.BackgroundColor3 = COLORS.Blue
+		end
+	end
+end
+
+-- الألعاب الصغيرة ------------------------------------------------------------------------------
+
+local function buildMiniGames()
+	local chooser = newPanel("MiniGames", UDim2.fromOffset(420, 250), "🎮 Play a mini-game", COLORS.Pink)
+	local catch = UI.Button(chooser, "⚾ Catch the Ball\nClick the balls!", COLORS.Blue, UDim2.fromOffset(186, 120), UDim2.fromOffset(16, 70))
+	local run = UI.Button(chooser, "🏃 Run Together\nRun as far as you can!", COLORS.Orange, UDim2.fromOffset(186, 120), UDim2.fromOffset(218, 70))
+	local function start(gameName: string)
+		local monsterId = getOpenMonster()
+		if monsterId then
+			remotes.MiniGameStart:FireServer(monsterId, gameName)
+		end
+		chooser.Visible = false
+	end
+	catch.Activated:Connect(function()
+		start("Catch")
+	end)
+	run.Activated:Connect(function()
+		start("Run")
+	end)
+	-- زرار Play بقى بيفتح الألعاب
+	ui.PlayButton.Activated:Connect(function()
+		UI.Open(ui, chooser)
+	end)
+
+	-- الشاشة اللي اللعبة بتتلعب فيها
+	miniGameFrame = Instance.new("Frame")
+	miniGameFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	miniGameFrame.Position = UDim2.fromScale(0.5, 0.5)
+	miniGameFrame.Size = UDim2.fromOffset(620, 420)
+	miniGameFrame.BackgroundColor3 = COLORS.Panel
+	miniGameFrame.BackgroundTransparency = 0.15
+	miniGameFrame.Visible = false
+	miniGameFrame.ZIndex = 5
+	miniGameFrame.Parent = ui.Gui
+	UI.Corner(miniGameFrame, 16)
+	UI.Stroke(miniGameFrame, COLORS.Pink, 3)
+	local header = UI.Label(miniGameFrame, "", UDim2.new(1, -20, 0, 50), UDim2.fromOffset(10, 6), 26)
+	header.ZIndex = 6
+	local ball = UI.Button(miniGameFrame, "⚾", COLORS.Yellow, UDim2.fromOffset(70, 70), UDim2.fromOffset(270, 200))
+	ball.TextSize = 36
+	ball.ZIndex = 6
+	UI.Corner(ball, 35)
+
+	local score = 0
+	local playingCatch = false
+	local runPanel = UI.Label(ui.Gui, "", UDim2.fromOffset(460, 46), UDim2.new(0.5, -230, 0, 104), 24)
+	runPanel.BackgroundTransparency = 0.15
+	runPanel.BackgroundColor3 = COLORS.Panel
+	runPanel.Visible = false
+	UI.Corner(runPanel, 12)
+
+	ball.Activated:Connect(function()
+		if not playingCatch then
+			return
+		end
+		score += 1
+		ball.Position = UDim2.fromOffset(math.random(20, 530), math.random(70, 330))
+	end)
+
+	remotes.MiniGameState.OnClientEvent:Connect(function(info: any)
+		if info.Done then
+			playingCatch = false
+			miniGameFrame.Visible = false
+			runPanel.Visible = false
+			return
+		end
+		if info.Game == "Catch" and not playingCatch then
+			playingCatch = true
+			score = 0
+			miniGameFrame.Visible = true
+			ball.Visible = true
+			ball.Position = UDim2.fromOffset(270, 200)
+			local duration = info.TimeLeft :: number
+			task.spawn(function()
+				local started = os.clock()
+				while playingCatch and os.clock() - started < duration do
+					header.Text = string.format("⚾ Catch the ball!   Score: %d   ⏳ %ds", score, math.ceil(duration - (os.clock() - started)))
+					task.wait(0.1)
+				end
+				if playingCatch then
+					playingCatch = false
+					header.Text = "Done! Score: " .. score
+					remotes.MiniGameFinish:FireServer(score)
+					task.wait(1)
+					miniGameFrame.Visible = false
+				end
+			end)
+		elseif info.Game == "Run" then
+			runPanel.Visible = true
+			runPanel.Text = string.format("🏃 Run with your monster!  %d / %d studs  ⏳ %ds", info.Progress or 0, info.Target or 0, math.ceil(info.TimeLeft or 0))
+		end
+	end)
+end
+
+-- الـ Trading -----------------------------------------------------------------------------------
+
+local function buildTrade()
+	local tradeButton = UI.Button(ui.Gui, "🤝\nTrade", COLORS.Green, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, 108))
+	tradeButton.TextSize = 18
+	local picker = newPanel("TradePicker", UDim2.fromOffset(380, 400), "🤝 Trade with...", COLORS.Green)
+	local playerList = makeList(picker, UDim2.new(1, -32, 1, -76), UDim2.fromOffset(16, 60))
+	tradeButton.Activated:Connect(function()
+		fillPlayers(playerList, function(other)
+			remotes.TradeRequest:FireServer(other.UserId)
+			picker.Visible = false
+		end)
+		UI.Toggle(ui, picker)
+	end)
+
+	-- شباك الـ Trade نفسه
+	local window = newPanel("Trade", UDim2.fromOffset(640, 470), "🤝 Trade", COLORS.Green)
+	local mineTitle = UI.Label(window, "Your offer (tap to add/remove)", UDim2.fromOffset(290, 24), UDim2.fromOffset(16, 56), 17)
+	mineTitle.TextXAlignment = Enum.TextXAlignment.Left
+	local theirTitle = UI.Label(window, "", UDim2.fromOffset(290, 24), UDim2.fromOffset(330, 56), 17)
+	theirTitle.TextXAlignment = Enum.TextXAlignment.Left
+	local mineList = makeList(window, UDim2.fromOffset(294, 290), UDim2.fromOffset(16, 84))
+	local theirList = makeList(window, UDim2.fromOffset(294, 290), UDim2.fromOffset(330, 84))
+	local readyButton = UI.Button(window, "Ready ✓", COLORS.Green, UDim2.fromOffset(294, 50), UDim2.fromOffset(16, 400))
+	local status = UI.Label(window, "", UDim2.fromOffset(180, 50), UDim2.fromOffset(330, 400), 16)
+	local cancel = UI.Button(window, "Cancel", COLORS.Red, UDim2.fromOffset(100, 50), UDim2.fromOffset(524, 400))
+
+	local current: any = nil
+	local function selectedIds(): { string }
+		local ids = {}
+		if current then
+			for _, monster in current.MyOffer do
+				table.insert(ids, monster.Id)
+			end
+		end
+		return ids
+	end
+	local function render()
+		if not current then
+			return
+		end
+		local selected = {}
+		for _, id in selectedIds() do
+			selected[id] = true
+		end
+		fillMonsters(mineList, function(monster)
+			return selected[monster.Id] == true
+		end, function(monster)
+			local ids = selectedIds()
+			local index = table.find(ids, monster.Id)
+			if index then
+				table.remove(ids, index)
+			elseif #ids < Config.Trade.MaxOffer then
+				table.insert(ids, monster.Id)
+			end
+			remotes.TradeSetOffer:FireServer(ids)
+		end)
+		clearList(theirList)
+		for index, monster in current.TheirOffer do
+			local entry = UI.Label(theirList, monsterText(monster), UDim2.new(1, 0, 0, 34), UDim2.new(), 17)
+			entry.LayoutOrder = index
+		end
+		theirTitle.Text = current.PartnerName .. "'s offer"
+		readyButton.Text = if current.MyReady then "Waiting... (tap to undo)" else "Ready ✓"
+		readyButton.BackgroundColor3 = if current.MyReady then COLORS.Gray else COLORS.Green
+		status.Text = if current.TheirReady then "✅ " .. current.PartnerName .. " is ready" else "⏳ " .. current.PartnerName .. " is choosing"
+	end
+	readyButton.Activated:Connect(function()
+		if current then
+			remotes.TradeReady:FireServer(not current.MyReady)
+		end
+	end)
+	cancel.Activated:Connect(function()
+		remotes.TradeCancel:FireServer()
+	end)
+	-- لو قفل الشباك بالـ X بنلغي الـ Trade
+	window:GetPropertyChangedSignal("Visible"):Connect(function()
+		if not window.Visible and current then
+			remotes.TradeCancel:FireServer()
+		end
+	end)
+
+	remotes.TradeUpdate.OnClientEvent:Connect(function(state: any)
+		current = state
+		if state then
+			UI.Open(ui, window)
+			render()
+		else
+			window.Visible = false
+		end
+	end)
+
+	remotes.TradeIncoming.OnClientEvent:Connect(function(fromUserId: number, fromName: string)
+		showPopup("🤝 " .. fromName .. " wants to trade with you!", Config.Trade.RequestTimeout, function(body, close)
+			local accept = UI.Button(body, "Accept", COLORS.Green, UDim2.new(0.5, -6, 0, 50), UDim2.fromOffset(0, 150))
+			local decline = UI.Button(body, "Decline", COLORS.Red, UDim2.new(0.5, -6, 0, 50), UDim2.new(0.5, 6, 0, 150))
+			accept.Activated:Connect(function()
+				remotes.TradeRespond:FireServer(fromUserId, true)
+				close()
+			end)
+			decline.Activated:Connect(function()
+				remotes.TradeRespond:FireServer(fromUserId, false)
+				close()
+			end)
+		end)
+	end)
+end
+
+-- الـ Arena -------------------------------------------------------------------------------------
+
+local function buildArena()
+	local arenaButton = UI.Button(ui.Gui, "⚔️\nArena", COLORS.Red, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, 208))
+	arenaButton.TextSize = 18
+	local picker = newPanel("ArenaPicker", UDim2.fromOffset(640, 470), "⚔️ Monster Arena", COLORS.Red)
+	local hint = UI.Label(picker, "Pick an opponent and your fighter. The winner takes coins AND the loser's monster!", UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 52), 16)
+	hint.TextColor3 = COLORS.SubText
+	local playersTitle = UI.Label(picker, "Opponent", UDim2.fromOffset(290, 24), UDim2.fromOffset(16, 96), 17)
+	playersTitle.TextXAlignment = Enum.TextXAlignment.Left
+	local monstersTitle = UI.Label(picker, "Your fighter", UDim2.fromOffset(290, 24), UDim2.fromOffset(330, 96), 17)
+	monstersTitle.TextXAlignment = Enum.TextXAlignment.Left
+	local playerList = makeList(picker, UDim2.fromOffset(294, 270), UDim2.fromOffset(16, 122))
+	local monsterList = makeList(picker, UDim2.fromOffset(294, 270), UDim2.fromOffset(330, 122))
+	local challenge = UI.Button(picker, "Challenge!", COLORS.Gray, UDim2.new(1, -32, 0, 48), UDim2.fromOffset(16, 406))
+
+	local chosenPlayer: Player? = nil
+	local chosenMonster: string? = nil
+	local function renderPicker()
+		fillPlayers(playerList, function(other)
+			chosenPlayer = other
+			playersTitle.Text = "Opponent: " .. other.DisplayName
+		end)
+		fillMonsters(monsterList, function(monster)
+			return monster.Id == chosenMonster
+		end, function(monster)
+			chosenMonster = monster.Id
+			renderPicker()
+		end)
+		challenge.BackgroundColor3 = if chosenPlayer and chosenMonster then COLORS.Green else COLORS.Gray
+	end
+	arenaButton.Activated:Connect(function()
+		chosenPlayer = nil
+		chosenMonster = nil
+		playersTitle.Text = "Opponent"
+		renderPicker()
+		UI.Toggle(ui, picker)
+	end)
+	challenge.Activated:Connect(function()
+		if chosenPlayer and chosenMonster then
+			remotes.ArenaChallenge:FireServer(chosenPlayer.UserId, chosenMonster)
+			picker.Visible = false
+		end
+	end)
+
+	remotes.ArenaIncoming.OnClientEvent:Connect(function(fromUserId: number, fromName: string, monsterName: string)
+		showPopup("⚔️ " .. fromName .. " challenges you with " .. monsterName .. "! Pick your fighter:", Config.Arena.RequestTimeout, function(body, close)
+			local list = makeList(body, UDim2.new(1, 0, 1, -56), UDim2.new())
+			fillMonsters(list, function()
+				return false
+			end, function(monster)
+				remotes.ArenaRespond:FireServer(fromUserId, monster.Id)
+				close()
+			end)
+			local decline = UI.Button(body, "Decline", COLORS.Red, UDim2.new(1, 0, 0, 46), UDim2.new(0, 0, 1, -48))
+			decline.Activated:Connect(function()
+				remotes.ArenaRespond:FireServer(fromUserId, nil)
+				close()
+			end)
+		end)
+	end)
+
+	-- المعركة
+	local battle = Instance.new("Frame")
+	battle.AnchorPoint = Vector2.new(0.5, 0)
+	battle.Position = UDim2.new(0.5, 0, 0, 200)
+	battle.Size = UDim2.fromOffset(560, 190)
+	battle.BackgroundColor3 = COLORS.Panel
+	battle.BackgroundTransparency = 0.1
+	battle.Visible = false
+	battle.Parent = ui.Gui
+	UI.Corner(battle, 16)
+	UI.Stroke(battle, COLORS.Red, 3)
+	local myName = UI.Label(battle, "", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 8), 18)
+	myName.TextXAlignment = Enum.TextXAlignment.Left
+	local myBar = UI.Bar(battle, COLORS.Green, UDim2.fromOffset(16, 34))
+	local theirName = UI.Label(battle, "", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 70), 18)
+	theirName.TextXAlignment = Enum.TextXAlignment.Left
+	local theirBar = UI.Bar(battle, COLORS.Red, UDim2.fromOffset(16, 96))
+	local log = UI.Label(battle, "", UDim2.new(1, -32, 0, 50), UDim2.fromOffset(16, 132), 20)
+	log.TextColor3 = COLORS.Yellow
+	local token = 0
+	remotes.ArenaUpdate.OnClientEvent:Connect(function(state: any)
+		token += 1
+		local myToken = token
+		if not state then
+			battle.Visible = false
+			return
+		end
+		battle.Visible = true
+		myName.Text = "🔵 You: " .. state.MyName
+		theirName.Text = "🔴 Them: " .. state.TheirName
+		UI.SetBar(myBar, state.MyHealth / state.MyMax, string.format("%d / %d", math.floor(state.MyHealth), state.MyMax))
+		UI.SetBar(theirBar, state.TheirHealth / state.TheirMax, string.format("%d / %d", math.floor(state.TheirHealth), state.TheirMax))
+		log.Text = if state.Done then (if state.Won then "🏆 YOU WON! " else "💔 You lost. ") .. state.Log else state.Log
+		if state.Done then
+			task.delay(5, function()
+				if token == myToken then
+					battle.Visible = false
+				end
+			end)
+		end
+	end)
+end
+
+-- التحديث ---------------------------------------------------------------------------------------
+
+function Features.Refresh()
+	local state = getState()
+	if not state then
+		return
+	end
+
+	-- الحالة تحت الفلوس: Speed Boost والحاجة اللي شايلها
+	local parts = {}
+	if state.Carrying then
+		table.insert(parts, "🎒 Carrying a monster: walk it home!")
+	end
+	if state.BoostLeft and state.BoostLeft > 0 then
+		table.insert(parts, "💨 Boost " .. formatTime(state.BoostLeft))
+	end
+	if state.CoinMultiplier and state.CoinMultiplier > 1 then
+		table.insert(parts, "👑 VIP x" .. state.CoinMultiplier)
+	end
+	statusLabel.Text = table.concat(parts, "   ")
+
+	-- الهدية اليومية
+	local dailyIn = state.DailyReadyIn or 0
+	local streak = state.DailyStreak or 0
+	local nextDay = math.min(streak + 1, Config.Daily.MaxStreak)
+	dailyInfo.Text = string.format(
+		"Day %d / %d\nNext reward: 💰 %s%s",
+		nextDay,
+		Config.Daily.MaxStreak,
+		MonsterMath.FormatNumber(Config.Daily.CoinsPerDay * nextDay),
+		if nextDay == Config.Daily.MaxStreak then " + " .. Config.Eggs[Config.Daily.Day7Egg].DisplayName else ""
+	)
+	dailyClaim.Text = if dailyIn > 0 then "Ready in " .. formatTime(dailyIn) else "Claim!"
+	dailyClaim.BackgroundColor3 = if dailyIn > 0 then COLORS.Gray else COLORS.Green
+	dailyButton.Text = if dailyIn > 0 then "🎁\nDaily" else "🎁\nReady!"
+
+	-- عجلة الحظ
+	local spinIn = state.SpinReadyIn or 0
+	spinGo.Text = if spinIn > 0 then "Free spin in " .. formatTime(spinIn) else "SPIN!"
+	spinGo.BackgroundColor3 = if spinIn > 0 then COLORS.Gray else COLORS.Green
+	spinButton.Text = if spinIn > 0 then "🎡\nSpin" else "🎡\nReady!"
+
+	-- الـ Gamepasses
+	local passes = state.Passes or {}
+	for name, button in passButtons do
+		if passes[name] then
+			button.Text = "Owned ✓"
+			button.BackgroundColor3 = COLORS.Gray
+		else
+			button.Text = "R$ " .. Config.Gamepasses[name].Price
+			button.BackgroundColor3 = COLORS.Green
+		end
+	end
+
+	if accessoriesFrame.Visible then
+		refreshAccessories(state)
+	end
+end
+
+function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stateGetter: () -> any, openMonsterGetter: () -> string?)
+	ui = newUi
+	remotes = allRemotes
+	getState = stateGetter
+	getOpenMonster = openMonsterGetter
+
+	buildBanner()
+	buildPopup()
+	buildButtons()
+	buildShopExtras()
+	buildDaily()
+	buildSpin()
+	buildAccessories()
+	buildMiniGames()
+	buildTrade()
+	buildArena()
+
+	remotes.Announce.OnClientEvent:Connect(function(text: string, color: Color3?)
+		announce(text, color)
+	end)
+
+	-- العدادات (Daily / Spin / Boost) بتعد كل ثانية
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			local state = getState()
+			if state then
+				for _, key in { "DailyReadyIn", "SpinReadyIn", "BoostLeft" } do
+					if state[key] and state[key] > 0 then
+						state[key] = math.max(0, state[key] - 1)
+					end
+				end
+				Features.Refresh()
+			end
+		end
+	end)
+end
+
+return Features
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="28">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[--!strict
@@ -4153,6 +7514,8 @@ export type UI = {
 	ShopButton: TextButton,
 	UpgradesButton: TextButton,
 	ShopFrame: Frame,
+	ShopScroll: ScrollingFrame,
+	ShopContentBottom: number,
 	EggButtons: { [string]: TextButton },
 	UpgradesFrame: Frame,
 	SlotsInfo: TextLabel,
@@ -4168,6 +7531,7 @@ export type UI = {
 	ProductionLabel: TextLabel,
 	FeedButton: TextButton,
 	PlayButton: TextButton,
+	AccessoriesButton: TextButton,
 	SellButton: TextButton,
 	Toasts: Frame,
 	Panels: { Frame },
@@ -4312,8 +7676,18 @@ function UI.Create(playerGui: PlayerGui): UI
 	local panels: { Frame } = {}
 
 	-- المتجر -------------------------------------------------------------------
-	local shopFrame = panel(gui, "Shop", UDim2.fromOffset(640, 380), "🥚 Egg Shop", COLORS.Pink)
+	local shopFrame = panel(gui, "Shop", UDim2.fromOffset(700, 560), "🥚 Shop", COLORS.Pink)
 	table.insert(panels, shopFrame)
+	local shopScroll = Instance.new("ScrollingFrame")
+	shopScroll.Name = "Content"
+	shopScroll.Position = UDim2.fromOffset(0, 56)
+	shopScroll.Size = UDim2.new(1, 0, 1, -64)
+	shopScroll.BackgroundTransparency = 1
+	shopScroll.BorderSizePixel = 0
+	shopScroll.ScrollBarThickness = 8
+	shopScroll.CanvasSize = UDim2.fromOffset(0, 0)
+	shopScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	shopScroll.Parent = shopFrame
 	local eggButtons: { [string]: TextButton } = {}
 	local sortedEggs = {}
 	for _, eggType in Config.ShopEggs do
@@ -4323,16 +7697,16 @@ function UI.Create(playerGui: PlayerGui): UI
 		end
 	end
 	if #sortedEggs == 0 then
-		local empty = label(shopFrame, "Coming soon...", UDim2.new(1, -40, 0, 60), UDim2.new(0, 20, 0.5, -30), 32)
+		local empty = label(shopScroll, "🥚 Eggs: coming soon...", UDim2.new(1, -40, 0, 60), UDim2.fromOffset(20, 10), 28)
 		empty.TextColor3 = COLORS.SubText
 	end
 	for i, entry in sortedEggs do
 		local egg = entry.Egg
 		local card = Instance.new("Frame")
 		card.Size = UDim2.fromOffset(196, 300)
-		card.Position = UDim2.fromOffset(16 + (i - 1) * 206, 60)
+		card.Position = UDim2.fromOffset(16 + (i - 1) * 206, 4)
 		card.BackgroundColor3 = COLORS.PanelLight
-		card.Parent = shopFrame
+		card.Parent = shopScroll
 		corner(card, 12)
 		stroke(card, egg.Color, 2)
 
@@ -4393,7 +7767,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	local lockButton = button(upgradesFrame, "", COLORS.Green, UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 218))
 
 	-- لوحة الوحش ------------------------------------------------------------------
-	local monsterFrame, monsterName = panel(gui, "Monster", UDim2.fromOffset(440, 420), "", COLORS.Green)
+	local monsterFrame, monsterName = panel(gui, "Monster", UDim2.fromOffset(440, 468), "", COLORS.Green)
 	table.insert(panels, monsterFrame)
 	local monsterInfo = label(monsterFrame, "", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 52), 18)
 	monsterInfo.TextXAlignment = Enum.TextXAlignment.Left
@@ -4413,7 +7787,8 @@ function UI.Create(playerGui: PlayerGui): UI
 
 	local feedButton = button(monsterFrame, "", COLORS.Orange, UDim2.fromOffset(196, 48), UDim2.fromOffset(16, 304))
 	local playButton = button(monsterFrame, "", COLORS.Pink, UDim2.fromOffset(196, 48), UDim2.fromOffset(228, 304))
-	local sellButton = button(monsterFrame, "", COLORS.Red, UDim2.new(1, -32, 0, 44), UDim2.fromOffset(16, 362))
+	local accessoriesButton = button(monsterFrame, "👒 Accessories", COLORS.Blue, UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 362))
+	local sellButton = button(monsterFrame, "", COLORS.Red, UDim2.new(1, -32, 0, 44), UDim2.fromOffset(16, 412))
 
 	-- الإشعارات --------------------------------------------------------------------
 	local toasts = Instance.new("Frame")
@@ -4436,6 +7811,8 @@ function UI.Create(playerGui: PlayerGui): UI
 		ShopButton = shopButton,
 		UpgradesButton = upgradesButton,
 		ShopFrame = shopFrame,
+		ShopScroll = shopScroll,
+		ShopContentBottom = if #sortedEggs > 0 then 316 else 80,
 		EggButtons = eggButtons,
 		UpgradesFrame = upgradesFrame,
 		SlotsInfo = slotsInfo,
@@ -4451,11 +7828,20 @@ function UI.Create(playerGui: PlayerGui): UI
 		ProductionLabel = productionLabel,
 		FeedButton = feedButton,
 		PlayButton = playButton,
+		AccessoriesButton = accessoriesButton,
 		SellButton = sellButton,
 		Toasts = toasts,
 		Panels = panels,
 	}
 end
+
+-- أدوات البناء متاحة لباقي ملفات الواجهة
+UI.Corner = corner
+UI.Stroke = stroke
+UI.Label = label
+UI.Button = button
+UI.Panel = panel
+UI.Bar = bar
 
 function UI.Open(ui: UI, frame: Frame)
 	for _, other in ui.Panels do
