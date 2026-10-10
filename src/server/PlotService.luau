@@ -619,20 +619,22 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 	end
 
 	-- لو القاعدة مقفولة، أي حد غير صاحبها بيترمي برّه.
-	barrier.Touched:Connect(function(hit)
-		if os.clock() >= plot.LockedUntil then
-			return
-		end
-		local character = hit.Parent
-		local player = Players:GetPlayerFromCharacter(character)
-		if not player or player == plot.Owner or not character then
-			return
-		end
-		local root = (character :: Model):FindFirstChild("HumanoidRootPart") :: BasePart?
-		if root then
-			root.CFrame = cframe * CFrame.new(0, 3, -HALF - 10)
-		end
-	end)
+	if barrier then
+		barrier.Touched:Connect(function(hit)
+			if os.clock() >= plot.LockedUntil then
+				return
+			end
+			local character = hit.Parent
+			local player = Players:GetPlayerFromCharacter(character)
+			if not player or player == plot.Owner or not character then
+				return
+			end
+			local root = (character :: Model):FindFirstChild("HumanoidRootPart") :: BasePart?
+			if root then
+				root.CFrame = cframe * CFrame.new(0, 3, -HALF - 10)
+			end
+		end)
+	end
 
 	return plot
 end
