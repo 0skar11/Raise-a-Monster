@@ -288,7 +288,7 @@ local function buildShopExtras()
 	end)
 	for i, entry in speedAccessories do
 		local accessory = entry.Accessory
-		speedAccessoryButtons[entry.Name] = card(i, 4, accessory.Name, accessory.Description .. string.format(" · Speed +%d%%", math.floor((accessory.Multiplier - 1) * 100 + 0.5)), accessory.Price, accessory.Color, function()
+		speedAccessoryButtons[entry.Name] = card(i, 4, accessory.Name, accessory.Description .. string.format(" · Speed +%d%% · HP +%d", math.floor((accessory.Multiplier - 1) * 100 + 0.5), accessory.HealthBonus), accessory.Price, accessory.Color, function()
 			remotes.BuySpeedAccessory:FireServer(entry.Name)
 		end, "💰 ")
 	end
