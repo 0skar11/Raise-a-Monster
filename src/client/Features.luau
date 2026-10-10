@@ -22,13 +22,12 @@ local getOpenMonster: () -> string?
 
 -- عناصر بتتحدث مع كل StateUpdate
 local statusLabel: TextLabel
-local dailyButton: TextButton
-local spinButton: TextButton
+local rewardsButton: TextButton
 local dailyInfo: TextLabel
 local dailyClaim: TextButton
 local spinGo: TextButton
 local passButtons: { [string]: TextButton } = {}
-local accessoryRows: { [string]: { Button: TextButton, Info: TextLabel } } = {}
+local accessoryRows: { [string]: { Row: Frame, Button: TextButton, Info: TextLabel } } = {}
 local accessoriesFrame: Frame
 local miniGameFrame: Frame
 
@@ -226,23 +225,21 @@ end
 -- تليبورت وأزرار جانبية -----------------------------------------------------------------------
 
 local function buildButtons()
-	-- ZIndex 0 عشان أي لوحة تتفتح تبقى فوقهم
-	local home = UI.Button(ui.Gui, "🏠 Home", COLORS.Green, UDim2.fromOffset(150, 44), UDim2.new(0.5, -160, 1, -150))
+	-- ZIndex 0 عشان أي لوحة تتفتح تبقى فوقهم. فوق خالص في النص، على جنبي الفلوس
+	local home = UI.Button(ui.Gui, "🏠 Home", COLORS.Green, UDim2.fromOffset(150, 44), UDim2.new(0.5, -292, 0, 18))
 	home.ZIndex = 0
 	home.Activated:Connect(function()
 		remotes.Teleport:FireServer("Home")
 	end)
-	local shop = UI.Button(ui.Gui, "🥚 To Shop", COLORS.Pink, UDim2.fromOffset(150, 44), UDim2.new(0.5, 10, 1, -150))
+	local shop = UI.Button(ui.Gui, "🥚 To Shop", COLORS.Pink, UDim2.fromOffset(150, 44), UDim2.new(0.5, 142, 0, 18))
 	shop.ZIndex = 0
 	shop.Activated:Connect(function()
 		remotes.Teleport:FireServer("Shop")
 	end)
 
-	-- عمود تاني على الشمال (اليمين بتغطيه لستة اللاعبين بتاعة Roblox وبتاكل الضغطات)
-	dailyButton = UI.Button(ui.Gui, "🎁\nDaily", COLORS.Yellow, UDim2.fromOffset(84, 84), UDim2.new(0, 104, 0.5, -92))
-	dailyButton.TextSize = 18
-	spinButton = UI.Button(ui.Gui, "🎡\nSpin", COLORS.Orange, UDim2.fromOffset(84, 84), UDim2.new(0, 104, 0.5, 8))
-	spinButton.TextSize = 18
+	-- الأزرار على الشمال شبكة عمودين (اليمين بتغطيه لستة اللاعبين بتاعة Roblox وبتاكل الضغطات)
+	rewardsButton = UI.Button(ui.Gui, "🎁\nRewards", COLORS.Yellow, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, -138))
+	rewardsButton.TextSize = 18
 
 	statusLabel = UI.Label(ui.Gui, "", UDim2.fromOffset(420, 26), UDim2.new(0.5, -210, 0, 76), 18)
 	statusLabel.TextStrokeTransparency = 0.3
@@ -313,27 +310,34 @@ local function buildShopExtras()
 	spacer.Parent = ui.ShopScroll
 end
 
--- الهدية اليومية -------------------------------------------------------------------------------
+-- الهدية اليومية وعجلة الحظ في شباك واحد: اليومية على الشمال والعجلة على اليمين ----------------
 
-local function buildDaily()
-	local frame = newPanel("Daily", UDim2.fromOffset(420, 260), "🎁 Daily Reward", COLORS.Yellow)
-	dailyInfo = UI.Label(frame, "", UDim2.new(1, -32, 0, 110), UDim2.fromOffset(16, 60), 20)
-	dailyClaim = UI.Button(frame, "Claim", COLORS.Green, UDim2.new(1, -32, 0, 50), UDim2.fromOffset(16, 190))
+local function buildRewards()
+	local frame = newPanel("Rewards", UDim2.fromOffset(820, 470), "🎁 Rewards", COLORS.Yellow)
+	rewardsButton.Activated:Connect(function()
+		UI.Toggle(ui, frame)
+	end)
+
+	local dailyTitle = UI.Label(frame, "🎁 Daily Reward", UDim2.fromOffset(360, 30), UDim2.fromOffset(16, 60), 24)
+	dailyTitle.TextColor3 = COLORS.Yellow
+	dailyInfo = UI.Label(frame, "", UDim2.fromOffset(360, 110), UDim2.fromOffset(16, 110), 20)
+	dailyClaim = UI.Button(frame, "Claim", COLORS.Green, UDim2.fromOffset(360, 50), UDim2.fromOffset(16, 404))
 	dailyClaim.Activated:Connect(function()
 		remotes.ClaimDaily:FireServer()
 	end)
-	dailyButton.Activated:Connect(function()
-		UI.Toggle(ui, frame)
-	end)
-end
 
--- عجلة الحظ -------------------------------------------------------------------------------------
+	local divider = Instance.new("Frame")
+	divider.Size = UDim2.fromOffset(2, 390)
+	divider.Position = UDim2.fromOffset(392, 60)
+	divider.BackgroundColor3 = COLORS.PanelLight
+	divider.BorderSizePixel = 0
+	divider.Parent = frame
 
-local function buildSpin()
-	local frame = newPanel("Spin", UDim2.fromOffset(460, 470), "🎡 Spin Wheel", COLORS.Orange)
+	local spinTitle = UI.Label(frame, "🎡 Spin Wheel", UDim2.fromOffset(400, 30), UDim2.fromOffset(410, 60), 24)
+	spinTitle.TextColor3 = COLORS.Orange
 	local wheel = Instance.new("Frame")
 	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
-	wheel.Position = UDim2.new(0.5, 0, 0, 220)
+	wheel.Position = UDim2.fromOffset(610, 250)
 	wheel.Size = UDim2.fromOffset(300, 300)
 	wheel.BackgroundColor3 = COLORS.PanelLight
 	wheel.Parent = frame
@@ -350,15 +354,12 @@ local function buildSpin()
 		chip.Rotation = (i - 1) * step
 		UI.Corner(chip, 10)
 	end
-	local pointer = UI.Label(frame, "▼", UDim2.fromOffset(40, 40), UDim2.new(0.5, -20, 0, 52), 34)
+	local pointer = UI.Label(frame, "▼", UDim2.fromOffset(40, 40), UDim2.fromOffset(590, 82), 34)
 	pointer.TextColor3 = COLORS.Red
 	pointer.ZIndex = 3
-	spinGo = UI.Button(frame, "SPIN!", COLORS.Green, UDim2.new(1, -32, 0, 50), UDim2.fromOffset(16, 400))
+	spinGo = UI.Button(frame, "SPIN!", COLORS.Green, UDim2.fromOffset(392, 50), UDim2.fromOffset(412, 404))
 	spinGo.Activated:Connect(function()
 		remotes.Spin:FireServer()
-	end)
-	spinButton.Activated:Connect(function()
-		UI.Toggle(ui, frame)
 	end)
 
 	remotes.SpinResult.OnClientEvent:Connect(function(index: number)
@@ -374,7 +375,8 @@ end
 -- الإكسسوارات -----------------------------------------------------------------------------------
 
 local function buildAccessories()
-	accessoriesFrame = newPanel("Accessories", UDim2.fromOffset(500, 470), "👒 Accessories", COLORS.Blue)
+	-- كل وحش بيظهرله القبعة والنضارة بتوعه هو بس
+	accessoriesFrame = newPanel("Accessories", UDim2.fromOffset(500, 210), "👒 Accessories", COLORS.Blue)
 	local list = makeList(accessoriesFrame, UDim2.new(1, -32, 1, -76), UDim2.fromOffset(16, 60))
 	local sorted = {}
 	for name, accessory in Config.Accessories do
@@ -389,6 +391,7 @@ local function buildAccessories()
 		row.Size = UDim2.new(1, 0, 0, 52)
 		row.BackgroundColor3 = COLORS.Panel
 		row.LayoutOrder = index
+		row.Visible = false
 		row.Parent = list
 		UI.Corner(row, 10)
 		local swatch = Instance.new("Frame")
@@ -398,7 +401,7 @@ local function buildAccessories()
 		swatch.Parent = row
 		UI.Corner(swatch, 8)
 		local bonus = if accessory.Bonus > 0 then string.format(" · +%d%% coins", math.floor(accessory.Bonus * 100 + 0.5)) else ""
-		local info = UI.Label(row, accessory.Name .. "  (" .. accessory.Slot .. ")" .. bonus, UDim2.new(1, -200, 1, 0), UDim2.fromOffset(50, 0), 17)
+		local info = UI.Label(row, accessory.Name .. bonus, UDim2.new(1, -200, 1, 0), UDim2.fromOffset(50, 0), 17)
 		info.TextXAlignment = Enum.TextXAlignment.Left
 		local action = UI.Button(row, "", COLORS.Green, UDim2.fromOffset(130, 38), UDim2.new(1, -138, 0, 7))
 		action.TextSize = 16
@@ -409,7 +412,7 @@ local function buildAccessories()
 				return
 			end
 			if not state.Accessories[entry.Name] then
-				remotes.BuyAccessory:FireServer(entry.Name)
+				remotes.BuyAccessory:FireServer(entry.Name, monsterId)
 				return
 			end
 			if not monsterId then
@@ -427,7 +430,7 @@ local function buildAccessories()
 			local wearing = monster[accessory.Slot] == entry.Name
 			remotes.EquipAccessory:FireServer(monsterId, accessory.Slot, if wearing then nil else entry.Name)
 		end)
-		accessoryRows[entry.Name] = { Button = action, Info = info }
+		accessoryRows[entry.Name] = { Row = row, Button = action, Info = info }
 	end
 	ui.AccessoriesButton.Activated:Connect(function()
 		UI.Open(ui, accessoriesFrame)
@@ -445,6 +448,7 @@ local function refreshAccessories(state: any)
 	end
 	for name, row in accessoryRows do
 		local accessory = Config.Accessories[name]
+		row.Row.Visible = monster ~= nil and monster.Species == accessory.Species
 		if not state.Accessories[name] then
 			row.Button.Text = "💰 " .. MonsterMath.FormatNumber(accessory.Cost)
 			row.Button.BackgroundColor3 = if state.Coins >= accessory.Cost then COLORS.Green else COLORS.Gray
@@ -555,7 +559,7 @@ end
 -- الـ Trading -----------------------------------------------------------------------------------
 
 local function buildTrade()
-	local tradeButton = UI.Button(ui.Gui, "🤝\nTrade", COLORS.Green, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, 108))
+	local tradeButton = UI.Button(ui.Gui, "🤝\nTrade", COLORS.Green, UDim2.fromOffset(84, 84), UDim2.new(0, 104, 0.5, -138))
 	tradeButton.TextSize = 18
 	local picker = newPanel("TradePicker", UDim2.fromOffset(380, 400), "🤝 Trade with...", COLORS.Green)
 	local playerList = makeList(picker, UDim2.new(1, -32, 1, -76), UDim2.fromOffset(16, 60))
@@ -663,7 +667,7 @@ end
 -- الـ Arena -------------------------------------------------------------------------------------
 
 local function buildArena()
-	local arenaButton = UI.Button(ui.Gui, "⚔️\nArena", COLORS.Red, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, 208))
+	local arenaButton = UI.Button(ui.Gui, "⚔️\nArena", COLORS.Red, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, -46))
 	arenaButton.TextSize = 18
 	local picker = newPanel("ArenaPicker", UDim2.fromOffset(640, 470), "⚔️ Monster Arena", COLORS.Red)
 	local hint = UI.Label(picker, "Pick an opponent and your fighter. The winner takes coins AND the loser's monster!", UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 52), 16)
@@ -799,13 +803,12 @@ function Features.Refresh()
 	)
 	dailyClaim.Text = if dailyIn > 0 then "Ready in " .. formatTime(dailyIn) else "Claim!"
 	dailyClaim.BackgroundColor3 = if dailyIn > 0 then COLORS.Gray else COLORS.Green
-	dailyButton.Text = if dailyIn > 0 then "🎁\nDaily" else "🎁\nReady!"
 
 	-- عجلة الحظ
 	local spinIn = state.SpinReadyIn or 0
 	spinGo.Text = if spinIn > 0 then "Free spin in " .. formatTime(spinIn) else "SPIN!"
 	spinGo.BackgroundColor3 = if spinIn > 0 then COLORS.Gray else COLORS.Green
-	spinButton.Text = if spinIn > 0 then "🎡\nSpin" else "🎡\nReady!"
+	rewardsButton.Text = if dailyIn > 0 and spinIn > 0 then "🎁\nRewards" else "🎁\nReady!"
 
 	-- الـ Gamepasses
 	local passes = state.Passes or {}
@@ -834,8 +837,7 @@ function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stat
 	buildPopup()
 	buildButtons()
 	buildShopExtras()
-	buildDaily()
-	buildSpin()
+	buildRewards()
 	buildAccessories()
 	buildMiniGames()
 	buildTrade()

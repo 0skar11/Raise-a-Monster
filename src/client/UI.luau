@@ -184,9 +184,9 @@ function UI.Create(playerGui: PlayerGui): UI
 	pendingLabel.TextColor3 = COLORS.SubText
 
 	-- أزرار الشمال
-	local shopButton = button(gui, "🥚\nShop", COLORS.Pink, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, -92))
+	local shopButton = button(gui, "🥚\nShop", COLORS.Pink, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, -230))
 	shopButton.TextSize = 22
-	local upgradesButton = button(gui, "⬆️\nUpgrades", COLORS.Blue, UDim2.fromOffset(84, 84), UDim2.new(0, 12, 0.5, 8))
+	local upgradesButton = button(gui, "⬆️\nUpgrades", COLORS.Blue, UDim2.fromOffset(84, 84), UDim2.new(0, 104, 0.5, -230))
 	upgradesButton.TextSize = 18
 
 	local panels: { Frame } = {}

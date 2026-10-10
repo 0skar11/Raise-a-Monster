@@ -20,7 +20,7 @@ local EVENT_NAMES = {
 	"BuyProduct", -- (productName)
 	"ClaimDaily", -- ()
 	"Spin", -- ()
-	"BuyAccessory", -- (accessoryName)
+	"BuyAccessory", -- (accessoryName, monsterId)
 	"EquipAccessory", -- (monsterId, slot, accessoryName?)
 	"MiniGameStart", -- (monsterId, gameName)
 	"MiniGameFinish", -- (score)

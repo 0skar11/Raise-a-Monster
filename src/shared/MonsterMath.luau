@@ -12,7 +12,7 @@ export type MonsterData = {
 	Hunger: number,
 	Happiness: number,
 	Slot: number,
-	Hat: string?, -- إكسسوارات (Config.Accessories)
+	Hat: string?, -- إكسسوارات الوحش (Config.Accessories، بتاعة نوعه بس)
 	Glasses: string?,
 }
 
@@ -54,7 +54,7 @@ function MonsterMath.GetAccessoryBonus(monster: MonsterData): number
 	local bonus = 0
 	for _, name in { monster.Hat, monster.Glasses } do
 		local accessory = name and Config.Accessories[name]
-		if accessory then
+		if accessory and accessory.Species == monster.Species then
 			bonus += accessory.Bonus
 		end
 	end
