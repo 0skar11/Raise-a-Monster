@@ -47,6 +47,10 @@
 ```
 rojo build -o RaiseAMonster.rbxlx
 ```
+أو من غير Rojo خالص (محتاج Node.js بس):
+```
+node tools/build-place.js
+```
 
 ---
 
@@ -95,7 +99,7 @@ rojo build -o RaiseAMonster.rbxlx
 **لو عدّلت شكل الوحوش:**
 1. شغّل `tools/GrowAMonster_RiggedGenerator.lua` من الـ Command Bar في Place فاضي.
 2. دوس كليك يمين على `ServerStorage.MonsterModels` واختار **Save to File** بصيغة **.rbxmx**، واحفظه مكان `assets/MonsterModels.rbxmx`.
-3. ابني الماب تاني: `rojo build -o RaiseAMonster.rbxlx`.
+3. ابني الماب تاني: `node tools/build-place.js` (أو `rojo build -o RaiseAMonster.rbxlx`).
 
 ---
 
