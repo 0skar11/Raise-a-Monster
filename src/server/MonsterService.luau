@@ -571,13 +571,13 @@ local function buySpeedAccessory(player: Player, name: unknown)
 	CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
 	MonsterService.Notify(player, "🏃 You bought " .. accessory.Name .. "!", "success")
 	MonsterService.PushState(player)
+end
 
 local function buyAccessory(player: Player, name: unknown, monsterId: unknown)
 	if rateLimited(player) or type(name) ~= "string" then
 		return
 	end
 
-	end
 	local accessory = Config.Accessories[name]
 	local profile = DataService.Get(player)
 	if not accessory or not profile then
