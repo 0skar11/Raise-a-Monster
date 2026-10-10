@@ -505,6 +505,12 @@ Config.Gamepasses = {
 	VIPSword = { Id = 0, Name = "VIP Sword", Description = "A strong sword for the monster zones", Price = 199, Order = 2 },
 	AutoCollect = { Id = 0, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
 	ExtraSlots = { Id = 0, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
+	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
+	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
+	ForestSword = { Id = 0, Name = "Forest Sword", Description = "A nature-forged sword", Price = 149, Order = 11 },
+	DesertSword = { Id = 0, Name = "Desert Sword", Description = "A sword tempered by desert heat", Price = 199, Order = 12 },
+	IceSword = { Id = 0, Name = "Ice Sword", Description = "A frozen sword with extra reach", Price = 249, Order = 13 },
+	LavaSword = { Id = 0, Name = "Lava Sword", Description = "A blazing sword with maximum power", Price = 299, Order = 14 },
 } :: { [string]: Gamepass }
 
 export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number }
@@ -517,6 +523,15 @@ Config.Products = {
 Config.VIPCoinMultiplier = 2
 Config.ExtraSlotsAmount = 2
 Config.VIPSword = { DamageMultiplier = 3, ExtraReach = 3 }
+Config.WeaponStats = {
+	IronBat = { Template = "IronBat", DamageMultiplier = 1.2, ExtraReach = 0.5 },
+	VIPSword = { Template = "IceSword", DamageMultiplier = 3, ExtraReach = 3 },
+	IronSword = { Template = "IronSword", DamageMultiplier = 1.5, ExtraReach = 1 },
+	ForestSword = { Template = "ForestSword", DamageMultiplier = 1.8, ExtraReach = 1.5 },
+	DesertSword = { Template = "DesertSword", DamageMultiplier = 2.1, ExtraReach = 2 },
+	IceSword = { Template = "IceSword", DamageMultiplier = 2.5, ExtraReach = 2.5 },
+	LavaSword = { Template = "LavaSword", DamageMultiplier = 3.5, ExtraReach = 4 },
+} :: { [string]: { Template: string, DamageMultiplier: number, ExtraReach: number } }
 Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
 
 -- أحداث الماب ---------------------------------------------------------------------------

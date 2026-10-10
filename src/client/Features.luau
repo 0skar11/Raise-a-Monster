@@ -277,13 +277,31 @@ local function buildShopExtras()
 	section("⭐ Gamepasses")
 	local passes = {}
 	for name, pass in Config.Gamepasses do
-		table.insert(passes, { Name = name, Pass = pass })
+		if not Config.WeaponStats[name] then
+			table.insert(passes, { Name = name, Pass = pass })
+		end
 	end
 	table.sort(passes, function(a, b)
 		return a.Pass.Order < b.Pass.Order
 	end)
 	for i, entry in passes do
 		passButtons[entry.Name] = card(i, #passes, entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, COLORS.Yellow, function()
+			remotes.BuyPass:FireServer(entry.Name)
+		end)
+	end
+	y += 168
+
+	section("⚔️ Weapons")
+	local weapons = {}
+	for name, stats in Config.WeaponStats do
+		local pass = Config.Gamepasses[name]
+		table.insert(weapons, { Name = name, Pass = pass })
+	end
+	table.sort(weapons, function(a, b)
+		return a.Pass.Order < b.Pass.Order
+	end)
+	for i, entry in weapons do
+		passButtons[entry.Name] = card(i, #weapons, entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, COLORS.Red, function()
 			remotes.BuyPass:FireServer(entry.Name)
 		end)
 	end

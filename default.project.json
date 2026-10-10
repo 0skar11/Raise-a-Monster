@@ -13,6 +13,9 @@
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
+      },
+      "WeaponModels": {
+        "$path": "assets/WeaponModels.rbxmx"
       }
     },
     "ServerStorage": {

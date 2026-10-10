@@ -1,5 +1,5 @@
 --!strict
--- الأسلحة والضرب: المضرب الخشبي لكل الناس، وسيف الـ VIP لأصحاب الـ Gamepass.
+-- الأسلحة والضرب: المضرب الخشبي للجميع، والأسلحة الإضافية من متجر الـ Gamepass.
 -- أي حاجة ممكن تتضرب (الوحوش الأم، الـ Big Boss) بتتسجل هنا كـ Target،
 -- ولو مفيش Target قريب السلاح بيضرب أقرب لاعب (برّه القواعد بس).
 
@@ -7,7 +7,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Build = require(script.Parent.Build)
 local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
 
@@ -132,89 +131,33 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 	end
 end
 
-local function weld(part0: BasePart, part1: BasePart)
-	local constraint = Instance.new("WeldConstraint")
-	constraint.Part0 = part0
-	constraint.Part1 = part1
-	constraint.Parent = part1
+local function cloneWeaponTemplate(name: string): Tool
+	local folder = ReplicatedStorage:WaitForChild("WeaponModels")
+	local template = folder:WaitForChild(name)
+	assert(template:IsA("Tool"), "Weapon template is missing or invalid: " .. name)
+	return template:Clone() :: Tool
 end
 
 local function makeBat(): Tool
-	local tool = Instance.new("Tool")
+	local tool = cloneWeaponTemplate("WoodenBat")
 	tool.Name = "Bat"
 	tool.ToolTip = "Hit the mother monsters!"
 	tool.CanBeDropped = false
-	tool.GripPos = Vector3.new(0, 0, 0.6) -- اللاعب ماسكه من آخره
-	local handle = Build.MakePart({
-		Name = "Handle",
-		Size = Vector3.new(0.5, 0.5, 2.2),
-		Color = Color3.fromRGB(140, 95, 55),
-		Material = Enum.Material.Wood,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	handle.Parent = tool
-	local barrel = Build.MakePart({
-		Name = "Barrel",
-		Size = Vector3.new(0.85, 0.85, 2.6),
-		CFrame = handle.CFrame * CFrame.new(0, 0, -2.3),
-		Color = Color3.fromRGB(170, 120, 70),
-		Material = Enum.Material.Wood,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	barrel.Parent = tool
-	weld(handle, barrel)
 	return tool
 end
 
-local function makeSword(): Tool
-	local tool = Instance.new("Tool")
-	tool.Name = "VIP Sword"
-	tool.ToolTip = "VIP: hits much harder!"
+local function makeSword(passName: string): Tool
+	local stats = Config.WeaponStats[passName]
+	assert(stats, "Weapon stats are missing: " .. passName)
+	local tool = cloneWeaponTemplate(stats.Template)
+	tool.Name = Config.Gamepasses[passName].Name
+	tool.ToolTip = Config.Gamepasses[passName].Description
 	tool.CanBeDropped = false
-	tool.GripPos = Vector3.new(0, 0, 0.4)
-	local handle = Build.MakePart({
-		Name = "Handle",
-		Size = Vector3.new(0.4, 0.4, 1.4),
-		Color = Color3.fromRGB(60, 40, 30),
-		Material = Enum.Material.Wood,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	handle.Parent = tool
-	local guard = Build.MakePart({
-		Name = "Guard",
-		Size = Vector3.new(1.8, 0.3, 0.3),
-		CFrame = handle.CFrame * CFrame.new(0, 0, -0.85),
-		Color = Color3.fromRGB(255, 205, 50),
-		Material = Enum.Material.Foil,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	guard.Parent = tool
-	weld(handle, guard)
-	local blade = Build.MakePart({
-		Name = "Blade",
-		Size = Vector3.new(0.25, 0.6, 4.2),
-		CFrame = handle.CFrame * CFrame.new(0, 0, -3.1),
-		Color = Color3.fromRGB(120, 220, 255),
-		Material = Enum.Material.Neon,
-		Anchored = false,
-		CanCollide = false,
-		Massless = true,
-	})
-	blade.Parent = tool
-	weld(handle, blade)
 	return tool
 end
 
 -- بيدّي اللاعب أسلحته (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
-function CombatService.GiveWeapons(player: Player, hasSword: boolean)
+function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: boolean })
 	local backpack = player:FindFirstChildOfClass("Backpack")
 	if not backpack then
 		return
@@ -230,12 +173,15 @@ function CombatService.GiveWeapons(player: Player, hasSword: boolean)
 		end)
 		bat.Parent = backpack
 	end
-	if hasSword and not has("VIP Sword") then
-		local sword = makeSword()
-		sword.Activated:Connect(function()
-			swing(player, sword, Config.VIPSword.DamageMultiplier, Config.VIPSword.ExtraReach, Config.PvP.SwordDamage)
-		end)
-		sword.Parent = backpack
+	for passName, stats in Config.WeaponStats do
+		local displayName = Config.Gamepasses[passName].Name
+		if ownedPasses[passName] and not has(displayName) then
+			local sword = makeSword(passName)
+			sword.Activated:Connect(function()
+				swing(player, sword, stats.DamageMultiplier, stats.ExtraReach, Config.PvP.SwordDamage)
+			end)
+			sword.Parent = backpack
+		end
 	end
 end
 
