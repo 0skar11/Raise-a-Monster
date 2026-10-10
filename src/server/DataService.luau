@@ -27,6 +27,7 @@ export type PlayerData = {
 	NextId: number,
 	Stats: { Hatched: number, Steals: number, TimesRobbed: number, ArenaWins: number },
 	Accessories: { [string]: boolean }, -- الإكسسوارات اللي اللاعب اشتراها
+	SpeedAccessories: { [string]: boolean },
 	Daily: { LastClaim: number, Streak: number },
 	LastSpin: number,
 }
@@ -48,6 +49,7 @@ local DEFAULT_DATA: PlayerData = {
 	NextId = 1,
 	Stats = { Hatched = 0, Steals = 0, TimesRobbed = 0, ArenaWins = 0 },
 	Accessories = {},
+	SpeedAccessories = {},
 	Daily = { LastClaim = 0, Streak = 0 },
 	LastSpin = 0,
 }

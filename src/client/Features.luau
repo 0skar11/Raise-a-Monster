@@ -27,6 +27,7 @@ local dailyInfo: TextLabel
 local dailyClaim: TextButton
 local spinGo: TextButton
 local passButtons: { [string]: TextButton } = {}
+local speedAccessoryButtons: { [string]: TextButton } = {}
 local accessoryRows: { [string]: { Row: Frame, Button: TextButton, Info: TextLabel } } = {}
 local accessoriesFrame: Frame
 local miniGameFrame: Frame
@@ -256,11 +257,13 @@ local function buildShopExtras()
 		header.TextColor3 = COLORS.Yellow
 		y += 40
 	end
-	local function card(index: number, perRow: number, name: string, description: string, price: number, color: Color3, onBuy: () -> ()): TextButton
+	local function card(index: number, perRow: number, name: string, description: string, price: number, color: Color3, onBuy: () -> (), currency: string?): TextButton
 		local width = math.floor((640 - (perRow - 1) * 10) / perRow)
+		local column = (index - 1) % perRow
+		local row = math.floor((index - 1) / perRow)
 		local frame = Instance.new("Frame")
 		frame.Size = UDim2.fromOffset(width, 156)
-		frame.Position = UDim2.fromOffset(16 + (index - 1) * (width + 10), y)
+		frame.Position = UDim2.fromOffset(16 + column * (width + 10), y + row * 168)
 		frame.BackgroundColor3 = COLORS.PanelLight
 		frame.Parent = ui.ShopScroll
 		UI.Corner(frame, 12)
@@ -269,7 +272,7 @@ local function buildShopExtras()
 		title.TextColor3 = color
 		local desc = UI.Label(frame, description, UDim2.new(1, -10, 0, 60), UDim2.fromOffset(5, 38), 15)
 		desc.TextColor3 = COLORS.SubText
-		local buy = UI.Button(frame, "R$ " .. price, COLORS.Green, UDim2.new(1, -16, 0, 40), UDim2.fromOffset(8, 106))
+		local buy = UI.Button(frame, (currency or "R$ ") .. price, COLORS.Green, UDim2.new(1, -16, 0, 40), UDim2.fromOffset(8, 106))
 		buy.Activated:Connect(onBuy)
 		return buy
 	end
@@ -290,6 +293,22 @@ local function buildShopExtras()
 		end)
 	end
 	y += 168
+
+	section("🏃 Speed Accessories")
+	local speedAccessories = {}
+	for name, accessory in Config.SpeedAccessories do
+		table.insert(speedAccessories, { Name = name, Accessory = accessory })
+	end
+	table.sort(speedAccessories, function(a, b)
+		return a.Accessory.Order < b.Accessory.Order
+	end)
+	for i, entry in speedAccessories do
+		local accessory = entry.Accessory
+		speedAccessoryButtons[entry.Name] = card(i, 4, accessory.Name, accessory.Description .. string.format(" · Speed +%d%%", math.floor((accessory.Multiplier - 1) * 100 + 0.5)), accessory.Price, accessory.Color, function()
+			remotes.BuySpeedAccessory:FireServer(entry.Name)
+		end, "💰 ")
+	end
+	y += math.ceil(#speedAccessories / 4) * 168
 
 	section("⚔️ Weapons")
 	local weapons = {}
@@ -837,6 +856,17 @@ function Features.Refresh()
 		else
 			button.Text = "R$ " .. Config.Gamepasses[name].Price
 			button.BackgroundColor3 = COLORS.Green
+		end
+		local speedAccessories = state.SpeedAccessories or {}
+		for name, button in speedAccessoryButtons do
+			local accessory = Config.SpeedAccessories[name]
+			if speedAccessories[name] then
+				button.Text = "Owned ✓"
+				button.BackgroundColor3 = COLORS.Gray
+			else
+				button.Text = "💰 " .. accessory.Price
+				button.BackgroundColor3 = COLORS.Green
+			end
 		end
 	end
 

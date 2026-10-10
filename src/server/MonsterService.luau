@@ -8,6 +8,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
+local CharacterService = require(script.Parent.CharacterService)
 
 type Remotes = { [string]: RemoteEvent }
 
@@ -154,11 +155,14 @@ function MonsterService.PushState(player: Player)
 		Stats = data.Stats,
 		SaveDisabled = profile.LoadFailed,
 		Accessories = data.Accessories,
+		SpeedAccessories = data.SpeedAccessories,
+		SpeedAccessoryMultiplier = CharacterService.GetSpeedAccessoryMultiplier(data.SpeedAccessories),
 		CoinMultiplier = MonsterService.GetCoinMultiplier(player),
 	}
 	for key, value in MonsterService.ExtraState(player) do
 		state[key] = value
 	end
+
 	remotes.StateUpdate:FireClient(player, state)
 end
 
@@ -550,6 +554,29 @@ local function buyAccessory(player: Player, name: unknown, monsterId: unknown)
 	if rateLimited(player) or type(name) ~= "string" then
 		return
 	end
+
+	local function buySpeedAccessory(player: Player, name: unknown)
+		if rateLimited(player) or type(name) ~= "string" then
+			return
+		end
+		local accessory = Config.SpeedAccessories[name]
+		local profile = DataService.Get(player)
+		if not accessory or not profile then
+			return
+		end
+		if profile.Data.SpeedAccessories[name] then
+			MonsterService.Notify(player, "You already own " .. accessory.Name .. "!", "info")
+			return
+		end
+		if not DataService.TrySpend(player, accessory.Price) then
+			MonsterService.Notify(player, "Not enough coins!", "error")
+			return
+		end
+		profile.Data.SpeedAccessories[name] = true
+		CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
+		MonsterService.Notify(player, "🏃 You bought " .. accessory.Name .. "!", "success")
+		MonsterService.PushState(player)
+	end
 	local accessory = Config.Accessories[name]
 	local profile = DataService.Get(player)
 	if not accessory or not profile then
@@ -822,6 +849,7 @@ function MonsterService.Init(allRemotes: Remotes)
 	remotes.MiniGameStart.OnServerEvent:Connect(startMiniGame)
 	remotes.MiniGameFinish.OnServerEvent:Connect(finishCatch)
 	remotes.BuyAccessory.OnServerEvent:Connect(buyAccessory)
+	remotes.BuySpeedAccessory.OnServerEvent:Connect(buySpeedAccessory)
 	remotes.EquipAccessory.OnServerEvent:Connect(equipAccessory)
 	remotes.SellMonster.OnServerEvent:Connect(sell)
 	remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
