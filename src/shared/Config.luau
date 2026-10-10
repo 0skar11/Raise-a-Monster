@@ -460,14 +460,18 @@ Config.NestsPerZone = 3
 -- الوحش اللي بيطلع في كل عش بيتختار بالندرة دي (Common أكتر بكتير من Mythic)
 Config.NestRarityWeights = { Common = 35, Uncommon = 25, Rare = 18, Epic = 12, Legendary = 7, Mythic = 3 }
 Config.MotherScale = 1.6 -- الأم = نسخة الـ Adult مكبّرة
+-- ضربة الأم = MotherDamage بتاع المنطقة × الرقم ده حسب ندرة الوحش
+Config.MotherDamageByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3, Mythic = 4 }
+-- دم الأم = MotherHealth بتاع المنطقة × الرقم ده حسب ندرة الوحش
+Config.MotherHealthByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3, Mythic = 4 }
 Config.BabiesPerNest = 3
 
-Config.WalkSpeed = 20 -- سرعة المشي (الافتراضي في Roblox 16)
+Config.WalkSpeed = 25 -- سرعة المشي ثابتة (الافتراضي في Roblox 16)
 
 -- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
 Config.Carry = {
-	WalkSpeedMultiplier = 0.8, -- بتمشي أبطأ وانت شايل وحش
-	SecretEggSpeedMultiplier = 0.7, -- بيضة الـ Big Boss تقيلة شوية
+	WalkSpeedMultiplier = 1, -- السرعة مابتقلّش وانت شايل وحش
+	SecretEggSpeedMultiplier = 1, -- ولا وانت شايل بيضة الـ Big Boss
 	KillCreditTime = 10, -- لو حد ضربك في آخر 10 ثواني وموتّ، هو اللي بياخد اللي شايله
 	DropLifetime = 60, -- الوحش اللي بيقع على الأرض بيختفي بعد المدة دي
 }
@@ -487,6 +491,8 @@ Config.Combat = {
 	MotherAttackInterval = 1.5,
 	MotherAttackRange = 24,
 	MotherRegenDelay = 20, -- لو محدش ضربها المدة دي الـ HP بيرجع كامل
+	MotherChaseSpeed = 16, -- سرعتها وهي بتجري ورا اللي ضربها (أبطأ من اللاعب 25 عشان يقدر يهرب)
+	MotherLeashRange = 70, -- لو اللاعب بعد عن عشها أكتر من كده بترجع
 	TakeHoldDuration = 1,
 }
 

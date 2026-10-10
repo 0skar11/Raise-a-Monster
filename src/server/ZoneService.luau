@@ -42,6 +42,8 @@ type Nest = {
 	Babies: { BasePart },
 	Damagers: { [Player]: number },
 	Target: CombatService.Target?,
+	Aggro: Player?, -- آخر واحد ضربها، وهي بتجري وراه
+	Moving: boolean,
 }
 
 local ZoneService = {}
@@ -321,6 +323,8 @@ local function buildZone(index: number, zone: Config.Zone)
 			Babies = {},
 			Damagers = {},
 			Target = nil,
+			Aggro = nil,
+			Moving = false,
 		})
 	end
 
@@ -338,6 +342,13 @@ local function updateHealthBar(nest: Nest)
 	local ratio = math.clamp(nest.Health / nest.MaxHealth, 0, 1)
 	fill.Size = UDim2.fromScale(ratio, 1)
 	text.Text = MonsterMath.FormatNumber(math.max(0, nest.Health)) .. " / " .. MonsterMath.FormatNumber(nest.MaxHealth)
+end
+
+-- ضربة الأم: حسب المنطقة وندرة الوحش
+local function motherDamage(nest: Nest): number
+	local species = nest.Species and Config.Species[nest.Species]
+	local multiplier = species and Config.MotherDamageByRarity[species.Rarity] or 1
+	return math.floor(nest.Zone.MotherDamage * multiplier + 0.5)
 end
 
 local function babyText(nest: Nest): string
@@ -391,6 +402,7 @@ local function attack(player: Player, nest: Nest, damage: number)
 	nest.Health -= damage
 	nest.Damagers[player] = (nest.Damagers[player] or 0) + damage
 	nest.LastHit = os.clock()
+	nest.Aggro = player -- لو اتنين ضربوها بتروح لآخر واحد
 
 	if nest.MotherModel then
 		PlotService.Flash(nest.MotherModel, Color3.fromRGB(255, 80, 80))
@@ -428,6 +440,8 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 end
 
 local function clearNest(nest: Nest)
+	nest.Aggro = nil
+	nest.Moving = false
 	CombatService.Unregister(nest.Target)
 	nest.Target = nil
 	nest.Folder:ClearAllChildren()
@@ -486,7 +500,8 @@ local function spawnNest(nest: Nest)
 	local species = pickSpecies(nest)
 	nest.Species = species
 	nest.Alive = true
-	nest.MaxHealth = nest.Zone.MotherHealth
+	-- الدم حسب المنطقة وندرة الوحش
+	nest.MaxHealth = math.floor(nest.Zone.MotherHealth * (Config.MotherHealthByRarity[Config.Species[species].Rarity] or 1))
 	nest.Health = nest.MaxHealth
 	nest.LastHit = 0
 
@@ -512,7 +527,7 @@ local function spawnNest(nest: Nest)
 	gui.Name = "Info"
 	gui.AlwaysOnTop = false
 	label.Size = UDim2.fromScale(1, 0.6)
-	label.Text = string.format('<font color="%s">%s</font> · MOTHER\n🏏 Hit her with your bat', rarityHex(species), name)
+	label.Text = string.format('<font color="%s">%s</font> · MOTHER\n⚔️ %d dmg · 🏏 Hit her with your bat', rarityHex(species), name, motherDamage(nest))
 
 	local bar = Instance.new("Frame")
 	bar.Name = "HealthBar"
@@ -598,6 +613,7 @@ local function motherTick()
 		if nest.Health < nest.MaxHealth and now - nest.LastHit > Config.Combat.MotherRegenDelay then
 			nest.Health = nest.MaxHealth
 			nest.Damagers = {}
+			nest.Aggro = nil
 			updateHealthBar(nest)
 		end
 		local attacking = false
@@ -608,13 +624,13 @@ local function motherTick()
 			if root and humanoid and humanoid.Health > 0 then
 				local flat = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z)
 				if flat.Magnitude <= Config.Combat.MotherAttackRange then
-					humanoid:TakeDamage(nest.Zone.MotherDamage)
+					humanoid:TakeDamage(motherDamage(nest))
 					attacking = true
 				end
 			end
 		end
 		-- الأنيميشن: بتهاجم لما حد قريب منها
-		if nest.MotherModel then
+		if nest.MotherModel and not nest.Moving then
 			nest.MotherModel:SetAttribute("AnimState", if attacking then "Attack" else "Idle")
 		end
 	end
@@ -634,6 +650,53 @@ function ZoneService.CleanupPlayer(player: Player)
 	end
 end
 
+-- الأم بتجري ورا آخر واحد ضربها، وبترجع عشها لو بعدت أوي أو هو مات أو خرج
+local function chaseStep(dt: number)
+	for _, nest in nests do
+		local model = nest.MotherModel
+		local mother = nest.Mother
+		if not nest.Alive or not model or not mother then
+			continue
+		end
+		local pivot = model:GetPivot()
+		local home = Vector3.new(nest.Center.X, pivot.Position.Y, nest.Center.Z)
+
+		-- الهدف لسه صالح؟
+		local goal: Vector3? = nil
+		local stopDistance = 0.5
+		local aggro = nest.Aggro
+		if aggro then
+			local character = aggro.Parent and aggro.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local flatFromHome = root and Vector3.new(root.Position.X - home.X, 0, root.Position.Z - home.Z).Magnitude
+			if root and humanoid and humanoid.Health > 0 and flatFromHome and flatFromHome <= Config.Combat.MotherLeashRange then
+				goal = Vector3.new(root.Position.X, pivot.Position.Y, root.Position.Z)
+				local target = nest.Target
+				stopDistance = (if target then target.Radius else 3) + 2
+			else
+				nest.Aggro = nil
+			end
+		end
+		if not goal then
+			goal = home
+		end
+
+		local offset = Vector3.new(goal.X - pivot.Position.X, 0, goal.Z - pivot.Position.Z)
+		local distance = offset.Magnitude
+		local moving = distance > stopDistance
+		if moving then
+			local step = math.min(Config.Combat.MotherChaseSpeed * dt, distance - stopDistance)
+			local position = pivot.Position + offset.Unit * step
+			model:PivotTo(CFrame.lookAt(position, position + offset.Unit))
+		end
+		if moving ~= nest.Moving then
+			nest.Moving = moving
+			model:SetAttribute("AnimState", if moving then "Walk" else "Idle")
+		end
+	end
+end
+
 function ZoneService.Init()
 	zonesFolder = Instance.new("Folder")
 	zonesFolder.Name = "Zones"
@@ -643,6 +706,16 @@ function ZoneService.Init()
 		buildZone(index, zone)
 	end
 	resetAll()
+
+	task.spawn(function()
+		local last = os.clock()
+		while true do
+			task.wait(0.1)
+			local now = os.clock()
+			chaseStep(now - last)
+			last = now
+		end
+	end)
 
 	task.spawn(function()
 		while true do
