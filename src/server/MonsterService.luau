@@ -550,32 +550,33 @@ end
 
 -- الإكسسوارات ------------------------------------------------------------------------------
 
+local function buySpeedAccessory(player: Player, name: unknown)
+	if rateLimited(player) or type(name) ~= "string" then
+		return
+	end
+	local accessory = Config.SpeedAccessories[name]
+	local profile = DataService.Get(player)
+	if not accessory or not profile then
+		return
+	end
+	if profile.Data.SpeedAccessories[name] then
+		MonsterService.Notify(player, "You already own " .. accessory.Name .. "!", "info")
+		return
+	end
+	if not DataService.TrySpend(player, accessory.Price) then
+		MonsterService.Notify(player, "Not enough coins!", "error")
+		return
+	end
+	profile.Data.SpeedAccessories[name] = true
+	CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
+	MonsterService.Notify(player, "🏃 You bought " .. accessory.Name .. "!", "success")
+	MonsterService.PushState(player)
+
 local function buyAccessory(player: Player, name: unknown, monsterId: unknown)
 	if rateLimited(player) or type(name) ~= "string" then
 		return
 	end
 
-	local function buySpeedAccessory(player: Player, name: unknown)
-		if rateLimited(player) or type(name) ~= "string" then
-			return
-		end
-		local accessory = Config.SpeedAccessories[name]
-		local profile = DataService.Get(player)
-		if not accessory or not profile then
-			return
-		end
-		if profile.Data.SpeedAccessories[name] then
-			MonsterService.Notify(player, "You already own " .. accessory.Name .. "!", "info")
-			return
-		end
-		if not DataService.TrySpend(player, accessory.Price) then
-			MonsterService.Notify(player, "Not enough coins!", "error")
-			return
-		end
-		profile.Data.SpeedAccessories[name] = true
-		CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
-		MonsterService.Notify(player, "🏃 You bought " .. accessory.Name .. "!", "success")
-		MonsterService.PushState(player)
 	end
 	local accessory = Config.Accessories[name]
 	local profile = DataService.Get(player)
