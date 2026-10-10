@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local CharacterService = require(script.CharacterService)
+local MonsterModels = require(script.MonsterModels)
 local DataService = require(script.DataService)
 local PlotService = require(script.PlotService)
 local MonsterService = require(script.MonsterService)
@@ -38,6 +39,7 @@ MonsterService.ExtraState = function(player: Player): { [string]: any }
 end
 
 CharacterService.Init()
+MonsterModels.Build() -- الوحوش الـ Rig (موجودين في ServerStorage.MonsterModels)
 PlotService.Init()
 MonsterService.Init(remotes)
 StealService.Init()

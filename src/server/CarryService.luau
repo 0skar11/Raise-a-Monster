@@ -133,11 +133,12 @@ function CarryService.SpawnPickup(cargo: Cargo, position: Vector3, lifetime: num
 			part.CanCollide = false
 		end
 	end
-	local ground = position + Vector3.new(0, body.Size.Y / 2 + 0.5, 0)
+	local pivotHeight = PlotService.PivotHeight(model)
+	local ground = position + Vector3.new(0, pivotHeight + 0.3, 0)
 	model:PivotTo(CFrame.new(ground + Vector3.new(0, fallHeight or 0, 0)))
 	model.Parent = pickupsFolder
 
-	local gui, label = Build.MakeBillboard(body, UDim2.fromOffset(240, 60), Vector3.new(0, body.Size.Y / 2 + 3, 0), 250)
+	local gui, label = Build.MakeBillboard(body, UDim2.fromOffset(240, 60), Vector3.new(0, model:GetExtentsSize().Y - pivotHeight + 2.5, 0), 250)
 	gui.Name = "Info"
 	label.Text = string.format('<font color="%s">%s</font>\n%s', cargoColor(cargo), CarryService.CargoName(cargo), title or "✋ Take it to your base!")
 
@@ -221,7 +222,7 @@ function CarryService.StartCarry(player: Player, cargo: Cargo): boolean
 	local model = buildCargoModel(cargo)
 	model.Name = "CarriedCargo"
 	local body = model.PrimaryPart :: BasePart
-	local scale = math.min(1, 2.6 / math.max(body.Size.Y, 0.1))
+	local scale = math.min(1, 3 / math.max(model:GetExtentsSize().Y, 0.1))
 	if scale < 1 then
 		model:ScaleTo(scale)
 	end
@@ -232,7 +233,7 @@ function CarryService.StartCarry(player: Player, cargo: Cargo): boolean
 			part.Massless = true
 		end
 	end
-	model:PivotTo(torso.CFrame * CFrame.new(0, 0.4, 0.6 + body.Size.Y / 2))
+	model:PivotTo(torso.CFrame * CFrame.new(0, 0.2, 0.6 + model:GetExtentsSize().Z / 2))
 	local weldConstraint = Instance.new("WeldConstraint")
 	weldConstraint.Part0 = torso
 	weldConstraint.Part1 = body

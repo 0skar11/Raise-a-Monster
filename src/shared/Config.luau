@@ -219,11 +219,12 @@ export type Rarity = {
 
 Config.Rarities = {
 	Common = { Name = "Common", Color = Color3.fromRGB(200, 200, 200), Order = 1 },
-	Rare = { Name = "Rare", Color = Color3.fromRGB(70, 150, 255), Order = 2 },
-	Epic = { Name = "Epic", Color = Color3.fromRGB(180, 80, 255), Order = 3 },
-	Legendary = { Name = "Legendary", Color = Color3.fromRGB(255, 170, 40), Order = 4 },
-	Mythic = { Name = "Mythic", Color = Color3.fromRGB(255, 70, 90), Order = 5 },
-	Secret = { Name = "Secret", Color = Color3.fromRGB(255, 255, 255), Order = 6 },
+	Uncommon = { Name = "Uncommon", Color = Color3.fromRGB(70, 210, 90), Order = 2 },
+	Rare = { Name = "Rare", Color = Color3.fromRGB(70, 150, 255), Order = 3 },
+	Epic = { Name = "Epic", Color = Color3.fromRGB(180, 80, 255), Order = 4 },
+	Legendary = { Name = "Legendary", Color = Color3.fromRGB(255, 170, 40), Order = 5 },
+	Mythic = { Name = "Mythic", Color = Color3.fromRGB(255, 70, 90), Order = 6 },
+	Secret = { Name = "Secret", Color = Color3.fromRGB(255, 255, 255), Order = 7 },
 } :: { [string]: Rarity }
 
 export type Species = {
@@ -234,6 +235,7 @@ export type Species = {
 	Color: Color3,
 	Horns: boolean,
 	Placeholder: boolean?, -- شكل مؤقت (مكعب واسمه فوقه) لحد ما الـ Skin يجهز
+	Model: { Region: number, Index: number }?, -- الـ Rig المتحرك من MonsterModels (المنطقة ورقم الوحش)
 }
 
 Config.Species = {
@@ -246,25 +248,37 @@ Config.Species = {
 	Draco = { DisplayName = "Draco", Rarity = "Mythic", BaseProduction = 80, SellValue = 25000, Color = Color3.fromRGB(200, 20, 60), Horns = true },
 } :: { [string]: Species }
 
--- وحوش المناطق: بالأرقام وشكلها مؤقت لحد ما الـ Skins تيجي.
--- كل منطقة ليها 4 وحوش، وكل ما المنطقة تبعد الوحش بيبقى أندر وبينتج أكتر.
-local ZONE_SPECIES_STATS = {
-	{ Rarity = "Common", Production = { 1.5, 1.8, 2.1, 2.5 }, Sell = { 60, 70, 85, 100 } },
-	{ Rarity = "Rare", Production = { 6, 7, 8, 9 }, Sell = { 600, 700, 800, 900 } },
-	{ Rarity = "Epic", Production = { 28, 32, 36, 40 }, Sell = { 6000, 7000, 8000, 9000 } },
-	{ Rarity = "Mythic", Production = { 120, 140, 160, 180 }, Sell = { 40000, 46000, 52000, 60000 } },
+-- وحوش المناطق (من GrowAMonster_RiggedGenerator): 5 مناطق × 10 وحوش، وشكلهم Rig متحرك.
+-- المفتاح بتاع كل وحش "<Region>_<رقمه>"، مثلاً "Grassland_1" = Leaf Slime.
+Config.RegionMonsters = {
+	{ Region = "Grassland", Names = { "Leaf Slime", "Bunnycorn", "Wood Turtle", "Flower Golem", "Beehive Beast", "Moss Deer", "Treant", "Verdant Griffin", "Solar Stag", "Gaia Titan" } },
+	{ Region = "Desert", Names = { "Sand Slime", "Cactus Pup", "Sand Fox", "Armadillo", "Scorpion", "Mummy", "Anubis Hound", "Sand Dragon", "Pharaoh Golem", "Sun Wyrm" } },
+	{ Region = "Ice", Names = { "Ice Slime", "Penguin", "Ice Wolf", "Frost Turtle", "Crystal Bear", "Snow Golem", "Ice Dragon", "Blizzard Phoenix", "Glacial Titan", "Frost Leviathan" } },
+	{ Region = "Volcano", Names = { "Magma Slime", "Lava Lizard", "Fire Boar", "Rock Rhino", "Flame Ape", "Lava Golem", "Inferno Wolf", "Magma Dragon", "Molten Titan", "Fire Overlord" } },
+	{ Region = "Void", Names = { "Shadow Slime", "Void Cat", "Dark Deer", "Void Spider", "Chaos Hound", "Eclipse Raven", "Abyss Golem", "Void Dragon", "Celestial Serpent", "Reality Titan" } },
 }
-for zoneIndex, stats in ZONE_SPECIES_STATS do
-	for i = 1, 4 do
-		local number = (zoneIndex - 1) * 4 + i
-		Config.Species["Monster" .. number] = {
-			DisplayName = "Monster " .. number,
-			Rarity = stats.Rarity,
-			BaseProduction = stats.Production[i],
-			SellValue = stats.Sell[i],
-			Color = Color3.fromRGB(163, 162, 165),
+-- الندرة بالترتيب جوه كل منطقة (زي الملف بالظبط)
+Config.RegionRarities = { "Common", "Common", "Uncommon", "Uncommon", "Rare", "Rare", "Epic", "Epic", "Legendary", "Mythic" }
+-- الإنتاج الأساسي حسب ترتيب الوحش، وكل منطقة أبعد ×3
+local REGION_PRODUCTION = { 1, 1.3, 2.5, 3, 6, 7.5, 18, 22, 60, 150 }
+local REGION_COLORS = {
+	Color3.fromRGB(90, 205, 95),
+	Color3.fromRGB(238, 205, 145),
+	Color3.fromRGB(150, 212, 255),
+	Color3.fromRGB(255, 110, 30),
+	Color3.fromRGB(172, 92, 255),
+}
+for regionIndex, region in Config.RegionMonsters do
+	for index, name in region.Names do
+		local production = REGION_PRODUCTION[index] * 3 ^ (regionIndex - 1)
+		Config.Species[region.Region .. "_" .. index] = {
+			DisplayName = name,
+			Rarity = Config.RegionRarities[index],
+			BaseProduction = production,
+			SellValue = math.floor(production * 40),
+			Color = REGION_COLORS[regionIndex],
 			Horns = false,
-			Placeholder = true,
+			Model = { Region = regionIndex, Index = index },
 		}
 	end
 end
@@ -293,7 +307,7 @@ Config.Eggs = {
 		HatchTime = 20,
 		Color = Color3.fromRGB(235, 225, 200),
 		Order = 1,
-		Weights = { Blobby = 55, Pebble = 35, Fangy = 8, Frosty = 2 },
+		Weights = { Grassland_1 = 30, Grassland_2 = 25, Grassland_3 = 18, Grassland_4 = 12, Desert_1 = 8, Desert_2 = 5, Grassland_5 = 2 },
 	},
 	Rare = {
 		DisplayName = "Rare Egg",
@@ -301,7 +315,7 @@ Config.Eggs = {
 		HatchTime = 45,
 		Color = Color3.fromRGB(80, 160, 255),
 		Order = 2,
-		Weights = { Pebble = 20, Fangy = 40, Frosty = 30, Shadowy = 8, Flamey = 2 },
+		Weights = { Grassland_5 = 20, Grassland_6 = 18, Desert_5 = 18, Desert_6 = 14, Ice_5 = 10, Grassland_7 = 8, Desert_7 = 6, Ice_7 = 4, Grassland_9 = 2 },
 	},
 	Mythic = {
 		DisplayName = "Mythic Egg",
@@ -309,7 +323,7 @@ Config.Eggs = {
 		HatchTime = 90,
 		Color = Color3.fromRGB(255, 60, 120),
 		Order = 3,
-		Weights = { Frosty = 25, Shadowy = 35, Flamey = 30, Draco = 10 },
+		Weights = { Ice_7 = 25, Ice_8 = 20, Volcano_7 = 18, Volcano_8 = 15, Ice_9 = 10, Volcano_9 = 7, Void_9 = 3, Ice_10 = 2 },
 	},
 	-- بيضة الحظ (Developer Product وعجلة الحظ): أندر من العادي، وفرصة الـ Secret فيها ×5
 	Lucky = {
@@ -318,7 +332,7 @@ Config.Eggs = {
 		HatchTime = 30,
 		Color = Color3.fromRGB(90, 230, 120),
 		Order = 4,
-		Weights = { Fangy = 25, Frosty = 25, Shadowy = 25, Flamey = 15, Draco = 10 },
+		Weights = { Desert_5 = 20, Ice_5 = 20, Volcano_5 = 18, Ice_7 = 15, Volcano_7 = 12, Desert_9 = 8, Ice_9 = 5, Volcano_10 = 2 },
 	},
 	-- بيضة الـ Big Boss: بتفقس وحش Secret مضمون
 	Secret = {
@@ -372,70 +386,80 @@ export type Zone = {
 	GroundColor: Color3,
 	GroundMaterial: Enum.Material,
 	AccentColor: Color3,
-	Decoration: string, -- "Flowers" / "Trees" / "Lava" / "Crystals"
+	Decoration: string, -- "Flowers" / "Desert" / "Ice" / "Lava" / "Crystals"
 	Species: { string },
 	MotherHealth: number,
 	MotherDamage: number, -- الضرر اللي الأم بتعمله في اللاعبين اللي جنبها كل ضربة
-	MotherSize: number,
 }
 
 Config.Zones = {
 	{
-		Name = "Meadow",
+		Name = "Grassland",
 		Difficulty = "Easy",
 		Stars = 1,
 		GroundColor = Color3.fromRGB(120, 200, 90),
 		GroundMaterial = Enum.Material.Grass,
 		AccentColor = Color3.fromRGB(90, 220, 110),
 		Decoration = "Flowers",
-		Species = { "Monster1", "Monster2", "Monster3", "Monster4" },
+		Species = { "Grassland_1", "Grassland_2", "Grassland_3", "Grassland_4", "Grassland_5", "Grassland_6", "Grassland_7", "Grassland_8", "Grassland_9", "Grassland_10" },
 		MotherHealth = 300,
 		MotherDamage = 5,
-		MotherSize = 6,
 	},
 	{
-		Name = "Forest",
+		Name = "Desert",
 		Difficulty = "Medium",
 		Stars = 2,
-		GroundColor = Color3.fromRGB(60, 130, 60),
-		GroundMaterial = Enum.Material.Grass,
-		AccentColor = Color3.fromRGB(60, 150, 255),
-		Decoration = "Trees",
-		Species = { "Monster5", "Monster6", "Monster7", "Monster8" },
-		MotherHealth = 4000,
-		MotherDamage = 12,
-		MotherSize = 7.5,
+		GroundColor = Color3.fromRGB(225, 190, 130),
+		GroundMaterial = Enum.Material.Sand,
+		AccentColor = Color3.fromRGB(255, 190, 80),
+		Decoration = "Desert",
+		Species = { "Desert_1", "Desert_2", "Desert_3", "Desert_4", "Desert_5", "Desert_6", "Desert_7", "Desert_8", "Desert_9", "Desert_10" },
+		MotherHealth = 2500,
+		MotherDamage = 10,
 	},
 	{
-		Name = "Lava Canyon",
+		Name = "Ice",
 		Difficulty = "Hard",
 		Stars = 3,
+		GroundColor = Color3.fromRGB(220, 240, 255),
+		GroundMaterial = Enum.Material.Snow,
+		AccentColor = Color3.fromRGB(120, 200, 255),
+		Decoration = "Ice",
+		Species = { "Ice_1", "Ice_2", "Ice_3", "Ice_4", "Ice_5", "Ice_6", "Ice_7", "Ice_8", "Ice_9", "Ice_10" },
+		MotherHealth = 20000,
+		MotherDamage = 18,
+	},
+	{
+		Name = "Volcano",
+		Difficulty = "Very Hard",
+		Stars = 4,
 		GroundColor = Color3.fromRGB(60, 45, 45),
 		GroundMaterial = Enum.Material.Basalt,
 		AccentColor = Color3.fromRGB(255, 120, 30),
 		Decoration = "Lava",
-		Species = { "Monster9", "Monster10", "Monster11", "Monster12" },
-		MotherHealth = 40000,
-		MotherDamage = 25,
-		MotherSize = 9,
+		Species = { "Volcano_1", "Volcano_2", "Volcano_3", "Volcano_4", "Volcano_5", "Volcano_6", "Volcano_7", "Volcano_8", "Volcano_9", "Volcano_10" },
+		MotherHealth = 150000,
+		MotherDamage = 30,
 	},
 	{
-		Name = "Shadow Realm",
+		Name = "Void",
 		Difficulty = "Extreme",
-		Stars = 4,
+		Stars = 5,
 		GroundColor = Color3.fromRGB(45, 30, 70),
 		GroundMaterial = Enum.Material.Slate,
 		AccentColor = Color3.fromRGB(170, 70, 255),
 		Decoration = "Crystals",
-		Species = { "Monster13", "Monster14", "Monster15", "Monster16" },
-		MotherHealth = 400000,
+		Species = { "Void_1", "Void_2", "Void_3", "Void_4", "Void_5", "Void_6", "Void_7", "Void_8", "Void_9", "Void_10" },
+		MotherHealth = 1000000,
 		MotherDamage = 45,
-		MotherSize = 11,
 	},
 } :: { Zone }
 
 Config.ZoneResetInterval = 600 -- كل 10 دقايق الأعشاش بتتجدد بوحوش تانية
 Config.NestsPerZone = 3
+-- الوحش اللي بيطلع في كل عش بيتختار بالندرة دي (Common أكتر بكتير من Mythic)
+Config.NestRarityWeights = { Common = 35, Uncommon = 25, Rare = 18, Epic = 12, Legendary = 7, Mythic = 3 }
+Config.MotherScale = 1.6 -- الأم = نسخة الـ Adult مكبّرة
 Config.BabiesPerNest = 3
 
 Config.WalkSpeed = 20 -- سرعة المشي (الافتراضي في Roblox 16)
@@ -494,7 +518,7 @@ Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
 Config.MonsterRain = {
 	Interval = 3600,
 	Lifetime = 300, -- لو محدش مسكه بيختفي
-	Species = { "Shadowy", "Flamey", "Draco", "Monster9", "Monster10", "Monster11", "Monster12", "Monster13", "Monster14" },
+	Species = { "Grassland_7", "Grassland_8", "Desert_7", "Desert_8", "Ice_7", "Ice_8", "Grassland_9", "Desert_9", "Volcano_7" },
 	MutationChanceMultiplier = 3,
 }
 

@@ -13,6 +13,7 @@ local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
 local CombatService = require(script.Parent.CombatService)
 local CarryService = require(script.Parent.CarryService)
+local MonsterModels = require(script.Parent.MonsterModels)
 
 local makePart = Build.MakePart
 local makeBillboard = Build.MakeBillboard
@@ -24,7 +25,6 @@ local ROAD_WIDTH = 20
 local NEST_RADIUS = 17
 local NEST_Z = 55
 local NEST_TOP = 1
-local PLACEHOLDER_COLOR = Color3.fromRGB(163, 162, 165)
 
 type Nest = {
 	Zone: Config.Zone,
@@ -35,7 +35,8 @@ type Nest = {
 	Health: number,
 	MaxHealth: number,
 	LastHit: number,
-	Mother: BasePart?,
+	Mother: BasePart?, -- الـ HumanoidRootPart بتاع الأم
+	MotherModel: Model?,
 	HealthFill: Frame?,
 	HealthText: TextLabel?,
 	Babies: { BasePart },
@@ -174,6 +175,42 @@ local function decorate(index: number, zone: Config.Zone, folder: Folder, nestCe
 				Material = Enum.Material.Neon,
 				Parent = folder,
 			})
+		elseif zone.Decoration == "Desert" then
+			if random:NextNumber() < 0.6 then
+				-- صبّار
+				local height = random:NextNumber(4, 8)
+				local green = Color3.fromRGB(80, 150, 70)
+				makePart({ Name = "Cactus", Size = Vector3.new(1.4, height, 1.4), Position = position + Vector3.new(0, height / 2, 0), Color = green, Material = Enum.Material.Grass, Parent = folder })
+				for _, side in { -1, 1 } do
+					if random:NextNumber() < 0.7 then
+						local armY = random:NextNumber(height * 0.35, height * 0.7)
+						makePart({ Name = "CactusArm", Size = Vector3.new(1.6, 0.9, 0.9), Position = position + Vector3.new(side * 1.1, armY, 0), Color = green, Material = Enum.Material.Grass, Parent = folder })
+						makePart({ Name = "CactusArm", Size = Vector3.new(0.9, 1.8, 0.9), Position = position + Vector3.new(side * 1.6, armY + 1.1, 0), Color = green, Material = Enum.Material.Grass, Parent = folder })
+					end
+				end
+			else
+				local size = random:NextNumber(2.5, 5)
+				makePart({ Name = "Rock", Size = Vector3.new(size, size * 0.7, size), CFrame = CFrame.new(position + Vector3.new(0, size * 0.35, 0)) * spin, Color = Color3.fromRGB(200, 160, 105), Material = Enum.Material.Sandstone, Parent = folder })
+			end
+		elseif zone.Decoration == "Ice" then
+			if random:NextNumber() < 0.5 then
+				local height = random:NextNumber(4, 9)
+				makePart({
+					Name = "IceCrystal",
+					Size = Vector3.new(1.8, height, 1.8),
+					CFrame = CFrame.new(position + Vector3.new(0, height / 2 - 0.5, 0)) * spin * CFrame.Angles(random:NextNumber(-0.3, 0.3), 0, random:NextNumber(-0.3, 0.3)),
+					Color = Color3.fromRGB(150, 215, 255),
+					Material = Enum.Material.Ice,
+					Transparency = 0.15,
+					Parent = folder,
+				})
+			else
+				-- شجرة صنوبر عليها تلج
+				makePart({ Name = "Trunk", Size = Vector3.new(1, 2, 1), Position = position + Vector3.new(0, 1, 0), Color = Color3.fromRGB(100, 70, 45), Material = Enum.Material.Wood, Parent = folder })
+				for i, width in { 5, 3.6, 2.2 } do
+					makePart({ Name = "Pine", Size = Vector3.new(width, 1.6, width), Position = position + Vector3.new(0, 1.4 + i * 1.5, 0), Color = if i % 2 == 0 then Color3.fromRGB(60, 110, 80) else Color3.fromRGB(240, 248, 255), Material = Enum.Material.Snow, CanCollide = false, Parent = folder })
+				end
+			end
 		end
 	end
 end
@@ -278,6 +315,7 @@ local function buildZone(index: number, zone: Config.Zone)
 			MaxHealth = zone.MotherHealth,
 			LastHit = 0,
 			Mother = nil,
+			MotherModel = nil,
 			HealthFill = nil,
 			HealthText = nil,
 			Babies = {},
@@ -316,10 +354,11 @@ local function killMother(nest: Nest, killer: Player)
 	nest.Health = 0
 	CombatService.Unregister(nest.Target)
 	nest.Target = nil
-	if nest.Mother then
-		nest.Mother:Destroy()
-		nest.Mother = nil
+	if nest.MotherModel then
+		nest.MotherModel:Destroy()
 	end
+	nest.MotherModel = nil
+	nest.Mother = nil
 	nest.HealthFill = nil
 	nest.HealthText = nil
 	for _, baby in nest.Babies do
@@ -353,14 +392,8 @@ local function attack(player: Player, nest: Nest, damage: number)
 	nest.Damagers[player] = (nest.Damagers[player] or 0) + damage
 	nest.LastHit = os.clock()
 
-	local mother = nest.Mother
-	if mother then
-		mother.Color = Color3.fromRGB(255, 90, 90)
-		task.delay(0.1, function()
-			if mother.Parent then
-				mother.Color = PLACEHOLDER_COLOR:Lerp(Color3.new(0, 0, 0), 0.3)
-			end
-		end)
+	if nest.MotherModel then
+		PlotService.Flash(nest.MotherModel, Color3.fromRGB(255, 80, 80))
 	end
 
 	if nest.Health <= 0 then
@@ -381,7 +414,12 @@ local function take(player: Player, nest: Nest, baby: BasePart)
 	end
 	local cargo: CarryService.Cargo = { Kind = "Monster", Species = nest.Species, Mutation = MonsterService.RollMutation(1) }
 	if CarryService.StartCarry(player, cargo) then
-		baby:Destroy()
+		local babyModel = baby.Parent
+		if babyModel and babyModel:IsA("Model") then
+			babyModel:Destroy()
+		else
+			baby:Destroy()
+		end
 		local index = table.find(nest.Babies, baby)
 		if index then
 			table.remove(nest.Babies, index)
@@ -394,6 +432,7 @@ local function clearNest(nest: Nest)
 	nest.Target = nil
 	nest.Folder:ClearAllChildren()
 	nest.Mother = nil
+	nest.MotherModel = nil
 	nest.HealthFill = nil
 	nest.HealthText = nil
 	nest.Babies = {}
@@ -401,17 +440,50 @@ local function clearNest(nest: Nest)
 	nest.Alive = false
 end
 
+-- الوحش اللي بيطلع في العش: بالندرة (Config.NestRarityWeights)، ومختلف عن اللي قبله لو ينفع
+local function pickSpecies(nest: Nest): string
+	local pool = nest.Zone.Species
+	local total = 0
+	local weights: { [string]: number } = {}
+	for _, species in pool do
+		local rarity = Config.Species[species].Rarity
+		local weight = Config.NestRarityWeights[rarity] or 1
+		if species == nest.Species and #pool > 1 then
+			weight = 0
+		end
+		weights[species] = weight
+		total += weight
+	end
+	local roll = math.random() * total
+	for _, species in pool do
+		roll -= weights[species]
+		if roll <= 0 then
+			return species
+		end
+	end
+	return pool[1]
+end
+
+-- نسخة من الـ Rig بتاع الوحش على الأرض (رجليه على الأرض بالظبط)
+local function placeRig(species: string, stage: string, position: Vector3, facing: Vector3, scale: number): Model?
+	local info = Config.Species[species].Model
+	local model = info and MonsterModels.Get(info.Region, info.Index, stage)
+	if not model then
+		return nil
+	end
+	if scale ~= 1 then
+		model:ScaleTo(scale)
+	end
+	local pivotHeight = (model:GetAttribute("Scale") or 1) * scale
+	model:SetAttribute("PivotHeight", pivotHeight)
+	model:PivotTo(CFrame.lookAt(position + Vector3.new(0, pivotHeight, 0), Vector3.new(facing.X, position.Y + pivotHeight, facing.Z)))
+	return model
+end
+
 local function spawnNest(nest: Nest)
 	clearNest(nest)
 
-	-- وحش مختلف عن اللي كان قبل كده لو ينفع
-	local pool = nest.Zone.Species
-	local species = pool[math.random(1, #pool)]
-	if #pool > 1 then
-		while species == nest.Species do
-			species = pool[math.random(1, #pool)]
-		end
-	end
+	local species = pickSpecies(nest)
 	nest.Species = species
 	nest.Alive = true
 	nest.MaxHealth = nest.Zone.MotherHealth
@@ -419,19 +491,24 @@ local function spawnNest(nest: Nest)
 	nest.LastHit = 0
 
 	local name = Config.Species[species].DisplayName
-	local size = nest.Zone.MotherSize
-	local mother = makePart({
-		Name = "Mother",
-		Size = Vector3.one * size,
-		Position = nest.Center + Vector3.new(0, size / 2, 0),
-		Color = PLACEHOLDER_COLOR:Lerp(Color3.new(0, 0, 0), 0.3),
-		Material = Enum.Material.SmoothPlastic,
-		Parent = nest.Folder,
-	})
+	-- الأم: الـ Adult مكبّرة، بتبص على الطريق
+	local roadSide = Vector3.new(nest.Center.X, nest.Center.Y, 0)
+	local motherModel = placeRig(species, "Adult", nest.Center, roadSide, Config.MotherScale)
+	if not motherModel then
+		warn("[ZoneService] Missing monster model for", species)
+		return
+	end
+	motherModel.Name = "Mother"
+	motherModel:SetAttribute("AnimState", "Idle")
+	motherModel.Parent = nest.Folder
+	local mother = motherModel.PrimaryPart :: BasePart
 	nest.Mother = mother
+	nest.MotherModel = motherModel
+	local extents = motherModel:GetExtentsSize()
+	local height = extents.Y - (motherModel:GetAttribute("PivotHeight") :: number)
 
 	-- مقاسات الـ Billboards بالـ studs عشان تصغر مع البعد وماتركبش على بعض
-	local gui, label = makeBillboard(mother, UDim2.fromScale(16, 5.5), Vector3.new(0, size / 2 + 3.5, 0), 120)
+	local gui, label = makeBillboard(mother, UDim2.fromScale(16, 5.5), Vector3.new(0, height + 4, 0), 120)
 	gui.Name = "Info"
 	gui.AlwaysOnTop = false
 	label.Size = UDim2.fromScale(1, 0.6)
@@ -467,31 +544,33 @@ local function spawnNest(nest: Nest)
 	-- المضرب بيضربها لما تبقى قريب منها
 	nest.Target = CombatService.Register({
 		Part = mother,
-		Radius = size / 2,
+		Radius = math.max(extents.X, extents.Z) / 2,
 		OnHit = function(player: Player, damage: number)
 			attack(player, nest, damage)
 		end,
 	})
 
+	-- الصغار: نسخ Baby حوالين الأم
+	local ring = math.max(extents.X, extents.Z) / 2 + 5
 	for i = 1, Config.BabiesPerNest do
 		local angle = (i / Config.BabiesPerNest) * math.pi * 2
-		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * (size / 2 + 6)
-		local baby = makePart({
-			Name = "Baby",
-			Size = Vector3.one * 2.5,
-			Position = nest.Center + offset + Vector3.new(0, 1.25, 0),
-			Color = PLACEHOLDER_COLOR,
-			Material = Enum.Material.SmoothPlastic,
-			CanCollide = false,
-			Parent = nest.Folder,
-		})
-		local babyGui, babyLabel = makeBillboard(baby, UDim2.fromScale(7, 2.2), Vector3.new(0, 3, 0), 60)
+		local position = nest.Center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * ring
+		local babyModel = placeRig(species, "Baby", position, roadSide, 1)
+		if not babyModel then
+			continue
+		end
+		babyModel.Name = "Baby"
+		babyModel.Parent = nest.Folder
+		local baby = babyModel.PrimaryPart :: BasePart
+		local babyHeight = babyModel:GetExtentsSize().Y - (babyModel:GetAttribute("PivotHeight") :: number)
+		local babyGui, babyLabel = makeBillboard(baby, UDim2.fromScale(7, 2.2), Vector3.new(0, babyHeight + 2, 0), 60)
 		babyGui.Name = "Info"
 		babyGui.AlwaysOnTop = false
 		babyLabel.Text = babyText(nest)
 		local takePrompt = makePrompt(baby, "TakePrompt", "Take", Enum.KeyCode.E, Config.Combat.TakeHoldDuration)
 		takePrompt.ObjectText = name
 		takePrompt.Enabled = false
+		takePrompt.MaxActivationDistance = 10
 		takePrompt.Triggered:Connect(function(player)
 			take(player, nest, baby)
 		end)
@@ -521,6 +600,7 @@ local function motherTick()
 			nest.Damagers = {}
 			updateHealthBar(nest)
 		end
+		local attacking = false
 		for _, player in Players:GetPlayers() do
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -529,8 +609,13 @@ local function motherTick()
 				local flat = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z)
 				if flat.Magnitude <= Config.Combat.MotherAttackRange then
 					humanoid:TakeDamage(nest.Zone.MotherDamage)
+					attacking = true
 				end
 			end
+		end
+		-- الأنيميشن: بتهاجم لما حد قريب منها
+		if nest.MotherModel then
+			nest.MotherModel:SetAttribute("AnimState", if attacking then "Attack" else "Idle")
 		end
 	end
 end
