@@ -12,6 +12,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UI = require(script.UI)
 local Features = require(script.Features)
 local MonsterAnimate = require(script.MonsterAnimate)
+local Effects = require(script.Effects)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -113,6 +114,7 @@ local function refresh()
 		return
 	end
 	ui.CoinsLabel.Text = "💰 " .. MonsterMath.FormatNumber(state.Coins)
+	Effects.OnCoins(ui, state.Coins)
 	local production = 0
 	for _, monster in state.Monsters do
 		if not monster.Carried then
@@ -153,6 +155,7 @@ end)
 
 remotes.Notify.OnClientEvent:Connect(function(text: string, kind: string)
 	UI.Toast(ui, text, kind)
+	Effects.OnNotify(kind)
 end)
 
 remotes.OpenShop.OnClientEvent:Connect(function()
@@ -273,6 +276,7 @@ end)
 
 -- أنيميشن الوحوش (Idle / Walk / Attack) من MonsterAnimator
 MonsterAnimate.Start()
+Effects.Start(ui)
 
 -- العدّاد في لوحة الوحش (Play cooldown) بيتحدث مع كل StateUpdate، وكمان كل نص ثانية.
 task.spawn(function()
