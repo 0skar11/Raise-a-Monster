@@ -7,6 +7,23 @@ Config.StartingCoins = 150
 Config.DataStoreName = "RaiseAMonster_v1"
 Config.AutosaveInterval = 60 -- ثواني
 
+-- أبعاد الأرض والممرات؛ القواعد الستة تفضل في مكانها الحالي.
+Config.Map = {
+	IslandMinX = -100,
+	PlazaMinX = -10,
+	PlazaHalfZ = 280,
+	PlazaPadding = 10,
+	ZonesStartX = 100,
+	ZoneLength = 180,
+	ZoneHalfZ = 140,
+	RoadWidth = 28,
+	NestRadius = 17,
+	NestZ = 75,
+	NestTop = 1,
+	SpawnPosition = Vector3.new(20, 0.5, 40),
+	WaterMargin = 300,
+}
+
 -- القاعدة ------------------------------------------------------------------
 Config.MaxPlots = 6
 -- لون كل قاعدة بالترتيب (القواعد جنب بعض على الشمال)
@@ -162,12 +179,12 @@ Config.BaseThemes = {
 
 Config.BaseSlots = 3 -- عدد أماكن الوحوش في البداية
 Config.MaxSlots = 10
-Config.SlotUpgradeCosts = { 500, 1500, 4000, 10000, 25000, 60000, 150000 } -- تكلفة كل slot زيادة
+Config.SlotUpgradeCosts = { 650, 1950, 5200, 13000, 32500, 78000, 195000 } -- تكلفة كل slot زيادة
 
 Config.LockDuration = 45 -- مدة قفل القاعدة (ثواني)
 Config.LockCooldown = 90 -- لازم تستنى قد إيه بعد ما القفل يخلص
 Config.LockDurationPerUpgrade = 10
-Config.LockUpgradeCosts = { 800, 3000, 9000, 25000 }
+Config.LockUpgradeCosts = { 1040, 3900, 11700, 32500 }
 
 -- الاحتياجات ----------------------------------------------------------------
 Config.NeedsTickInterval = 1 -- كل قد إيه السيرفر يحدّث الوحوش
@@ -178,7 +195,7 @@ Config.LowNeedsThreshold = 25 -- تحت الرقم ده الإنتاج يقل
 Config.LowNeedsProductionMultiplier = 0.4
 
 Config.Food = {
-	Cost = 10, -- بيتضرب في مرحلة الوحش (Stage)
+	Cost = 13, -- ثابت حسب المرحلة، عشان أكل الوحوش يفضل في متناول البداية
 	Hunger = 35,
 	Xp = 15,
 }
@@ -191,6 +208,8 @@ Config.Play = {
 
 -- المستويات والتطور -------------------------------------------------------------
 Config.MaxLevel = 60
+Config.ProductionLevelBonusPerLevel = 0.05
+Config.SellLevelBonusPerLevel = 0.1
 
 function Config.XpForLevel(level: number): number
 	return math.floor(40 * level ^ 1.35)
@@ -259,8 +278,9 @@ Config.RegionMonsters = {
 }
 -- الندرة بالترتيب جوه كل منطقة (زي الملف بالظبط)
 Config.RegionRarities = { "Common", "Common", "Uncommon", "Uncommon", "Rare", "Rare", "Epic", "Epic", "Legendary", "Mythic" }
--- الإنتاج الأساسي حسب ترتيب الوحش، وكل منطقة أبعد ×3
+-- الإنتاج بيعلى مع الندرة، ومن Ice (Hard) بيبدأ بالملايين في الثانية.
 local REGION_PRODUCTION = { 1, 1.3, 2.5, 3, 6, 7.5, 18, 22, 60, 150 }
+Config.RegionProductionMultipliers = { 1, 3, 1000000, 3000000, 10000000 }
 local REGION_COLORS = {
 	Color3.fromRGB(90, 205, 95),
 	Color3.fromRGB(238, 205, 145),
@@ -270,7 +290,7 @@ local REGION_COLORS = {
 }
 for regionIndex, region in Config.RegionMonsters do
 	for index, name in region.Names do
-		local production = REGION_PRODUCTION[index] * 3 ^ (regionIndex - 1)
+		local production = REGION_PRODUCTION[index] * Config.RegionProductionMultipliers[regionIndex]
 		Config.Species[region.Region .. "_" .. index] = {
 			DisplayName = name,
 			Rarity = Config.RegionRarities[index],
@@ -283,12 +303,13 @@ for regionIndex, region in Config.RegionMonsters do
 	end
 end
 
--- وحوش Secret: نادرة جداً (0.1% من أي بيضة، أو من بيضة الـ Big Boss)، وليها شكل خاص منوّر.
+-- وحوش Secret: نادرة جداً من البيض العادي أو مضمونة من بيضة الـ Big Boss، ومش موجودة في Lucky.
 -- السيرفر كله بيجيله إعلان لما حد يفقس واحد.
 Config.SecretChance = 0.001
 Config.SecretSpecies = { "Secret1", "Secret2" }
-Config.Species.Secret1 = { DisplayName = "Secret ???", Rarity = "Secret", BaseProduction = 500, SellValue = 250000, Color = Color3.fromRGB(20, 20, 25), Horns = true }
-Config.Species.Secret2 = { DisplayName = "Secret Void", Rarity = "Secret", BaseProduction = 650, SellValue = 320000, Color = Color3.fromRGB(240, 240, 255), Horns = true }
+local strongestRegionalProduction = Config.Species.Void_10.BaseProduction
+Config.Species.Secret1 = { DisplayName = "Secret ???", Rarity = "Secret", BaseProduction = strongestRegionalProduction * 1.25, SellValue = strongestRegionalProduction * 50, Color = Color3.fromRGB(20, 20, 25), Horns = true }
+Config.Species.Secret2 = { DisplayName = "Secret Void", Rarity = "Secret", BaseProduction = strongestRegionalProduction * 1.5, SellValue = strongestRegionalProduction * 60, Color = Color3.fromRGB(240, 240, 255), Horns = true }
 
 -- البيض ----------------------------------------------------------------------
 export type Egg = {
@@ -298,12 +319,13 @@ export type Egg = {
 	Color: Color3,
 	Order: number,
 	Weights: { [string]: number },
+	AllowSecret: boolean?,
 }
 
 Config.Eggs = {
 	Basic = {
 		DisplayName = "Basic Egg",
-		Cost = 100,
+		Cost = 130,
 		HatchTime = 20,
 		Color = Color3.fromRGB(235, 225, 200),
 		Order = 1,
@@ -311,7 +333,7 @@ Config.Eggs = {
 	},
 	Rare = {
 		DisplayName = "Rare Egg",
-		Cost = 1200,
+		Cost = 1560,
 		HatchTime = 45,
 		Color = Color3.fromRGB(80, 160, 255),
 		Order = 2,
@@ -319,20 +341,21 @@ Config.Eggs = {
 	},
 	Mythic = {
 		DisplayName = "Mythic Egg",
-		Cost = 15000,
+		Cost = 19500,
 		HatchTime = 90,
 		Color = Color3.fromRGB(255, 60, 120),
 		Order = 3,
 		Weights = { Ice_7 = 25, Ice_8 = 20, Volcano_7 = 18, Volcano_8 = 15, Ice_9 = 10, Volcano_9 = 7, Void_9 = 3, Ice_10 = 2 },
 	},
-	-- بيضة الحظ (Developer Product وعجلة الحظ): أندر من العادي، وفرصة الـ Secret فيها ×5
+	-- بيضة الحظ: Legendary أو Mythic بس، من Ice وVoid حصرياً.
 	Lucky = {
 		DisplayName = "Lucky Egg",
 		Cost = 0,
 		HatchTime = 30,
 		Color = Color3.fromRGB(90, 230, 120),
 		Order = 4,
-		Weights = { Desert_5 = 20, Ice_5 = 20, Volcano_5 = 18, Ice_7 = 15, Volcano_7 = 12, Desert_9 = 8, Ice_9 = 5, Volcano_10 = 2 },
+		Weights = { Ice_9 = 40, Ice_10 = 10, Void_9 = 40, Void_10 = 10 },
+		AllowSecret = false,
 	},
 	-- بيضة الـ Big Boss: بتفقس وحش Secret مضمون
 	Secret = {
@@ -345,7 +368,7 @@ Config.Eggs = {
 	},
 } :: { [string]: Egg }
 
-Config.LuckyEggSecretMultiplier = 5
+Config.LuckyEggSecretMultiplier = 0 -- حماية للمنطق القديم كمان: Lucky مفيهاش Secret
 
 -- البيض اللي بيتباع في المتجر، بالترتيب. فاضي دلوقتي (البيضة المجانية في الأول شغالة عادي).
 -- عشان ترجّع البيض: { "Basic", "Rare", "Mythic" }
@@ -466,18 +489,20 @@ Config.MotherDamageByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2
 Config.MotherHealthByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3, Mythic = 4 }
 Config.BabiesPerNest = 3
 
+Config.PlayerBaseHealth = 100
+Config.Shop = { Position = Vector3.new(Config.Map.ZonesStartX - 35, 0, -Config.Map.NestZ), Yaw = -90, TeleportOffset = Vector3.new(0, 4, 12) }
 Config.WalkSpeed = 25 -- سرعة المشي ثابتة (الافتراضي في Roblox 16)
 
 Config.SpeedAccessories = {
-	SwiftSneakers = { Name = "Swift Sneakers", Description = "Blue neon sneakers", Price = 1500, Multiplier = 1.05, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
-	FlameBoots = { Name = "Flame Boots", Description = "Boots with a fiery trail", Price = 3000, Multiplier = 1.08, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
-	IceSkates = { Name = "Ice Skates", Description = "Frozen skates that glide", Price = 6000, Multiplier = 1.10, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
-	WindScarf = { Name = "Wind Scarf", Description = "A scarf carried by the wind", Price = 10000, Multiplier = 1.12, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
-	LightningBoots = { Name = "Lightning Boots", Description = "Boots charged with lightning", Price = 15000, Multiplier = 1.15, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
-	ShadowCloak = { Name = "Shadow Cloak", Description = "A cloak that moves like smoke", Price = 22000, Multiplier = 1.18, Order = 6, Color = Color3.fromRGB(125, 75, 210) },
-	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 32000, Multiplier = 1.22, Order = 7, Color = Color3.fromRGB(195, 80, 255) },
-	GoldenWings = { Name = "Golden Wings", Description = "Radiant wings for maximum speed", Price = 50000, Multiplier = 1.30, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
-} :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, Order: number, Color: Color3 } }
+	SwiftSneakers = { Name = "Swift Sneakers", Description = "Blue neon sneakers", Price = 650, Multiplier = 1.05, HealthBonus = 15, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
+	FlameBoots = { Name = "Flame Boots", Description = "Boots with a fiery trail", Price = 1950, Multiplier = 1.08, HealthBonus = 30, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
+	IceSkates = { Name = "Ice Skates", Description = "Frozen skates that glide", Price = 4550, Multiplier = 1.10, HealthBonus = 50, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
+	WindScarf = { Name = "Wind Scarf", Description = "A scarf carried by the wind", Price = 9100, Multiplier = 1.12, HealthBonus = 75, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
+	LightningBoots = { Name = "Lightning Boots", Description = "Boots charged with lightning", Price = 18200, Multiplier = 1.15, HealthBonus = 100, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
+	ShadowCloak = { Name = "Shadow Cloak", Description = "A cloak that moves like smoke", Price = 227500, Multiplier = 1.40, HealthBonus = 350, Order = 9, Color = Color3.fromRGB(125, 75, 210) },
+	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 71500, Multiplier = 1.22, HealthBonus = 190, Order = 7, Color = Color3.fromRGB(195, 80, 255) },
+	GoldenWings = { Name = "Golden Wings", Description = "Radiant wings for maximum speed", Price = 130000, Multiplier = 1.30, HealthBonus = 250, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
+} :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, HealthBonus: number, Order: number, Color: Color3 } }
 
 -- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
 Config.Carry = {
@@ -489,9 +514,23 @@ Config.Carry = {
 
 -- ضرب اللاعبين بالمضرب (برّه القواعد بس)
 Config.PvP = {
-	BatDamage = 15,
-	SwordDamage = 30,
+	BatDamage = 19,
+	SwordDamage = 38,
 	Reach = 7,
+}
+
+-- الوحوش الكبيرة اللي اللاعب يجهزها بتتبعه؛ ضربها مرتبط بالندرة مش الدخل.
+Config.Followers = {
+	MaxCount = 5,
+	MinLevel = 25,
+	DamagePerRarity = { Common = 5, Uncommon = 8, Rare = 12, Epic = 18, Legendary = 28, Mythic = 40, Secret = 60 },
+	LevelBonusPerLevel = 0.02,
+	MaxLevelBonus = 2,
+	ModelScale = 0.6,
+	Spacing = 6,
+	RowDistance = 8,
+	PvpDamageScale = 0.25,
+	VisualPadding = 1.2,
 }
 
 Config.Combat = {
@@ -499,19 +538,87 @@ Config.Combat = {
 	DamagePerProduction = 2, -- كل 1 Coin/s من وحوشك بيزوّد ضربتك 2
 	AttackCooldown = 0.35,
 	BatReach = 7, -- قد إيه تبعد عن حرف الأم وتقدر تضربها بالمضرب
-	MotherAttackInterval = 1.5,
-	MotherAttackRange = 24,
 	MotherRegenDelay = 20, -- لو محدش ضربها المدة دي الـ HP بيرجع كامل
 	MotherChaseSpeed = 16, -- سرعتها وهي بتجري ورا اللي ضربها (أبطأ من اللاعب 25 عشان يقدر يهرب)
 	MotherLeashRange = 70, -- لو اللاعب بعد عن عشها أكتر من كده بترجع
 	TakeHoldDuration = 1,
+	CritChance = 0.12, -- فرصة الضربة القاضية
+	CritMultiplier = 2,
+	Sounds = {
+		Swing = "rbxassetid://12222208",
+		Hit = "rbxassetid://12222216",
+	},
+}
+
+-- M1 بتاع الوحوش الأم: كل نوع جسم ليه ضربة، وكل منطقة ليها عنصر (لون + تأثير).
+-- الضربة بتتعلّم على الأرض الأول (Windup) عشان اللاعب يلحق يهرب منها.
+export type MotherStyle = {
+	Name: string,
+	Shape: "Slam" | "Cone" | "Lob", -- Slam دايرة حواليها، Cone قدامها، Lob بترمي على مكان اللاعب
+	Radius: number, -- Slam/Lob: نص قطر الدايرة (Slam بيتحسب من حرف الأم)
+	Range: number, -- Cone: الطول من حرف الأم، Lob: أبعد مسافة ترمي لها
+	Angle: number?, -- Cone: الزاوية كلها بالدرجات
+	Windup: number,
+	Cooldown: number,
+	DamageMultiplier: number,
+	Hits: number?, -- ضربات متتالية (يمين شمال يمين شمال)، DamageMultiplier لكل ضربة
+	HitInterval: number?, -- الفاصل بين الضربات بالثواني
+}
+Config.MotherAttacks = {
+	AggroRange = 34, -- لو لاعب قرّب أكتر من كده الأم بتبدأ تضرب
+	FirstAttackDelay = 0.8, -- مهلة صغيرة أول ما حد يقرب
+	FxDistance = 260, -- الكلاينت مش بيرسم ضربات أبعد من كده
+	Sounds = {
+		Windup = "rbxasset://sounds/swordlunge.wav",
+		Impact = "rbxassetid://12222216",
+	},
+	-- المناطق الصعبة: البايبد بيضرب كومبو إيدين بدل الكنسة (ComboStyles بتحل محل Styles)
+	ComboDifficulties = { Hard = true, ["Very Hard"] = true, Extreme = true } :: { [string]: boolean },
+	ComboStyles = {
+		Biped = { Name = "Fist Barrage", Shape = "Cone", Radius = 0, Range = 11, Angle = 110, Windup = 0.5, Cooldown = 2.2, DamageMultiplier = 0.45, Hits = 4, HitInterval = 0.4 },
+	} :: { [string]: MotherStyle },
+	Styles = {
+		Slime = { Name = "Bounce Slam", Shape = "Slam", Radius = 11, Range = 0, Windup = 0.75, Cooldown = 1.9, DamageMultiplier = 1 },
+		Quad = { Name = "Pounce Bite", Shape = "Cone", Radius = 0, Range = 15, Angle = 75, Windup = 0.55, Cooldown = 1.6, DamageMultiplier = 1 },
+		Biped = { Name = "Arm Sweep", Shape = "Cone", Radius = 0, Range = 12, Angle = 160, Windup = 0.6, Cooldown = 1.6, DamageMultiplier = 1.1 }, -- M1: الإيد بتكنس من اليمين للشمال
+		Bird = { Name = "Dive Bomb", Shape = "Lob", Radius = 8, Range = 40, Windup = 0.9, Cooldown = 2, DamageMultiplier = 1 },
+		Dragon = { Name = "Elemental Breath", Shape = "Cone", Radius = 0, Range = 22, Angle = 55, Windup = 0.8, Cooldown = 2.2, DamageMultiplier = 1.2 },
+		Serpent = { Name = "Venom Spit", Shape = "Lob", Radius = 7, Range = 36, Windup = 0.8, Cooldown = 1.8, DamageMultiplier = 1 },
+		Spider = { Name = "Web Shot", Shape = "Lob", Radius = 8, Range = 34, Windup = 0.8, Cooldown = 2, DamageMultiplier = 0.9 },
+		Scorpion = { Name = "Tail Sting", Shape = "Cone", Radius = 0, Range = 14, Angle = 50, Windup = 0.5, Cooldown = 1.5, DamageMultiplier = 1.1 },
+		Turtle = { Name = "Shell Quake", Shape = "Slam", Radius = 13, Range = 0, Windup = 0.9, Cooldown = 2.2, DamageMultiplier = 1.15 },
+		Boss = { Name = "Void Quake", Shape = "Slam", Radius = 18, Range = 0, Windup = 1.1, Cooldown = 2.6, DamageMultiplier = 1 },
+	} :: { [string]: MotherStyle },
+	-- العنصر حسب المنطقة. Slow = بطء مؤقت، Burn = ضرر زيادة على مرات، Drain = الأم بتاخد دم.
+	Elements = {
+		Grassland = { Name = "Nature", Color = Color3.fromRGB(110, 230, 90), Secondary = Color3.fromRGB(255, 240, 120) },
+		Desert = { Name = "Sand", Color = Color3.fromRGB(240, 200, 110), Secondary = Color3.fromRGB(190, 140, 70), Slow = 0.8, SlowTime = 1.2 },
+		Ice = { Name = "Frost", Color = Color3.fromRGB(140, 220, 255), Secondary = Color3.fromRGB(255, 255, 255), Slow = 0.6, SlowTime = 2 },
+		Volcano = { Name = "Fire", Color = Color3.fromRGB(255, 110, 30), Secondary = Color3.fromRGB(255, 220, 80), BurnTicks = 3, BurnFraction = 0.15 },
+		Void = { Name = "Void", Color = Color3.fromRGB(180, 80, 255), Secondary = Color3.fromRGB(60, 20, 90), Drain = 0.5 },
+	},
+}
+
+-- الموسيقى في الخلفية (من مكتبة Roblox المرخّصة APM). زرار 🔊 على الشمال بيقفلها.
+Config.Music = {
+	SoundId = "rbxassetid://120231070741138", -- Curious Creatures
+	Volume = 0.3,
+	CombatVolume = 0.18, -- بتوطى شوية وقت القتال عشان أصوات الضرب تبان
+}
+
+Config.Security = {
+	TradeCooldown = 5,
+	ArenaCooldown = 5,
+	FreeEggCooldown = 300,
+	MaxSpeedTolerance = 1.6,
 }
 
 -- Gamepasses و Developer Products -----------------------------------------------------
 -- حط الـ Id بتاع كل واحد بعد ما تعمله من Creator Dashboard (بعد الـ Publish).
 -- لو الـ Id = 0: في Studio الزرار بيدّيهولك مجاناً عشان التجربة، وفي اللعبة الحقيقية بيقول "Coming soon".
-export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number }
+export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number, Hidden: boolean? }
 Config.Gamepasses = {
+	CoinBoost = { Id = 2025938655, Name = "Coin Booster", Description = "Legacy income boost", Price = 99, Order = 0, Hidden = true },
 	VIP = { Id = 0, Name = "VIP", Description = "x2 coins from all your monsters", Price = 299, Order = 1 },
 	VIPSword = { Id = 0, Name = "VIP Sword", Description = "A strong sword for the monster zones", Price = 199, Order = 2 },
 	AutoCollect = { Id = 0, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
@@ -524,34 +631,39 @@ Config.Gamepasses = {
 	LavaSword = { Id = 0, Name = "Lava Sword", Description = "A blazing sword with maximum power", Price = 299, Order = 14 },
 } :: { [string]: Gamepass }
 
-export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number }
+export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number, Coins: number? }
 Config.Products = {
+	Coins1000 = { Id = 3717867513, Name = "1,000 Coins", Description = "1,000 coins added to your wallet · repeatable", Price = 50, Order = 4, Coins = 1000 },
+	Coins5000 = { Id = 3717867716, Name = "5,000 Coins", Description = "5,000 coins added to your wallet · repeatable", Price = 100, Order = 5, Coins = 5000 },
+	Coins15000 = { Id = 3717867936, Name = "15,000 Coins", Description = "15,000 coins added to your wallet · repeatable", Price = 250, Order = 6, Coins = 15000 },
 	InstantHatch = { Id = 0, Name = "Instant Hatch", Description = "All your eggs hatch right now", Price = 25, Order = 1 },
 	LuckyEgg = { Id = 0, Name = "Lucky Egg", Description = "A rare egg with better odds", Price = 49, Order = 2 },
 	SpeedBoost = { Id = 0, Name = "Speed Boost", Description = "Run faster for 10 minutes", Price = 29, Order = 3 },
 } :: { [string]: Product }
 
 Config.VIPCoinMultiplier = 2
+Config.CoinBoostMultiplier = 1.5
 Config.ExtraSlotsAmount = 2
-Config.VIPSword = { DamageMultiplier = 3, ExtraReach = 3 }
+Config.VIPSword = { DamageMultiplier = 3.75, ExtraReach = 3 }
 Config.WeaponStats = {
-	IronBat = { Template = "IronBat", DamageMultiplier = 1.2, ExtraReach = 0.5 },
-	VIPSword = { Template = "IceSword", DamageMultiplier = 3, ExtraReach = 3 },
-	IronSword = { Template = "IronSword", DamageMultiplier = 1.5, ExtraReach = 1 },
-	ForestSword = { Template = "ForestSword", DamageMultiplier = 1.8, ExtraReach = 1.5 },
-	DesertSword = { Template = "DesertSword", DamageMultiplier = 2.1, ExtraReach = 2 },
-	IceSword = { Template = "IceSword", DamageMultiplier = 2.5, ExtraReach = 2.5 },
-	LavaSword = { Template = "LavaSword", DamageMultiplier = 3.5, ExtraReach = 4 },
+	IronBat = { Template = "IronBat", DamageMultiplier = 1.5, ExtraReach = 0.5 },
+	VIPSword = { Template = "IceSword", DamageMultiplier = 3.75, ExtraReach = 3 },
+	IronSword = { Template = "IronSword", DamageMultiplier = 1.9, ExtraReach = 1 },
+	ForestSword = { Template = "ForestSword", DamageMultiplier = 2.25, ExtraReach = 1.5 },
+	DesertSword = { Template = "DesertSword", DamageMultiplier = 2.65, ExtraReach = 2 },
+	IceSword = { Template = "IceSword", DamageMultiplier = 3.15, ExtraReach = 2.5 },
+	LavaSword = { Template = "LavaSword", DamageMultiplier = 4.4, ExtraReach = 4 },
 } :: { [string]: { Template: string, DamageMultiplier: number, ExtraReach: number } }
 -- معدات القتال تُشترى بعملات اللعبة من المتجر، مش بـ Robux.
+-- Early upgrades are affordable; later tiers follow the five-zone economy.
 Config.WeaponCoinPrices = {
-	IronBat = 1500,
-	IronSword = 2500,
-	ForestSword = 6000,
-	DesertSword = 12000,
-	IceSword = 30000,
-	VIPSword = 45000,
-	LavaSword = 65000,
+	IronBat = 390,
+	IronSword = 1040,
+	ForestSword = 3250,
+	DesertSword = 9750,
+	IceSword = 26000,
+	VIPSword = 52000,
+	LavaSword = 104000,
 } :: { [string]: number }
 Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
 
@@ -570,12 +682,11 @@ Config.Boss = {
 	MaxInterval = 4800,
 	HealthPerPlayer = 60000,
 	MinHealth = 120000,
-	Damage = 30, -- كل ضربة، لكل اللي جنبه
-	AttackInterval = 1.5,
-	AttackRange = 30,
+	Damage = 30, -- كل ضربة، لكل اللي جنبه (شكلها في Config.MotherAttacks.Styles.Boss)
+	AttackRange = 30, -- لو حد قرّب أكتر من كده بيبدأ يضرب
 	Size = 18,
 	Lifetime = 600, -- لو محدش قتله بيمشي
-	Position = Vector3.new(120, 0, 0), -- في الطريق جوه Zone 1
+	Position = Vector3.new(Config.Map.ZonesStartX + Config.Map.ZoneLength / 2, 0, 0), -- في الطريق جوه Zone 1
 }
 
 -- اللوحات اللي في الساحة (Leaderboards)
@@ -610,7 +721,7 @@ Config.Spin = {
 Config.MiniGames = {
 	Cooldown = 20, -- لكل وحش
 	Happiness = 40,
-	Catch = { Duration = 12, XpPerCatch = 4, MaxCatches = 30 },
+	Catch = { Duration = 12, XpPerCatch = 4, MaxCatches = 30, MinCatchInterval = 0.5 },
 	Run = { Duration = 15, Target = 160, MaxXp = 60 }, -- XP على حسب المسافة اللي جريتها
 }
 
@@ -645,9 +756,9 @@ local SHAPE_NAMES = {
 	CoolShades = "Cool Shades",
 	Monocle = "Monocle",
 }
-Config.AccessoryHatCostSeconds = 300 -- القبعة بتمن 5 دقايق إنتاج الوحش وهو Baby
-Config.AccessoryGlassesCostSeconds = 200
-Config.AccessoryMinCost = 150
+Config.AccessoryHatCostSeconds = 390 -- تمن القبعة = 6.5 دقيقة إنتاج Baby، من غير تصاعد أسرع من الدخل
+Config.AccessoryGlassesCostSeconds = 260
+Config.AccessoryMinCost = 195
 Config.AccessoryHatBonus = 0.1 -- +10% فلوس
 Config.AccessoryGlassesBonus = 0.05
 Config.Accessories = {} :: { [string]: Accessory }
@@ -694,6 +805,7 @@ end
 Config.Arena = {
 	Position = Vector3.new(20, 0, 150), -- في الساحة
 	RequestTimeout = 60,
+	RequestCooldown = 3,
 	TurnTime = 0.8,
 	MaxTurns = 40,
 	PrizeCoins = 500, -- + 10% من قيمة الوحش اللي خسر
@@ -704,6 +816,9 @@ Config.Arena = {
 Config.Trade = {
 	MaxOffer = 4,
 	RequestTimeout = 60,
+	RequestCooldown = 3,
 }
+
+Config.MapBorder = { Spacing = 28, LowHeight = 13, MiddleHeight = 28, HighHeight = 44, LanternEvery = 3, LightRange = 16, LightBrightness = 1 }
 
 return Config
