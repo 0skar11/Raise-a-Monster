@@ -1,9 +1,11 @@
 --!strict
 -- حفظ وتحميل بيانات اللاعبين باستخدام DataStoreService.
--- لو التحميل فشل، اللاعب بيلعب ببيانات مؤقتة ومش بنحفظ فوق بياناته القديمة.
+-- كل جلسة ليها قفل؛ السيرفر القديم ما يكتبش فوق تقدم جلسة أحدث.
 
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
@@ -29,17 +31,25 @@ export type PlayerData = {
 	Accessories: { [string]: boolean }, -- الإكسسوارات اللي اللاعب اشتراها
 	SpeedAccessories: { [string]: boolean },
 	Weapons: { [string]: boolean },
+	EquippedWeapon: string,
+	EquippedSpeedAccessory: string?,
 	Daily: { LastClaim: number, Streak: number },
 	LastSpin: number,
+	ProcessedReceipts: { [string]: boolean },
+	SpeedBoostUntil: number,
 }
 
 export type Profile = {
 	Data: PlayerData,
 	LoadFailed: boolean,
+	CanSave: boolean,
+	SessionId: string,
+	Closing: boolean?,
+	Temporary: boolean?,
 }
 
 local DEFAULT_DATA: PlayerData = {
-	Version = 1,
+	Version = 2,
 	Coins = Config.StartingCoins,
 	PendingCoins = 0,
 	TotalEarned = 0,
@@ -51,12 +61,13 @@ local DEFAULT_DATA: PlayerData = {
 	Stats = { Hatched = 0, Steals = 0, TimesRobbed = 0, ArenaWins = 0 },
 	Accessories = {},
 	SpeedAccessories = {},
-	Weapons = {},
+	Weapons = { Bat = true },
+	EquippedWeapon = "Bat",
 	Daily = { LastClaim = 0, Streak = 0 },
 	LastSpin = 0,
+	ProcessedReceipts = {},
+	SpeedBoostUntil = 0,
 }
-
-local MAX_RETRIES = 3
 
 local store: DataStore? = nil
 do
@@ -71,6 +82,10 @@ do
 end
 
 local profiles: { [Player]: Profile } = {}
+local loading: { [Player]: boolean } = {}
+local saving: { [Player]: boolean } = {}
+type QueuedSave = { Profile: Profile, Revision: number, Closing: boolean }
+local queuedSaves: { [Player]: QueuedSave } = {}
 
 local function deepCopy(value: any): any
 	if type(value) ~= "table" then
@@ -96,13 +111,13 @@ end
 
 local function withRetries<T>(callback: () -> T): (boolean, T | string)
 	local lastError: any
-	for attempt = 1, MAX_RETRIES do
+	for attempt = 1, Config.DataSave.MaxRetries do
 		local ok, result = pcall(callback)
 		if ok then
 			return true, result
 		end
 		lastError = result
-		task.wait(attempt)
+		if attempt < Config.DataSave.MaxRetries then task.wait(attempt * Config.DataSave.RetryDelay) end
 	end
 	return false, tostring(lastError)
 end
@@ -111,32 +126,125 @@ local function keyFor(player: Player): string
 	return "Player_" .. player.UserId
 end
 
+local function validRecord(record: any): boolean
+	if record == nil then return true end
+	if type(record) ~= "table" then return false end
+	for key, template in DEFAULT_DATA do
+		local value = record[key]
+		if value ~= nil and key ~= "Version" and key ~= "Weapons" and key ~= "SpeedAccessories" and key ~= "EquippedWeapon" then
+			if type(value) ~= type(template) then return false end
+			if type(value) == "number" and (value ~= value or math.abs(value) == math.huge) then return false end
+		end
+	end
+	for _, records in { record.Monsters or {}, record.Eggs or {} } do
+		for id, value in records do
+			if type(id) ~= "string" or type(value) ~= "table" then return false end
+		end
+	end
+	return true
+end
+
 local DataService = {}
 
+-- Slot 0 is the persistent bench. Legacy collisions/invalid slots never delete ownership.
+function DataService.NormalizeMonsterSlots(data: PlayerData, unlocked: number)
+	local used: { [number]: boolean } = {}
+	local function normalize(records: { [string]: any })
+		local ids = {}
+		for id in records do table.insert(ids, id) end
+		table.sort(ids)
+		for _, id in ids do
+			local record = records[id]
+			local slot = record.Slot
+			record.Id = id
+			if type(slot) ~= "number" or slot ~= slot or slot % 1 ~= 0 or slot < 1 or slot > unlocked or used[slot] then
+				record.Slot = 0
+			else
+				used[slot] = true
+			end
+		end
+	end
+	-- Eggs already occupying a slot keep it; displaced monsters move to the bench.
+	normalize(data.Eggs)
+	normalize(data.Monsters)
+end
+
+-- الملكية منفصلة عن الاختيار؛ البيانات القديمة بتحتفظ بكل مشترياتها.
+local function reconcileGear(data: PlayerData)
+	local legacy = type(data.Version) ~= "number" or data.Version < 2
+	local function ownedKeys(value: any, definitions: { [string]: any }, includeBat: boolean): { [string]: boolean }
+		local result = {}
+		if type(value) == "table" then
+			for key, owned in value do
+				if type(key) == "string" and owned == true and (definitions[key] or (includeBat and key == "Bat")) then result[key] = true end
+			end
+		end
+		if includeBat then result.Bat = true end
+		return result
+	end
+	data.Weapons = ownedKeys(data.Weapons, Config.WeaponStats, true)
+	data.SpeedAccessories = ownedKeys(data.SpeedAccessories, Config.SpeedAccessories, false)
+	if type(data.EquippedWeapon) ~= "string" or (data.EquippedWeapon ~= "Bat" and not Config.WeaponStats[data.EquippedWeapon]) then
+		data.EquippedWeapon = "Bat"
+	end
+	if legacy and data.EquippedSpeedAccessory == nil then
+		local bestPrice = -1
+		for name, accessory in Config.SpeedAccessories do
+			if data.SpeedAccessories[name] and accessory.Price > bestPrice then data.EquippedSpeedAccessory = name; bestPrice = accessory.Price end
+		end
+	end
+	if type(data.EquippedSpeedAccessory) ~= "string" or not data.SpeedAccessories[data.EquippedSpeedAccessory] then data.EquippedSpeedAccessory = nil end
+	data.Version = math.max(if type(data.Version) == "number" then data.Version else 0, 2)
+end
+
 function DataService.Load(player: Player): Profile
+	while loading[player] do task.wait() end
+	if profiles[player] then return profiles[player] end
+	loading[player] = true
 	local data: PlayerData = deepCopy(DEFAULT_DATA)
 	local loadFailed = false
+	local sessionId = HttpService:GenerateGUID(false)
+	local rejectedRecord = false
 
 	if store then
 		local dataStore = store :: DataStore
 		local ok, result = withRetries(function()
-			return dataStore:GetAsync(keyFor(player))
+			return dataStore:UpdateAsync(keyFor(player), function(current)
+				rejectedRecord = false
+				if not validRecord(current) then rejectedRecord = true; return nil end
+				local lock = current and current._SessionLock
+				if type(lock) == "table" and lock.Id ~= sessionId and type(lock.ExpiresAt) == "number" and lock.ExpiresAt > os.time() then
+					rejectedRecord = true
+					return nil
+				end
+				local record = deepCopy(current or DEFAULT_DATA)
+				record._SessionLock = { Id = sessionId, ExpiresAt = os.time() + Config.DataSave.SessionTimeout }
+				return record
+			end)
 		end)
-		if ok then
-			if type(result) == "table" then
-				data = result :: any
-				reconcile(data :: any, DEFAULT_DATA :: any)
-			end
+		if ok and type(result) == "table" and type(result._SessionLock) == "table" and result._SessionLock.Id == sessionId then
+			data = deepCopy(result) :: any
+			(data :: any)._SessionLock = nil
+			-- Keep the old version until the gear migration has inspected it.
+			local version = (data :: any).Version
+			reconcile(data :: any, DEFAULT_DATA :: any)
+			if version == nil then data.Version = 1 end
 		else
 			loadFailed = true
-			warn("[DataService] Failed to load data for", player.Name, result)
+			warn("[DataService] Failed to load or acquire session for", player.Name, if ok then "profile locked or invalid" else result)
 		end
 	else
 		loadFailed = true
 	end
 
-	local profile: Profile = { Data = data, LoadFailed = loadFailed }
+	reconcileGear(data)
+	DataService.NormalizeMonsterSlots(data, Config.MaxSlots)
+	local profile: Profile = {
+		Data = data, LoadFailed = loadFailed, CanSave = not loadFailed, SessionId = sessionId,
+		Temporary = loadFailed and not rejectedRecord and RunService:IsStudio(),
+	}
 	profiles[player] = profile
+	loading[player] = nil
 	return profile
 end
 
@@ -144,35 +252,93 @@ function DataService.Get(player: Player): Profile?
 	return profiles[player]
 end
 
-function DataService.Save(player: Player): boolean
+local function saveProfile(player: Player, releaseLock: boolean): boolean
 	local profile = profiles[player]
-	if not profile or profile.LoadFailed or not store then
+	while saving[player] do
+		task.wait()
+	end
+	if not profile or profiles[player] ~= profile or profile.LoadFailed or (profile.Closing and not releaseLock) or not store then
 		return false
 	end
+	saving[player] = true
 	local dataStore = store :: DataStore
 	local snapshot = deepCopy(profile.Data)
-	local ok, err = withRetries(function()
-		dataStore:UpdateAsync(keyFor(player), function()
-			return snapshot
+	local ok, result = withRetries(function()
+		return dataStore:UpdateAsync(keyFor(player), function(current)
+			local lock = type(current) == "table" and current._SessionLock
+			if type(lock) ~= "table" or lock.Id ~= profile.SessionId then return nil end
+			local record = deepCopy(snapshot)
+			record._SessionLock = if releaseLock then nil else { Id = profile.SessionId, ExpiresAt = os.time() + Config.DataSave.SessionTimeout }
+			return record
 		end)
-		return true
 	end)
-	if not ok then
-		warn("[DataService] Failed to save data for", player.Name, err)
+	saving[player] = nil
+	local saved = ok and type(result) == "table"
+	if not saved then
+		warn("[DataService] Failed to save data for", player.Name, if ok then "session ownership lost" else result)
+		if ok then
+			profile.LoadFailed = true
+			profile.CanSave = false
+			player:Kick("Your data session changed. Please rejoin to load your saved progress safely.")
+		end
 	end
-	return ok
+	return saved
+end
+
+function DataService.Save(player: Player): boolean
+	return saveProfile(player, false)
+end
+
+-- Selection remotes share one worker per profile. Save remains synchronous for
+-- receipts; each worker waits for the current write before taking a fresh snapshot.
+function DataService.QueueSave(player: Player)
+	local profile = profiles[player]
+	if not profile or profile.LoadFailed or not store then return end
+	local pending = queuedSaves[player]
+	if pending and pending.Profile == profile then
+		if not pending.Closing then pending.Revision += 1 end
+		return
+	end
+	local state: QueuedSave = { Profile = profile, Revision = 1, Closing = false }
+	queuedSaves[player] = state
+	task.spawn(function()
+		local function active(): boolean
+			return not state.Closing and profiles[player] == profile and queuedSaves[player] == state
+		end
+		while active() do
+			task.wait(Config.Security.GearSaveInterval)
+			while active() and saving[player] do task.wait(0.1) end
+			if not active() then break end
+			local revision = state.Revision
+			DataService.Save(player) -- Uses the existing bounded three-attempt retry.
+			-- Mutations during the write need another snapshot, including after a
+			-- failed write. Otherwise autosave/exit retain the normal retry policy.
+			if state.Revision == revision then break end
+		end
+		if queuedSaves[player] == state then queuedSaves[player] = nil end
+	end)
 end
 
 function DataService.Release(player: Player)
-	DataService.Save(player)
-	profiles[player] = nil
+	local profile = profiles[player]
+	if not profile then return end
+	profile.Closing = true
+	local pending = queuedSaves[player]
+	if pending then pending.Closing = true end
+	-- Release ownership in the same durable write as the final progress snapshot.
+	saveProfile(player, true)
+	if profiles[player] == profile then profiles[player] = nil end
+	if queuedSaves[player] == pending then queuedSaves[player] = nil end
 end
 
 function DataService.NewId(player: Player): string
 	local profile = profiles[player]
 	assert(profile, "No profile")
-	local id = tostring(profile.Data.NextId)
-	profile.Data.NextId += 1
+	local id: string
+	repeat
+		id = tostring(profile.Data.NextId)
+		profile.Data.NextId += 1
+	until not profile.Data.Monsters[id] and not profile.Data.Eggs[id]
 	return id
 end
 
@@ -211,12 +377,12 @@ function DataService.StartAutosave()
 		for player in profiles do
 			remaining += 1
 			task.spawn(function()
-				DataService.Save(player)
+				DataService.Release(player)
 				remaining -= 1
 			end)
 		end
 		local started = os.clock()
-		while remaining > 0 and os.clock() - started < 25 do
+		while remaining > 0 and os.clock() - started < Config.DataSave.ShutdownTimeout do
 			task.wait(0.1)
 		end
 	end)

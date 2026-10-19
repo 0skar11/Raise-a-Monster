@@ -14,17 +14,18 @@ local MonsterService = require(script.Parent.MonsterService)
 local CombatService = require(script.Parent.CombatService)
 local CarryService = require(script.Parent.CarryService)
 local MonsterModels = require(script.Parent.MonsterModels)
+local MonsterAttack = require(script.Parent.MonsterAttack)
 
 local makePart = Build.MakePart
 local makeBillboard = Build.MakeBillboard
 local makePrompt = Build.MakePrompt
 
-local ZONE_LENGTH = 140
-local ZONE_HALF_Z = 100
-local ROAD_WIDTH = 20
-local NEST_RADIUS = 17
-local NEST_Z = 55
-local NEST_TOP = 1
+local ZONE_LENGTH = Config.Map.ZoneLength
+local ZONE_HALF_Z = Config.Map.ZoneHalfZ
+local ROAD_WIDTH = Config.Map.RoadWidth
+local NEST_RADIUS = Config.Map.NestRadius
+local NEST_Z = Config.Map.NestZ
+local NEST_TOP = Config.Map.NestTop
 
 type Nest = {
 	Zone: Config.Zone,
@@ -44,6 +45,10 @@ type Nest = {
 	Target: CombatService.Target?,
 	Aggro: Player?, -- آخر واحد ضربها، وهي بتجري وراه
 	Moving: boolean,
+	Style: Config.MotherStyle?, -- الـ M1 بتاعها (حسب شكل جسمها)
+	NextAttackAt: number,
+	Engaged: boolean, -- فيه حد قريب منها دلوقتي
+	WindingUntil: number, -- واقفة بتجهّز الضربة لحد الوقت ده
 }
 
 local ZoneService = {}
@@ -325,6 +330,10 @@ local function buildZone(index: number, zone: Config.Zone)
 			Target = nil,
 			Aggro = nil,
 			Moving = false,
+			Style = nil,
+			NextAttackAt = 0,
+			Engaged = false,
+			WindingUntil = 0,
 		})
 	end
 
@@ -348,7 +357,8 @@ end
 local function motherDamage(nest: Nest): number
 	local species = nest.Species and Config.Species[nest.Species]
 	local multiplier = species and Config.MotherDamageByRarity[species.Rarity] or 1
-	return math.floor(nest.Zone.MotherDamage * multiplier + 0.5)
+	local styleMultiplier = if nest.Style then nest.Style.DamageMultiplier else 1
+	return math.floor(nest.Zone.MotherDamage * multiplier * styleMultiplier + 0.5)
 end
 
 local function babyText(nest: Nest): string
@@ -442,6 +452,9 @@ end
 local function clearNest(nest: Nest)
 	nest.Aggro = nil
 	nest.Moving = false
+	nest.Engaged = false
+	nest.WindingUntil = 0
+	nest.NextAttackAt = 0
 	CombatService.Unregister(nest.Target)
 	nest.Target = nil
 	nest.Folder:ClearAllChildren()
@@ -519,6 +532,18 @@ local function spawnNest(nest: Nest)
 	local mother = motherModel.PrimaryPart :: BasePart
 	nest.Mother = mother
 	nest.MotherModel = motherModel
+	local styles = Config.MotherAttacks.Styles
+	local rigType = motherModel:GetAttribute("RigType") :: string
+	local comboStyles = Config.MotherAttacks.ComboStyles
+	if Config.MotherAttacks.ComboDifficulties[nest.Zone.Difficulty] and comboStyles[rigType] then
+		nest.Style = comboStyles[rigType]
+	else
+		nest.Style = styles[rigType] or styles.Quad
+	end
+	local picked = nest.Style :: Config.MotherStyle
+	motherModel:SetAttribute("AttackWindup", picked.Windup)
+	motherModel:SetAttribute("ComboHits", picked.Hits) -- بيخلّي الأنيميشن يعمل كومبو
+	motherModel:SetAttribute("ComboInterval", picked.HitInterval)
 	local extents = motherModel:GetExtentsSize()
 	local height = extents.Y - (motherModel:GetAttribute("PivotHeight") :: number)
 
@@ -527,7 +552,15 @@ local function spawnNest(nest: Nest)
 	gui.Name = "Info"
 	gui.AlwaysOnTop = false
 	label.Size = UDim2.fromScale(1, 0.6)
-	label.Text = string.format('<font color="%s">%s</font> · MOTHER\n⚔️ %d dmg · 🏏 Hit her with your bat', rarityHex(species), name, motherDamage(nest))
+	local element = Config.MotherAttacks.Elements[nest.Zone.Name]
+	label.Text = string.format(
+		'<font color="%s">%s</font> · MOTHER\n<font color="%s">%s</font> · ⚔️ %d dmg',
+		rarityHex(species),
+		name,
+		Build.ColorToHex(if element then element.Color else nest.Zone.AccentColor),
+		(nest.Style :: Config.MotherStyle).Name,
+		motherDamage(nest)
+	)
 
 	local bar = Instance.new("Frame")
 	bar.Name = "HealthBar"
@@ -602,12 +635,33 @@ end
 
 -- اللوب -----------------------------------------------------------------------------
 
--- الأم بتضرب أي لاعب قريب منها، والـ HP بيرجع كامل لو محدش ضربها شوية.
-local function motherTick()
-	local now = os.clock()
+-- أقرب لاعب في مدى الضربة (واللي ضربها ليه الأولوية)
+local function pickVictim(nest: Nest, mother: BasePart, reach: number): BasePart?
+	local best: BasePart? = nil
+	local bestScore = math.huge
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if root and humanoid and humanoid.Health > 0 then
+			local distance = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z).Magnitude
+			local score = if player == nest.Aggro then distance - 1000 else distance
+			if distance <= reach and score < bestScore then
+				best = root
+				bestScore = score
+			end
+		end
+	end
+	return best
+end
+
+-- الـ HP بيرجع كامل لو محدش ضربها شوية، والأم بتعمل M1 على اللي قريب منها.
+local function motherTick(now: number)
 	for _, nest in nests do
 		local mother = nest.Mother
-		if not nest.Alive or not mother then
+		local model = nest.MotherModel
+		local style = nest.Style
+		if not nest.Alive or not mother or not model or not style then
 			continue
 		end
 		if nest.Health < nest.MaxHealth and now - nest.LastHit > Config.Combat.MotherRegenDelay then
@@ -616,23 +670,59 @@ local function motherTick()
 			nest.Aggro = nil
 			updateHealthBar(nest)
 		end
-		local attacking = false
-		for _, player in Players:GetPlayers() do
-			local character = player.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if root and humanoid and humanoid.Health > 0 then
-				local flat = Vector3.new(root.Position.X - mother.Position.X, 0, root.Position.Z - mother.Position.Z)
-				if flat.Magnitude <= Config.Combat.MotherAttackRange then
-					humanoid:TakeDamage(motherDamage(nest))
-					attacking = true
+		if now < nest.WindingUntil then
+			continue
+		end
+		local bodyRadius = if nest.Target then nest.Target.Radius else 3
+		local reach = if style.Shape == "Slam" then style.Radius else math.min(style.Range, Config.MotherAttacks.AggroRange)
+		local victim = pickVictim(nest, mother, bodyRadius + reach)
+		if not victim then
+			nest.Engaged = false
+			continue
+		end
+		if not nest.Engaged then
+			-- أول ما حد يقرب: مهلة صغيرة قبل أول ضربة
+			nest.Engaged = true
+			nest.NextAttackAt = math.max(nest.NextAttackAt, now + Config.MotherAttacks.FirstAttackDelay)
+		end
+		if now < nest.NextAttackAt then
+			continue
+		end
+
+		-- تبص على اللاعب وتقف تجهّز الضربة
+		local pivot = model:GetPivot()
+		local look = Vector3.new(victim.Position.X, pivot.Position.Y, victim.Position.Z)
+		if (look - pivot.Position).Magnitude > 0.1 then
+			model:PivotTo(CFrame.lookAt(pivot.Position, look))
+		end
+		model:SetAttribute("AnimState", "Attack")
+		nest.Moving = false
+		local current = model
+		local windup = MonsterAttack.Start({
+			Model = model,
+			Root = mother,
+			BodyRadius = bodyRadius,
+			Target = victim,
+			Style = style,
+			Element = nest.Zone.Name,
+			Damage = motherDamage(nest),
+			IsValid = function()
+				return nest.Alive and nest.MotherModel == current
+			end,
+			OnDrain = function(amount: number)
+				if nest.Alive and nest.MotherModel == current then
+					nest.Health = math.min(nest.MaxHealth, nest.Health + math.floor(amount))
+					updateHealthBar(nest)
 				end
+			end,
+		})
+		nest.WindingUntil = now + windup + 0.25
+		nest.NextAttackAt = now + windup + style.Cooldown
+		task.delay(windup + 0.25, function()
+			if nest.MotherModel == current and not nest.Moving then
+				current:SetAttribute("AnimState", "Idle")
 			end
-		end
-		-- الأنيميشن: بتهاجم لما حد قريب منها
-		if nest.MotherModel and not nest.Moving then
-			nest.MotherModel:SetAttribute("AnimState", if attacking then "Attack" else "Idle")
-		end
+		end)
 	end
 end
 
@@ -655,7 +745,7 @@ local function chaseStep(dt: number)
 	for _, nest in nests do
 		local model = nest.MotherModel
 		local mother = nest.Mother
-		if not nest.Alive or not model or not mother then
+		if not nest.Alive or not model or not mother or os.clock() < nest.WindingUntil then
 			continue
 		end
 		local pivot = model:GetPivot()
@@ -713,14 +803,8 @@ function ZoneService.Init()
 			task.wait(0.1)
 			local now = os.clock()
 			chaseStep(now - last)
+			motherTick(now)
 			last = now
-		end
-	end)
-
-	task.spawn(function()
-		while true do
-			task.wait(Config.Combat.MotherAttackInterval)
-			motherTick()
 		end
 	end)
 

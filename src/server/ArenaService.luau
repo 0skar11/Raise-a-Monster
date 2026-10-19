@@ -27,13 +27,24 @@ type Fighter = {
 type Challenge = { From: Player, MonsterId: string, Time: number }
 
 local ArenaService = {}
+local lastArenaChallenge: { [Player]: number } = {}
 
 local remotes: { [string]: RemoteEvent }
 local challenges: { [Player]: { [Player]: Challenge } } = {} -- challenges[target][from]
 local fighting: { [Player]: boolean } = {}
-local battleRunning = false
-local pedestals: { BasePart } = {}
-local arenaSign: TextLabel
+local lastChallengeAt: { [Player]: number } = {}
+local SIGN_IDLE = '<font color="#FF6060">⚔️ MONSTER ARENA ⚔️</font>\nChallenge someone from the Arena button'
+
+type Arena = {
+	Index: number,
+	Center: Vector3,
+	Entrance: Vector3, -- unit vector from the centre towards the plaza
+	Pedestals: { BasePart },
+	Sign: TextLabel,
+	Busy: boolean,
+}
+local arenas: { Arena } = {}
+local lastArenaIndex: { [Player]: number } = {}
 
 -- قوة الوحش في المعركة: الندرة والـ Level والمرحلة والطفرة
 local function fighterStats(monster: MonsterMath.MonsterData): (number, number)
@@ -53,73 +64,108 @@ local function setCarried(player: Player, monsterId: string, value: boolean)
 	set[monsterId] = if value then true else nil
 end
 
-local function buildArena()
-	local center = Config.Arena.Position
+local function buildArena(index: number, center: Vector3): Arena
+	local radius = Config.Arena.Radius
+	local entrance = Vector3.xAxis -- the gate always faces the grey plaza, away from the bases and the map edge
 	local folder = Instance.new("Folder")
-	folder.Name = "MonsterArena"
+	folder.Name = "MonsterArena" .. index
 	folder.Parent = workspace
-	Build.MakePart({
-		Name = "ArenaFloor",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(0.6, 36, 36),
-		CFrame = CFrame.new(center + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-		Color = Color3.fromRGB(150, 60, 60),
-		Material = Enum.Material.Slate,
-		Parent = folder,
-	})
-	Build.MakePart({
-		Name = "ArenaRing",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(0.7, 30, 30),
-		CFrame = CFrame.new(center + Vector3.new(0, 0.35, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-		Color = Color3.fromRGB(200, 170, 120),
-		Material = Enum.Material.Sand,
-		Parent = folder,
-	})
+	local stone = Color3.fromRGB(120, 110, 100)
+	local function part(props: { [string]: any }): Part
+		props.Parent = folder
+		return Build.MakePart(props)
+	end
+	local function disc(name: string, diameter: number, height: number, y: number, color: Color3, material: Enum.Material)
+		return part({
+			Name = name,
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(height, diameter, diameter),
+			CFrame = CFrame.new(center + Vector3.new(0, y, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = color,
+			Material = material,
+		})
+	end
+	-- Flow design: a paved plaza, a red stone rim, then the sand fighting pit.
+	disc("ArenaPlaza", (radius + 10) * 2, 0.5, 0.25, Color3.fromRGB(150, 146, 138), Enum.Material.Cobblestone)
+	disc("ArenaFloor", (radius + 2) * 2, 0.7, 0.4, Color3.fromRGB(150, 60, 60), Enum.Material.Slate)
+	disc("ArenaRing", radius * 2, 0.8, 0.45, Color3.fromRGB(205, 175, 120), Enum.Material.Sand)
+	disc("ArenaCircle", radius * 0.9, 0.85, 0.5, Color3.fromRGB(190, 160, 108), Enum.Material.Sand)
+
+	local pedestals: { BasePart } = {}
 	for _, side in { -1, 1 } do
-		local pedestal = Build.MakePart({
+		table.insert(pedestals, part({
 			Name = "ArenaPedestal",
-			Size = Vector3.new(7, 1.5, 7),
-			Position = center + Vector3.new(0, 1.2, side * 9),
+			Size = Vector3.new(8, 1.5, 8),
+			Position = center + Vector3.new(side * radius * 0.5, 1.2, 0),
 			Color = if side < 0 then Color3.fromRGB(70, 130, 255) else Color3.fromRGB(255, 80, 80),
 			Material = Enum.Material.Neon,
-			Parent = folder,
-		})
-		table.insert(pedestals, pedestal)
+		}))
 	end
-	for i = 0, 7 do
-		local angle = i / 8 * math.pi * 2
-		Build.MakePart({
-			Name = "ArenaPillar",
-			Size = Vector3.new(2, 8, 2),
-			Position = center + Vector3.new(math.cos(angle) * 17, 4, math.sin(angle) * 17),
-			Color = Color3.fromRGB(120, 110, 100),
-			Material = Enum.Material.Cobblestone,
-			Parent = folder,
-		})
+
+	-- Pillars with torches around the pit.
+	for i = 0, 11 do
+		local angle = i / 12 * math.pi * 2
+		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+		if direction:Dot(entrance) > 0.9 then continue end -- keep the entrance path clear
+		local at = center + direction * (radius + 3)
+		part({ Name = "ArenaPillar", Size = Vector3.new(2.4, 9, 2.4), Position = at + Vector3.new(0, 4.5, 0), Color = stone, Material = Enum.Material.Cobblestone })
+		local torch = part({ Name = "ArenaTorch", Size = Vector3.new(1.2, 1.6, 1.2), Position = at + Vector3.new(0, 9.8, 0), Color = Color3.fromRGB(255, 150, 50), Material = Enum.Material.Neon, CanCollide = false })
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 170, 80)
+		light.Range = 16
+		light.Brightness = 1.2
+		light.Shadows = false
+		light.Parent = torch
 	end
-	local signPart = Build.MakePart({
+
+	-- Two tiers of spectator steps, left open at the entrance.
+	for tier = 1, 2 do
+		local steps = 28
+		for i = 0, steps - 1 do
+			local angle = i / steps * math.pi * 2
+			local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+			if direction:Dot(entrance) < 0.82 then
+				local at = center + direction * (radius + 4 + tier * 2.6)
+				part({
+					Name = "ArenaStep",
+					Size = Vector3.new(2.8, tier * 1.6, 4.4),
+					CFrame = CFrame.lookAt(at + Vector3.new(0, tier * 0.8, 0), center + Vector3.new(0, tier * 0.8, 0)),
+					Color = if i % 2 == 0 then Color3.fromRGB(135, 128, 118) else Color3.fromRGB(118, 112, 104),
+					Material = Enum.Material.Slate,
+				})
+			end
+		end
+	end
+
+	-- Entrance arch facing the plaza.
+	local gate = center + entrance * (radius + 7)
+	for _, side in { -1, 1 } do
+		part({ Name = "ArenaGatePost", Size = Vector3.new(3, 14, 3), Position = gate + Vector3.new(0, 7, side * 8), Color = stone, Material = Enum.Material.Cobblestone })
+	end
+	part({ Name = "ArenaGateBeam", Size = Vector3.new(3.4, 3, 21), Position = gate + Vector3.new(0, 15, 0), Color = Color3.fromRGB(170, 55, 55), Material = Enum.Material.SmoothPlastic })
+	part({ Name = "ArenaPath", Size = Vector3.new(26, 0.3, 10), Position = center + entrance * (radius + 22) + Vector3.new(0, 0.3, 0), Color = Color3.fromRGB(165, 150, 128), Material = Enum.Material.Cobblestone, CanCollide = false })
+
+	local signPart = part({
 		Name = "ArenaSign",
 		Size = Vector3.new(1, 1, 1),
-		Position = center + Vector3.new(0, 14, 0),
+		Position = center + Vector3.new(0, 16, 0),
 		Transparency = 1,
 		CanCollide = false,
-		Parent = folder,
 	})
-	local gui, label = Build.MakeBillboard(signPart, UDim2.fromScale(28, 7), Vector3.zero, 220)
+	local gui, label = Build.MakeBillboard(signPart, UDim2.fromScale(28, 7), Vector3.zero, 260)
 	gui.AlwaysOnTop = false
-	label.Text = '<font color="#FF6060">⚔️ MONSTER ARENA ⚔️</font>\nChallenge someone from the Arena button'
-	arenaSign = label
+	label.Text = SIGN_IDLE
+	return { Index = index, Center = center, Entrance = entrance, Pedestals = pedestals, Sign = label, Busy = false }
 end
 
 local function fighterLabel(fighter: Fighter): string
 	return string.format("%s\n❤️ %d / %d", fighter.Name, math.max(0, math.floor(fighter.Health)), fighter.MaxHealth)
 end
 
-local function showFighter(fighter: Fighter, pedestal: BasePart, monster: MonsterMath.MonsterData)
+local function showFighter(arena: Arena, fighter: Fighter, pedestal: BasePart, monster: MonsterMath.MonsterData)
 	local model = PlotService.BuildMonsterModel(monster)
 	local body = model.PrimaryPart :: BasePart
-	local facing = Config.Arena.Position + Vector3.new(0, pedestal.Position.Y, 0)
+	local facing = arena.Center + Vector3.new(0, pedestal.Position.Y, 0)
 	model:PivotTo(CFrame.lookAt(pedestal.Position + Vector3.new(0, 0.75 + PlotService.PivotHeight(model) + 0.1, 0), facing))
 	local info = body:FindFirstChild("Info")
 	local label = info and info:FindFirstChild("Label") :: TextLabel?
@@ -150,7 +196,7 @@ local function sendState(a: Fighter, b: Fighter, log: string, done: boolean, win
 	end
 end
 
-local function finishBattle(a: Fighter, b: Fighter, winner: Fighter, loser: Fighter)
+local function finishBattle(arena: Arena, a: Fighter, b: Fighter, winner: Fighter, loser: Fighter)
 	setCarried(a.Player, a.MonsterId, false)
 	setCarried(b.Player, b.MonsterId, false)
 	fighting[a.Player] = nil
@@ -189,14 +235,14 @@ local function finishBattle(a: Fighter, b: Fighter, winner: Fighter, loser: Figh
 				fighter.Model:Destroy()
 			end
 		end
-		battleRunning = false
-		arenaSign.Text = '<font color="#FF6060">⚔️ MONSTER ARENA ⚔️</font>\nChallenge someone from the Arena button'
+		arena.Busy = false
+		arena.Sign.Text = SIGN_IDLE
 	end)
 end
 
-local function runBattle(a: Fighter, b: Fighter)
-	battleRunning = true
-	arenaSign.Text = string.format('<font color="#FF6060">⚔️ %s vs %s ⚔️</font>', a.Player.DisplayName, b.Player.DisplayName)
+local function runBattle(arena: Arena, a: Fighter, b: Fighter)
+	arena.Busy = true
+	arena.Sign.Text = string.format('<font color="#FF6060">⚔️ %s vs %s ⚔️</font>', a.Player.DisplayName, b.Player.DisplayName)
 	sendState(a, b, "The battle begins!", false, nil)
 	task.wait(1.5)
 	local attacker, defender = a, b
@@ -242,7 +288,7 @@ local function runBattle(a: Fighter, b: Fighter)
 	end
 	local loser = if winner == a then b else a
 	sendState(a, b, winner.Name .. " wins!", true, winner.Player)
-	finishBattle(a, b, winner, loser)
+	finishBattle(arena, a, b, winner, loser)
 end
 
 local function ownMonster(player: Player, monsterId: unknown): MonsterMath.MonsterData?
@@ -251,14 +297,17 @@ local function ownMonster(player: Player, monsterId: unknown): MonsterMath.Monst
 	end
 	local profile = DataService.Get(player)
 	local monster = profile and profile.Data.Monsters[monsterId]
-	if not monster or MonsterService.IsCarried(player, monsterId) then
+	if not monster or MonsterService.IsUnavailable(player, monsterId) then
 		return nil
 	end
 	return monster
 end
 
 local function onChallenge(player: Player, targetUserId: unknown, monsterId: unknown)
-	if type(targetUserId) ~= "number" or fighting[player] then
+	local now = os.clock()
+	if type(targetUserId) ~= "number" or fighting[player]
+		or now - (lastChallengeAt[player] or -math.huge) < Config.Arena.RequestCooldown
+	then
 		return
 	end
 	local target = Players:GetPlayerByUserId(targetUserId)
@@ -266,8 +315,13 @@ local function onChallenge(player: Player, targetUserId: unknown, monsterId: unk
 	if not target or target == player or not monster then
 		return
 	end
+	local targetChallenges = challenges[target]
+	if targetChallenges and targetChallenges[player] and now - targetChallenges[player].Time < Config.Arena.RequestTimeout then
+		return
+	end
+	lastChallengeAt[player] = now
 	challenges[target] = challenges[target] or {}
-	challenges[target][player] = { From = player, MonsterId = monsterId :: string, Time = os.clock() }
+	challenges[target][player] = { From = player, MonsterId = monsterId :: string, Time = now }
 	remotes.ArenaIncoming:FireClient(target, player.UserId, player.DisplayName, MonsterMath.GetDisplayName(monster))
 	MonsterService.Notify(player, "⚔️ Challenge sent to " .. target.DisplayName .. "!", "info")
 end
@@ -291,7 +345,11 @@ local function onRespond(player: Player, fromUserId: unknown, monsterId: unknown
 		MonsterService.Notify(player, "That challenge expired.", "error")
 		return
 	end
-	if battleRunning then
+	local arena: Arena? = nil
+	for _, candidate in arenas do
+		if not candidate.Busy then arena = candidate; break end
+	end
+	if not arena then
 		MonsterService.Notify(player, "The Arena is busy, try again in a moment!", "error")
 		MonsterService.Notify(from, "The Arena is busy, try again in a moment!", "error")
 		return
@@ -323,13 +381,32 @@ local function onRespond(player: Player, fromUserId: unknown, monsterId: unknown
 	fighting[player] = true
 	setCarried(from, a.MonsterId, true)
 	setCarried(player, b.MonsterId, true)
-	showFighter(a, pedestals[1], theirs)
-	showFighter(b, pedestals[2], mine)
-	task.spawn(runBattle, a, b)
+	arena.Busy = true
+	showFighter(arena, a, arena.Pedestals[1], theirs)
+	showFighter(arena, b, arena.Pedestals[2], mine)
+	task.spawn(runBattle, arena, a, b)
+end
+
+-- Each press goes to a different arena than last time, unless that one has a fight going.
+function ArenaService.GetTeleportCFrame(player: Player): CFrame
+	local count = #arenas
+	local index = ((lastArenaIndex[player] or 0) % count) + 1
+	if arenas[index].Busy then
+		for offset = 1, count - 1 do
+			local other = ((index - 1 + offset) % count) + 1
+			if not arenas[other].Busy then index = other; break end
+		end
+	end
+	lastArenaIndex[player] = index
+	local arena = arenas[index]
+	local spot = arena.Center + arena.Entrance * (Config.Arena.Radius + 18) + Vector3.new(0, 4, 0)
+	return CFrame.lookAt(spot, arena.Center + Vector3.new(0, 4, 0))
 end
 
 function ArenaService.CleanupPlayer(player: Player)
+	lastArenaIndex[player] = nil
 	challenges[player] = nil
+	lastChallengeAt[player] = nil
 	for _, pending in challenges do
 		pending[player] = nil
 	end
@@ -337,7 +414,9 @@ end
 
 function ArenaService.Init(allRemotes: { [string]: RemoteEvent })
 	remotes = allRemotes
-	buildArena()
+	for index, position in Config.Arena.Positions do
+		table.insert(arenas, buildArena(index, position))
+	end
 	remotes.ArenaChallenge.OnServerEvent:Connect(onChallenge)
 	remotes.ArenaRespond.OnServerEvent:Connect(onRespond)
 end

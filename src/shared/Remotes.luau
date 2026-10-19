@@ -14,18 +14,25 @@ local EVENT_NAMES = {
 	"FeedMonster", -- (monsterId)
 	"PlayMonster", -- (monsterId)
 	"SellMonster", -- (monsterId)
+	"PlaceMonster", -- (monsterId, unlockedSlot), swaps safely with current occupant
+	"BenchMonster", -- (monsterId), retains ownership and stops plot income
+	"AutoPlaceMonsters", -- (), ranks owned available monsters by actual production
+	"ToggleFollower", -- (monsterId), server validates adult ownership and limit
 	"BuyUpgrade", -- (upgradeName)
 	"Teleport", -- ("Home" | "Shop")
 	"BuyPass", -- (passName)
 	"BuyWeapon", -- (weaponName), paid with in-game coins
+	"EquipWeapon", -- (weaponName), server checks coin/pass ownership; "Bat" is free
 	"BuyProduct", -- (productName)
 	"ClaimDaily", -- ()
 	"Spin", -- ()
 	"BuyAccessory", -- (accessoryName, monsterId)
 	"BuySpeedAccessory", -- (accessoryName)
+	"EquipSpeedAccessory", -- (accessoryName?), nil removes the selected player accessory
 	"EquipAccessory", -- (monsterId, slot, accessoryName?)
 	"MiniGameStart", -- (monsterId, gameName)
-	"MiniGameFinish", -- (score)
+	"MiniGameCatch", -- () محاولة التقاط؛ السيرفر يحدد النقاط ويحد المعدل
+	"MiniGameFinish", -- () إنهاء Catch بعد انتهاء الوقت؛ لا تُقبل نتيجة من العميل
 	"TradeRequest", -- (targetUserId)
 	"TradeRespond", -- (fromUserId, accepted)
 	"TradeSetOffer", -- ({ monsterId })
@@ -41,6 +48,9 @@ local EVENT_NAMES = {
 	"TradeIncoming", -- (fromUserId, fromName)
 	"ArenaIncoming", -- (fromUserId, fromName, monsterName)
 	"ArenaUpdate", -- (battle state | nil)
+	"MonsterAttack", -- (attack) علامة ضربة الوحش على الأرض + الـ VFX لكل اللاعبين
+	"PlayerHurt", -- (damage, color) اللاعب اتضرب: هزة كاميرا ولون أحمر
+	"HitFeedback", -- (position, damage, crit) رقم الضرر فوق الهدف للي ضرب
 }
 
 local Remotes = {}
