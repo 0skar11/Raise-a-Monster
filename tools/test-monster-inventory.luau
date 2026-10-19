@@ -184,7 +184,7 @@ for _, monster in profile.Data.Monsters do if monster.Slot > 0 then upgradedCoun
 check(upgradedCount == 4, "Auto Place uses purchased unlocked slots")
 profile.Data.SlotUpgrades = 0
 monsters.SetupPlayer(p)
-for _, monster in profile.Data.Monsters do check(monster.Slot <= 3, "Rejoin entitlement changes bench excess placements") end
+for _, monster in profile.Data.Monsters do check(monster.Slot <= config.MaxSlots and (monster.Slot <= 3 or not monsters.IsPlaced(p, monster)), "Pending or lost entitlement preserves saved assignments without activating locked slots") end
 local legacy = copy(profile.Data)
 legacy.Eggs = {egg = {Id = "old", EggType = eggType, Slot = 1, HatchAt = 0}}
 legacy.Monsters["1"].Slot, legacy.Monsters["2"].Slot, legacy.Monsters["3"].Slot = 1, 2, 2

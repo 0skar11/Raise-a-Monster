@@ -17,6 +17,8 @@ All four passes were created and enabled for sale. The legacy hidden CoinBoost I
 
 Profiles acquire an atomic DataStore session lease. Saves require the same lease, retry transient failures, and release ownership when leaving or shutting down. This prevents an older server from overwriting progress after a new server acquires the profile. Concurrent joins share one profile load.
 
+Saved assignments in the two extra slots survive delayed or failed ownership checks. Those slots stay inactive until ownership is confirmed, then their saved monsters and eggs are rendered in place.
+
 When Studio cannot access DataStore services, it can run a temporary session with saving disabled and a warning. Temporary progress is never written to the saved profile. Live servers, malformed records and active session conflicts still reject unsafe loads. Paid product prompts are blocked when saving is unavailable.
 
 After syncing the source, stop Play and start it again. A Studio temporary session is suitable for gameplay testing; it does not prove cloud persistence. To validate real persistence, use the published experience and verify the same coins, monsters, eggs and equipped gear after leaving and rejoining.
@@ -24,6 +26,7 @@ After syncing the source, stop Play and start it again. A Studio temporary sessi
 ## Validation
 
 - Independent review and regression checks passed: 47 persistence checks, 20 gamepass checks, receipt processing and 77 save-queue checks.
+- Extra-slot rejoin coverage includes 30 checks for delayed ownership, failed requests, preserved assignments and inactive locked slots. The saving-warning renderer has three checks.
 - All 33 production Luau files compiled successfully. Rojo build passed.
 - A separate build of the selected commit files over HEAD passed using the repository's build script.
 - Two full-suite failures reproduce on the previous local baseline: approved geometry and an outdated gear UI caption assertion.

@@ -414,7 +414,7 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	profile.Data.Stats.Hatched += 1
 
 	PlotService.RemoveEgg(player, eggData.Id)
-	if monster.Slot > 0 then PlotService.RenderMonster(player, monster) end
+	if MonsterService.IsPlaced(player, monster) then PlotService.RenderMonster(player, monster) end
 
 	local rarity = Config.Species[species].Rarity
 	MonsterService.Notify(player, "🐣 Hatched! You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")", "success")
@@ -1016,13 +1016,15 @@ function MonsterService.SetupPlayer(player: Player)
 	local data = profile.Data
 
 	local unlocked = MonsterService.GetUnlockedSlots(player)
-	DataService.NormalizeMonsterSlots(data, unlocked)
+	-- Marketplace can still be checking ExtraSlots. Keep saved assignments until
+	-- ownership is known; locked slots remain inactive and cannot earn income.
+	DataService.NormalizeMonsterSlots(data, Config.MaxSlots)
 	PlotService.SetUnlockedSlots(player, unlocked)
 	for _, monster in data.Monsters do
-		if monster.Slot > 0 then PlotService.RenderMonster(player, monster) end
+		if MonsterService.IsPlaced(player, monster) then PlotService.RenderMonster(player, monster) end
 	end
 	for _, egg in data.Eggs do
-		if egg.Slot > 0 then PlotService.RenderEgg(player, egg.Id, egg.EggType, egg.Slot) end
+		if egg.Slot > 0 and egg.Slot <= unlocked then PlotService.RenderEgg(player, egg.Id, egg.EggType, egg.Slot) end
 	end
 	PlotService.SetPending(player, data.PendingCoins)
 	MonsterService.PushState(player)

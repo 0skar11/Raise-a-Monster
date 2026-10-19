@@ -53,7 +53,18 @@ local function onPassGranted(player: Player, name: string)
 	elseif Config.WeaponStats[name] then
 		giveWeapons(player)
 	elseif name == "ExtraSlots" then
-		PlotService.SetUnlockedSlots(player, MonsterService.GetUnlockedSlots(player))
+		local unlocked = MonsterService.GetUnlockedSlots(player)
+		PlotService.SetUnlockedSlots(player, unlocked)
+		local profile = DataService.Get(player)
+		if profile then
+			local baseUnlocked = math.min(Config.MaxSlots, Config.BaseSlots + (profile.Data.SlotUpgrades or 0))
+			for _, monster in profile.Data.Monsters do
+				if monster.Slot > baseUnlocked and MonsterService.IsPlaced(player, monster) then PlotService.UpdateMonster(player, monster, false) end
+			end
+			for _, egg in profile.Data.Eggs do
+				if egg.Slot > baseUnlocked and egg.Slot <= unlocked then PlotService.RenderEgg(player, egg.Id, egg.EggType, egg.Slot) end
+			end
+		end
 	end
 	MonsterService.PushState(player)
 end
