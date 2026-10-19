@@ -843,5 +843,29 @@ Config.Trade = {
 }
 
 Config.MapBorder = { Spacing = 28, LowHeight = 13, MiddleHeight = 28, HighHeight = 44, LanternEvery = 3, LightRange = 16, LightBrightness = 1 }
+-- الصوت ومؤثرات الواجهة -----------------------------------------------------------------------
+-- حط الـ Asset ID بتاع كل صوت من Toolbox ← Audio (الأحسن تختار من أصوات Roblox نفسها، مرخّصة ومناسبة لكل الأعمار).
+-- لو الـ ID بـ 0 الصوت ده مش هيشتغل، والمؤثرات الشكلية شغالة عادي من غير أصوات.
+Config.Audio = {
+	MusicIds = { 0 } :: { number }, -- الأغاني بتتلف ورا بعض (حط أكتر من واحدة لو عايز)
+	MusicVolume = 0.25,
+	SfxVolume = 0.5,
+	Sfx = {
+		Click = 0, -- أي زرار
+		Open = 0, -- شباك بيتفتح
+		Coins = 0, -- الفلوس زادت
+		Success = 0, -- فقس، شرا، جايزة
+		Error = 0, -- مش معاك فلوس وكده
+	} :: { [string]: number },
+}
+
+-- مؤثرات الواجهة (من غير صوت)
+Config.UIEffects = {
+	HoverScale = 1.06, -- الزرار بيكبر لما الماوس يعدّي عليه
+	PressScale = 0.92, -- وبيصغر لما تدوس
+	PanelPopFrom = 0.85, -- الشباك بيتفتح من الحجم ده لحد 1
+	CoinsBump = 1.15,
+	ReadyPulse = 1.08, -- الزرار اللي فيه Ready! بينبض
+}
 
 return Config
