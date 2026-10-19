@@ -159,17 +159,11 @@ local function onPlayerAdded(player: Player)
 	coins.Name = "Coins"
 	coins.Value = profile.Data.Coins
 	coins.Parent = leaderstats
-	-- الـ Steals: لما تموّت حد شايل وحش وتاخده منه
-	local steals = Instance.new("IntValue")
-	steals.Name = "Steals"
-	steals.Value = profile.Data.Stats.Steals
-	steals.Parent = leaderstats
 	leaderstats.Parent = player
 
 	task.spawn(function()
 		while player.Parent and DataService.Get(player) == profile do
 			coins.Value = math.floor(profile.Data.Coins)
-			steals.Value = profile.Data.Stats.Steals
 			task.wait(0.5)
 		end
 	end)

@@ -85,11 +85,26 @@ local collections = 0; plotService.Callbacks.Collect = function() collections +=
 signals[plot.Model.Collector]:Fire(currentOwner.Character.HumanoidRootPart)
 signals[plot.Model.Collector]:Fire(visitor.Character.HumanoidRootPart)
 check(collections == 1, "Collection retains owner checks on the corner chest")
+local collector = plot.Model.Collector
+check(#plot.CollectorParts == 5, "Collector includes pad, chest, lid and both bands")
+plotService.SetCollectorEnabled(currentOwner, false)
+for _, part in plot.CollectorParts do check(part.Parent == nil, "AutoCollect removes all collector geometry from the world") end
+check(not collector:IsDescendantOf(workspace) and not plot.CollectorLabel:IsDescendantOf(workspace), "Collection target and label are absent from Workspace")
+signals[collector]:Fire(currentOwner.Character.HumanoidRootPart)
+check(collections == 1, "Stale touch event cannot manually collect for AutoCollect owner")
+check(plotService.GetPlot(visitor) == nil and plotService.GetPlots()[2].Model:FindFirstChild("Collector"), "Other plots retain their collectors")
 plotService.RenderMonster(currentOwner, { Id = "Benched", Slot = 0 })
 plotService.UpdateMonster(currentOwner, { Id = "Benched", Slot = 0 }, true)
 plotService.RenderEgg(currentOwner, "BenchEgg", config.ShopEggs[1], 0)
 check(#plot.MonstersFolder:GetChildren() == 0 and #plot.EggsFolder:GetChildren() == 0, "Benched monsters and eggs have no habitat visual")
 plotService.Release(currentOwner)
+check(plot.CollectorEnabled and plot.Model.Collector == collector, "Release restores the original collector")
+for _, part in plot.CollectorParts do check(part.Parent == plot.Model, "Release restores all collector pieces") end
+local reassigned = assert(plotService.Assign(visitor))
+check(reassigned == plot and plot.CollectorEnabled, "New owner receives a working collector on the freed plot")
+signals[collector]:Fire(visitor.Character.HumanoidRootPart)
+check(collections == 2, "Reassigned collector accepts the new owner")
+plotService.Release(visitor)
 check(not plot.Pedestals[4]:GetAttribute("Unlocked") and plot.Pedestals[1]:GetAttribute("Unlocked"), "Release restores three starting habitats")
 local characterService = load("CharacterService", "src/server/CharacterService.luau")
 local features = { SwiftSneakers = "SneakerSideGlow", FlameBoots = "FlameTongue", IceSkates = "SkateBlade", LightningBoots = "BootLightningEmblem", VoidHoverboard = "HoverboardDeck", ShadowCloak = "SplitCloakTail", WindScarf = "WindScarfCollar", GoldenWings = "GoldenWingFeather" }

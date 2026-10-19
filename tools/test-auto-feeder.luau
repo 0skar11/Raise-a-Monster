@@ -74,6 +74,7 @@ local function harness(studio, passId, ownsPass)
 		SetUpgradeLabel = function() end,
 		UpdateMonster = function(_, _, evolved) if evolved then evolutions += 1 end end,
 		SetUnlockedSlots = function() end,
+		SetCollectorEnabled = function(_, enabled) plot.CollectorEnabled = enabled end,
 	}
 	local follower = {Init = function() end, CleanupPlayer = function() end}
 	local modules = {Config = config, MonsterMath = mathModule, DataService = data,
@@ -115,7 +116,7 @@ local function harness(studio, passId, ownsPass)
 	monetization.Init(remotes)
 	monetization.SetupPlayer(player)
 	local result = {Config = config, Math = mathModule, MonsterService = monsterService, Monetization = monetization,
-		Player = player, Stranger = stranger, Profile = profile, ForeignProfile = foreignProfile, Market = market}
+		Player = player, Stranger = stranger, Profile = profile, ForeignProfile = foreignProfile, Market = market, Plot = plot}
 	result.Advance = function(time)
 		assert(time >= clock, 'Clock cannot run backwards')
 		clock = time
