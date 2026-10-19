@@ -5,6 +5,10 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
+-- Roblox's Tab player list already provides player names and the Coins leaderstat.
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)

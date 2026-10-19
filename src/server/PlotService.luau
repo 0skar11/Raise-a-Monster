@@ -36,6 +36,8 @@ export type Plot = {
 	EggsFolder: Folder,
 	Barrier: BasePart?,
 	CollectorLabel: TextLabel,
+	CollectorParts: { BasePart },
+	CollectorEnabled: boolean,
 	LockLabel: TextLabel?, -- مش موجودين لما السرقة تبقى مقفولة
 	SignLabel: TextLabel,
 	LockPrompt: ProximityPrompt?,
@@ -430,6 +432,12 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 	block("ChestLid", Vector3.new(2.7, 0.4, 1.65), Vector3.new(-23, FLOOR_TOP + 1.7, -22.7), { Color = lightWood, Material = Enum.Material.Wood })
 	for _, x in { -23.85, -22.15 } do block("ChestBand", Vector3.new(0.19, 1.55, 1.72), Vector3.new(x, FLOOR_TOP + 1, -22.7), { Color = gold, Material = Enum.Material.Metal, CanCollide = false }) end
 	local collectorGui, collectorLabel = makeBillboard(collector, UDim2.fromOffset(200, 50), Vector3.new(0, 4.4, 0), 80)
+	local collectorParts: { BasePart } = {}
+	for _, item in model:GetChildren() do
+		if item:IsA("BasePart") and (item == collector or item.Name == "Chest" or item.Name == "ChestLid" or item.Name == "ChestBand") then
+			table.insert(collectorParts, item)
+		end
+	end
 	collectorGui.AlwaysOnTop = false
 	collectorLabel.Text = "💰 0"
 	local signAnchor = block("NameAnchor", Vector3.new(1, 1, 1), Vector3.new(0, FLOOR_TOP + 12, -27), { Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false })
@@ -453,10 +461,10 @@ local function buildPlot(index: number, cframe: CFrame): Plot
 	local upgradePrompt = makePrompt(upgradePad, "UpgradePrompt", "Buy Upgrade", Enum.KeyCode.E, 0.3)
 	local monstersFolder = Instance.new("Folder"); monstersFolder.Name = "Monsters"; monstersFolder.Parent = model
 	local eggsFolder = Instance.new("Folder"); eggsFolder.Name = "Eggs"; eggsFolder.Parent = model
-	local plot: Plot = { Index = index, Model = model, CFrame = cframe, Owner = nil, LockedUntil = 0, LockCooldownUntil = 0, Pedestals = pedestals, MonstersFolder = monstersFolder, EggsFolder = eggsFolder, Barrier = barrier, CollectorLabel = collectorLabel, LockLabel = lockLabel, SignLabel = signLabel, LockPrompt = lockPrompt, UpgradeLabel = upgradeLabel, SpawnCFrame = at(Vector3.new(0, FLOOR_TOP + 3, -23)) * CFrame.Angles(0, math.pi, 0) }
+	local plot: Plot = { Index = index, Model = model, CFrame = cframe, Owner = nil, LockedUntil = 0, LockCooldownUntil = 0, Pedestals = pedestals, MonstersFolder = monstersFolder, EggsFolder = eggsFolder, Barrier = barrier, CollectorLabel = collectorLabel, CollectorParts = collectorParts, CollectorEnabled = true, LockLabel = lockLabel, SignLabel = signLabel, LockPrompt = lockPrompt, UpgradeLabel = upgradeLabel, SpawnCFrame = at(Vector3.new(0, FLOOR_TOP + 3, -23)) * CFrame.Angles(0, math.pi, 0) }
 	local function collect(hit: BasePart)
 		local player = Players:GetPlayerFromCharacter(hit.Parent)
-		if player and player == plot.Owner then PlotService.Callbacks.Collect(player) end
+		if plot.CollectorEnabled and player and player == plot.Owner then PlotService.Callbacks.Collect(player) end
 	end
 	collector.Touched:Connect(collect)
 	upgradePrompt.Triggered:Connect(function(player) if player == plot.Owner then PlotService.Callbacks.Upgrade(player) end end)
@@ -967,6 +975,20 @@ function PlotService.SetUnlockedSlots(player: Player, count: number)
 	end
 end
 
+local function setCollectorEnabled(plot: Plot, enabled: boolean)
+	plot.CollectorEnabled = enabled
+	-- Keep references so a freed plot can restore the same collector for its next owner.
+	-- Removing the parts from Workspace also removes the label, collision and touch target.
+	for _, part in plot.CollectorParts do
+		part.Parent = if enabled then plot.Model else nil
+	end
+end
+
+function PlotService.SetCollectorEnabled(player: Player, enabled: boolean)
+	local plot = plotByPlayer[player]
+	if plot then setCollectorEnabled(plot, enabled) end
+end
+
 function PlotService.SetPending(player: Player, amount: number)
 	local plot = plotByPlayer[player]
 	if plot then
@@ -1014,6 +1036,7 @@ end
 function PlotService.Assign(player: Player): Plot?
 	for _, plot in plots do
 		if not plot.Owner then
+			setCollectorEnabled(plot, true)
 			plot.Owner = player
 			plot.LockedUntil = 0
 			plot.LockCooldownUntil = 0
@@ -1036,6 +1059,7 @@ function PlotService.Release(player: Player)
 	plot.MonstersFolder:ClearAllChildren()
 	plot.EggsFolder:ClearAllChildren()
 	plot.Owner = nil
+	setCollectorEnabled(plot, true)
 	plot.LockedUntil = 0
 	plot.SignLabel.Text = "Empty Base"
 	plot.CollectorLabel.Text = "💰 0"

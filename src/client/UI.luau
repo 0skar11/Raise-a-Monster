@@ -234,7 +234,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	walletTravel.Parent = hud
 	local coinsFrame = Instance.new("Frame")
 	coinsFrame.Name = "Wallet"
-	coinsFrame.Position = UDim2.fromOffset(98, 0)
+	coinsFrame.Position = UDim2.fromOffset(0, 0)
 	coinsFrame.Size = UDim2.fromOffset(200, 46)
 	coinsFrame.BackgroundColor3 = COLORS.Panel
 	coinsFrame.BackgroundTransparency = 0
@@ -255,7 +255,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	pendingLabel.TextColor3 = COLORS.SubText
 
 	local shopButton = navigationButtons.Shop
-	local homeButton = button(walletTravel, "Home", COLORS.Panel, UDim2.fromOffset(90, 34), UDim2.fromOffset(0, 6))
+	local homeButton = button(walletTravel, "Home", COLORS.Panel, UDim2.fromOffset(90, 34), UDim2.fromOffset(208, 6))
 	homeButton.Name = "HomeButton"
 	homeButton.ZIndex = 0
 	homeButton.TextSize = 16
@@ -291,9 +291,9 @@ function UI.Create(playerGui: PlayerGui): UI
 		else
 			walletTravel.Size = UDim2.fromOffset(494, 46)
 			coinsFrame.Size = UDim2.fromOffset(200, 46)
-			coinsFrame.Position = UDim2.fromOffset(98, 0)
+			coinsFrame.Position = UDim2.fromOffset(0, 0)
 			homeButton.Size = UDim2.fromOffset(90, 34)
-			homeButton.Position = UDim2.fromOffset(0, 6)
+			homeButton.Position = UDim2.fromOffset(208, 6)
 			teleportShopButton.Size = UDim2.fromOffset(90, 34)
 			teleportShopButton.Position = UDim2.fromOffset(306, 6)
 			teleportArenaButton.Size = UDim2.fromOffset(90, 34)

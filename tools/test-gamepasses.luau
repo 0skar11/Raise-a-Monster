@@ -12,15 +12,18 @@ local fixtureIds = { VIP = 9001, AutoCollect = 9002, ExtraSlots = 9003 }
 for name, id in fixtureIds do h.Config.Gamepasses[name].Id = id end
 check(h.MonsterService.GetCoinMultiplier(h.Player) == 1, "Unowned VIP does not boost income")
 check(h.MonsterService.GetUnlockedSlots(h.Player) == h.Config.BaseSlots, "Unowned slot pass does not expand base")
+check(h.Plot.CollectorEnabled ~= false, "Unowned pass retains the collector")
 h.Profile.Data.PendingCoins = 12.75
 h.Advance(1)
 check(h.Profile.Data.PendingCoins == 12.75 and h.Profile.Data.Coins == 1000, "Unowned auto collect leaves income pending")
 for name, id in fixtureIds do
 	h.Market.PromptGamePassPurchaseFinished:Fire(h.Player, id, false)
 	check(not h.Monetization.HasPass(h.Player, name), "Canceled purchase does not grant " .. name)
+	if name == "AutoCollect" then check(h.Plot.CollectorEnabled ~= false, "Canceled AutoCollect purchase retains collector") end
 	h.Market.PromptGamePassPurchaseFinished:Fire(h.Player, id, true)
 	check(h.Monetization.HasPass(h.Player, name), "Confirmed purchase grants " .. name)
 end
+check(h.Plot.CollectorEnabled == false, "Confirmed AutoCollect purchase removes collector immediately")
 check(h.MonsterService.GetCoinMultiplier(h.Player) == h.Config.VIPCoinMultiplier, "Verified VIP applies the configured income multiplier")
 check(h.MonsterService.GetUnlockedSlots(h.Player) == h.Config.BaseSlots + h.Config.ExtraSlotsAmount, "Verified ExtraSlots expands base immediately")
 h.Advance(2)
@@ -30,6 +33,11 @@ check(h.MonsterService.GetCoinMultiplier(h.Player) == h.Config.VIPCoinMultiplier
 h.Monetization.CleanupPlayer(h.Player)
 h.Market.PromptGamePassPurchaseFinished:Fire(h.Player, fixtureIds.VIP, true)
 check(not h.Monetization.HasPass(h.Player, "VIP"), "Late purchase event cannot recreate a departed session")
+h.Plot.CollectorEnabled = true
+h.Market.UserOwnsGamePassAsync = function(_, _, id) return id == fixtureIds.AutoCollect end
+h.Monetization.SetupPlayer(h.Player)
+check(h.Plot.CollectorEnabled == false and h.Monetization.HasPass(h.Player, "AutoCollect"), "Rejoin verifies ownership and removes collector again")
+h.Monetization.CleanupPlayer(h.Player)
 for _, pass in h.Config.Gamepasses do pass.Id = 0 end
 h.Config.Gamepasses.AutoFeeder.Id = 2036452299
 local attempts = 0
