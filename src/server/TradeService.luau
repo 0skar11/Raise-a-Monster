@@ -18,10 +18,12 @@ type Trade = {
 }
 
 local TradeService = {}
+local lastTradeRequest: { [Player]: number } = {}
 
 local remotes: { [string]: RemoteEvent }
 local trades: { [Player]: Trade } = {}
 local requests: { [Player]: { [Player]: number } } = {} -- requests[target][from] = وقت الطلب
+local lastRequestAt: { [Player]: number } = {}
 
 local function partnerOf(trade: Trade, player: Player): Player
 	return if trade.Players[1] == player then trade.Players[2] else trade.Players[1]
@@ -62,12 +64,14 @@ local function closeTrade(trade: Trade, message: string?)
 	for _, player in trade.Players do
 		if trades[player] == trade then
 			trades[player] = nil
+			MonsterService.Trading[player] = nil
 		end
 		if player.Parent then
 			remotes.TradeUpdate:FireClient(player, nil)
 			if message then
 				MonsterService.Notify(player, message, "info")
 			end
+			MonsterService.PushState(player)
 		end
 	end
 end
@@ -94,20 +98,16 @@ local function execute(trade: Trade)
 		closeTrade(trade, "Trade cancelled: a monster is not available anymore.")
 		return
 	end
-	-- كل واحد لازم يبقى عنده مكان للي جاي له
-	if MonsterService.CountFreeSlots(a) + #offerA < #offerB or MonsterService.CountFreeSlots(b) + #offerB < #offerA then
-		closeTrade(trade, "Trade cancelled: not enough free slots in a base.")
-		return
-	end
+	-- Incoming monsters overflow safely to the bench; plot capacity never destroys a trade.
 	local fromA, fromB = {}, {}
 	for _, id in offerA do
-		local monster = MonsterService.TakeMonsterData(a, id)
+		local monster = MonsterService.TakeMonsterData(a, id, true)
 		if monster then
 			table.insert(fromA, monster)
 		end
 	end
 	for _, id in offerB do
-		local monster = MonsterService.TakeMonsterData(b, id)
+		local monster = MonsterService.TakeMonsterData(b, id, true)
 		if monster then
 			table.insert(fromB, monster)
 		end
@@ -127,7 +127,10 @@ local function execute(trade: Trade)
 end
 
 local function onRequest(player: Player, targetUserId: unknown)
-	if type(targetUserId) ~= "number" or trades[player] then
+	local now = os.clock()
+	if type(targetUserId) ~= "number" or trades[player]
+		or now - (lastRequestAt[player] or -math.huge) < Config.Trade.RequestCooldown
+	then
 		return
 	end
 	local target = Players:GetPlayerByUserId(targetUserId)
@@ -138,8 +141,13 @@ local function onRequest(player: Player, targetUserId: unknown)
 		MonsterService.Notify(player, target.DisplayName .. " is already trading.", "error")
 		return
 	end
+	local targetRequests = requests[target]
+	if targetRequests and targetRequests[player] and now - targetRequests[player] < Config.Trade.RequestTimeout then
+		return
+	end
+	lastRequestAt[player] = now
 	requests[target] = requests[target] or {}
-	requests[target][player] = os.clock()
+	requests[target][player] = now
 	remotes.TradeIncoming:FireClient(target, player.UserId, player.DisplayName)
 	MonsterService.Notify(player, "📨 Trade request sent to " .. target.DisplayName, "info")
 end
@@ -184,8 +192,12 @@ local function onSetOffer(player: Player, ids: unknown)
 		return
 	end
 	trade.Offers[player] = clean
+	local reserved = {}
+	for _, id in clean do reserved[id] = true end
+	MonsterService.Trading[player] = reserved
 	trade.Ready = {} -- أي تغيير بيلغي التأكيد
 	sendUpdate(trade)
+	MonsterService.PushState(player)
 end
 
 local function onReady(player: Player, ready: unknown)
@@ -212,6 +224,7 @@ end
 function TradeService.CleanupPlayer(player: Player)
 	onCancel(player)
 	requests[player] = nil
+	lastRequestAt[player] = nil
 	for _, pending in requests do
 		pending[player] = nil
 	end

@@ -14,17 +14,15 @@ local MonsterModels = require(script.Parent.MonsterModels)
 local PLOT_SIZE = 60
 local HALF = PLOT_SIZE / 2
 local FLOOR_TOP = 0.6 -- المنصة قاعدة على الأرض، مش طايرة
-local PAD_SIZE = 7
 
 -- شكل الماب: القواعد جنب بعض في عمود على الشمال (X سالب) وبتبص ناحية +X،
 -- قدامها ساحة فيها متجر البيض، وبعدها الطريق اللي داخل على مناطق الوحوش.
 local BASE_X = -40
 local PLOT_SPACING = PLOT_SIZE + 8
-local ISLAND_MIN_X = -80
-local PLAZA_MIN_X = -10
-local PLAZA_HALF_Z = 220
+local ISLAND_MIN_X = Config.Map.IslandMinX
+local PLAZA_MIN_X = Config.Map.PlazaMinX
+local PLAZA_HALF_Z = Config.Map.PlazaHalfZ
 
-local theme = Config.BaseThemes[Config.BaseTheme] or Config.BaseThemes.Normal
 
 export type Plot = {
 	Index: number,
@@ -41,10 +39,12 @@ export type Plot = {
 	LockLabel: TextLabel?, -- مش موجودين لما السرقة تبقى مقفولة
 	SignLabel: TextLabel,
 	LockPrompt: ProximityPrompt?,
+	UpgradeLabel: TextLabel,
 	SpawnCFrame: CFrame,
 }
 
 type Callbacks = {
+	Upgrade: (player: Player) -> (),
 	Collect: (player: Player) -> (),
 	Lock: (player: Player) -> (),
 	OpenShop: (player: Player) -> (),
@@ -55,12 +55,13 @@ type Callbacks = {
 local PlotService = {}
 
 -- أول المناطق (آخر الساحة) بالـ X
-PlotService.ZonesStartX = 50
+PlotService.ZonesStartX = Config.Map.ZonesStartX
 -- حدود منطقة القواعد والساحة (الجبال بتلف حواليها)
 PlotService.IslandMinX = ISLAND_MIN_X
 PlotService.PlazaHalfZ = PLAZA_HALF_Z
 
 PlotService.Callbacks = {
+	Upgrade = function() end,
 	Collect = function() end,
 	Lock = function() end,
 	OpenShop = function() end,
@@ -91,17 +92,18 @@ local function buildGround()
 	})
 	makePart({
 		Name = "Plaza",
-		Size = Vector3.new(PlotService.ZonesStartX - PLAZA_MIN_X, 0.2, PLAZA_HALF_Z * 2 - 20),
+		Size = Vector3.new(PlotService.ZonesStartX - PLAZA_MIN_X, 0.2, (PLAZA_HALF_Z - Config.Map.PlazaPadding) * 2),
 		Position = Vector3.new((PLAZA_MIN_X + PlotService.ZonesStartX) / 2, 0.1, 0),
 		Color = Color3.fromRGB(150, 150, 155),
 		Material = Enum.Material.Cobblestone,
 		Parent = mapFolder,
 	})
-	-- مية حوالين الماب كلها
+	-- المية بتكبر مع الأرض، فتفضل محاوطة آخر منطقة كمان.
+	local zonesEndX = PlotService.ZonesStartX + #Config.Zones * Config.Map.ZoneLength
 	makePart({
 		Name = "Water",
-		Size = Vector3.new(2000, 1, 1000),
-		Position = Vector3.new(300, -4, 0),
+		Size = Vector3.new(zonesEndX - ISLAND_MIN_X + Config.Map.WaterMargin * 2, 1, PLAZA_HALF_Z * 2 + Config.Map.WaterMargin * 2),
+		Position = Vector3.new((ISLAND_MIN_X + zonesEndX) / 2, -4, 0),
 		Color = Color3.fromRGB(40, 110, 200),
 		Material = Enum.Material.Glass,
 		Transparency = 0.2,
@@ -109,10 +111,11 @@ local function buildGround()
 	})
 end
 
--- Keep the egg shop in the center of the plaza, beside the zone entrance.
-local SHOP_ORIGIN = Vector3.new(20, 0, 0)
+-- Against the zone-entrance wall, south of the gate road; the leaderboards line up on the north side.
+local SHOP_ORIGIN = Config.Shop.Position
 PlotService.ShopPosition = SHOP_ORIGIN
-PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_ORIGIN + Vector3.new(0, 4, 16), SHOP_ORIGIN)
+local SHOP_FRAME = CFrame.new(SHOP_ORIGIN) * CFrame.Angles(0, math.rad(Config.Shop.Yaw), 0)
+PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_FRAME:PointToWorldSpace(Config.Shop.TeleportOffset), SHOP_ORIGIN + Vector3.new(0, Config.Shop.TeleportOffset.Y, 0))
 
 local function buildShop()
 	local shopModel = Instance.new("Model")
@@ -123,7 +126,7 @@ local function buildShop()
 		Name = "Counter",
 		Size = Vector3.new(16, 4, 6),
 		Position = SHOP_ORIGIN + Vector3.new(0, 2, 0),
-		Color = Color3.fromRGB(120, 80, 50),
+		Color = Color3.fromRGB(100, 65, 40),
 		Material = Enum.Material.Wood,
 		Parent = shopModel,
 	})
@@ -132,7 +135,15 @@ local function buildShop()
 		Name = "Roof",
 		Size = Vector3.new(20, 1, 10),
 		Position = SHOP_ORIGIN + Vector3.new(0, 11, 0),
-		Color = Color3.fromRGB(230, 80, 80),
+		Color = Color3.fromRGB(30, 65, 75),
+		Parent = shopModel,
+	})
+	makePart({
+		Name = "ShopTrim",
+		Size = Vector3.new(20.2, 0.35, 0.35),
+		Position = SHOP_ORIGIN + Vector3.new(0, 10.7, 5),
+		Color = Color3.fromRGB(255, 205, 95),
+		Material = Enum.Material.Metal,
 		Parent = shopModel,
 	})
 	for _, x in { -9, 9 } do
@@ -143,6 +154,34 @@ local function buildShop()
 			Color = Color3.fromRGB(240, 240, 240),
 			Parent = shopModel,
 		})
+	end
+
+	-- Anchored display models cannot be picked up as Tools.
+	local templates = ReplicatedStorage:FindFirstChild("WeaponModels")
+	for i, name in { "WoodenBat", "IronSword" } do
+		local template = templates and templates:FindFirstChild(name)
+		if template then
+			local copy = template:Clone()
+			local display = Instance.new("Model")
+			display.Name = "Display" .. name
+			for _, child in copy:GetChildren() do child.Parent = display end
+			copy:Destroy()
+			local handle = display:FindFirstChild("Handle")
+			if handle and handle:IsA("BasePart") then
+				display.PrimaryPart = handle
+				for _, part in display:GetDescendants() do
+					if part:IsA("BasePart") then
+						part.Anchored = true
+						part.CanCollide = false
+						part.CanTouch = false
+					end
+				end
+				display:PivotTo(CFrame.new(SHOP_ORIGIN + Vector3.new(if i == 1 then -4 else 4, 4.8, 1)) * CFrame.Angles(0, 0, math.rad(65)))
+				display.Parent = shopModel
+			else
+				display:Destroy()
+			end
+		end
 	end
 
 	-- البيض المعروض على الكاونتر = اللي بيتباع في المتجر بس
@@ -171,12 +210,13 @@ local function buildShop()
 	end
 
 	local _, title = makeBillboard(counter, UDim2.fromOffset(260, 60), Vector3.new(0, 10, 0))
-	title.Text = "🥚 EGG SHOP 🥚"
+	title.Text = "⚔️ GEAR SHOP ⚔️"
 	title.TextColor3 = Color3.fromRGB(255, 230, 120)
 
 	local prompt = makePrompt(counter, "ShopPrompt", "Open Shop", Enum.KeyCode.E, 0)
-	prompt.ObjectText = "Egg Shop"
-	prompt.MaxActivationDistance = 14
+	prompt.ObjectText = "Gear Shop"
+	prompt.MaxActivationDistance = 18
+	prompt.RequiresLineOfSight = false
 	prompt.Triggered:Connect(function(player)
 		PlotService.Callbacks.OpenShop(player)
 	end)
@@ -186,11 +226,12 @@ local function buildShop()
 		end
 	end
 
+	shopModel:PivotTo(SHOP_FRAME * CFrame.new(SHOP_ORIGIN):Inverse() * shopModel:GetPivot())
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.Position = Vector3.new(20, 0.5, 40)
+	spawn.CFrame = CFrame.new(Config.Map.SpawnPosition)
 	spawn.Color = Color3.fromRGB(255, 255, 255)
 	spawn.Material = Enum.Material.SmoothPlastic
 	spawn.Neutral = true
@@ -210,440 +251,226 @@ local function plotCFrames(): { CFrame }
 	return result
 end
 
--- القاعدة: منصة مفتوحة على الأرض (مش طايرة).
--- محلياً: -Z هو قدام القاعدة (ناحية الساحة)، +Z ورا.
--- 10 أماكن للوحوش حوالين الأطراف: 4 ورا، و2 على كل جنب، و2 قدام. كلها بتبص على النص.
+-- The three starting habitats face the entrance; seven real expansions fit the
+-- existing ten-slot capacity. Local -Z is the plaza side of every plot.
 local SLOT_POSITIONS = {
-	Vector3.new(-6.5, 0, 20.5),
-	Vector3.new(6.5, 0, 20.5),
-	Vector3.new(-19.5, 0, 20.5),
-	Vector3.new(19.5, 0, 20.5),
-	Vector3.new(-22, 0, 6),
-	Vector3.new(22, 0, 6),
-	Vector3.new(-22, 0, -8),
-	Vector3.new(22, 0, -8),
-	Vector3.new(-14, 0, -21),
-	Vector3.new(14, 0, -21),
+	Vector3.new(-19, 0, -5), Vector3.new(0, 0, -5), Vector3.new(19, 0, -5),
+	Vector3.new(-22, 0, 10), Vector3.new(-10, 0, 10), Vector3.new(2, 0, 10),
+	Vector3.new(-22, 0, 23), Vector3.new(-10, 0, 23), Vector3.new(2, 0, 23), Vector3.new(14, 0, 23),
 }
 
 local function slotLocalCFrame(slot: number): CFrame
-	local position = SLOT_POSITIONS[slot] + Vector3.new(0, FLOOR_TOP + 0.75, 0)
-	return CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
+	local position = SLOT_POSITIONS[slot] + Vector3.new(0, FLOOR_TOP + 0.25, 0)
+	return CFrame.lookAt(position, Vector3.new(position.X, position.Y, -HALF))
 end
 
-local LOCKED_PAD_COLOR = Color3.fromRGB(60, 60, 66)
-
 local function setPadState(pad: BasePart, unlocked: boolean)
-	pad.Color = if unlocked then theme.PadColor else LOCKED_PAD_COLOR
-	pad.Material = if unlocked then Enum.Material.Neon else Enum.Material.SmoothPlastic
-	pad.Transparency = if unlocked then 0 else 0.4
+	pad:SetAttribute("Unlocked", unlocked)
+	pad.Color = if unlocked then Color3.fromRGB(94, 156, 62) else Color3.fromRGB(110, 107, 79)
+	pad.Material = if unlocked then Enum.Material.Grass else Enum.Material.Slate
+	pad.Transparency = 0
+	local habitat = pad.Parent
+	if not habitat then return end
+	for _, name in { "UnlockedGeometry", "LockedGeometry" } do
+		local group = habitat:FindFirstChild(name)
+		local visible = if name == "UnlockedGeometry" then unlocked else not unlocked
+		if group then
+			for _, item in group:GetDescendants() do
+				if item:IsA("BasePart") then
+					item.Transparency = if visible then (item:GetAttribute("VisibleTransparency") or 0) else 1
+					item.CanCollide = visible and item:GetAttribute("VisibleCanCollide") == true
+					item.CanTouch = visible and item:GetAttribute("VisibleCanTouch") == true
+					item.CanQuery = visible and item:GetAttribute("VisibleCanQuery") == true
+				elseif item:IsA("SurfaceGui") then
+					item.Enabled = visible
+				elseif item:IsA("PointLight") then
+					item.Enabled = visible
+				end
+			end
+		end
+	end
 end
 
 local function buildPlot(index: number, cframe: CFrame): Plot
 	local model = Instance.new("Model")
 	model.Name = "Plot_" .. index
+	model:SetAttribute("Design", "FlowMonsterSanctuary")
 	model.Parent = mapFolder
-
-	local function at(localPosition: Vector3): CFrame
-		return cframe * CFrame.new(localPosition)
-	end
-	local function block(name: string, size: Vector3, localPosition: Vector3, props: { [string]: any }?): Part
-		local all: { [string]: any } = {
-			Name = name,
-			Size = size,
-			CFrame = at(localPosition),
-			Color = theme.StoneColor,
-			Material = theme.StoneMaterial,
-			Parent = model,
-		}
-		if props then
-			for key, value in props do
-				all[key] = value
-			end
-		end
+	local wood = Color3.fromRGB(143, 98, 48)
+	local lightWood = Color3.fromRGB(189, 139, 67)
+	local stone = Color3.fromRGB(164, 161, 144)
+	local gold = Color3.fromRGB(255, 218, 101)
+	local function at(position: Vector3): CFrame return cframe * CFrame.new(position) end
+	local function block(name: string, size: Vector3, position: Vector3, props: { [string]: any }?): Part
+		local all: { [string]: any } = { Name = name, Size = size, CFrame = at(position), Color = stone, Material = Enum.Material.Slate, Parent = model }
+		for key, value in props or {} do all[key] = value end
 		return makePart(all)
 	end
-	local function glow(part: BasePart, color: Color3, range: number)
-		local light = Instance.new("PointLight")
-		light.Color = color
-		light.Range = range
-		light.Brightness = 1.5
-		light.Parent = part
+	local function beam(name: string, a: Vector3, b: Vector3, width: number, height: number, parent: Instance?, color: Color3?, material: Enum.Material?): Part
+		return Build.MakeBeam(name, cframe:PointToWorldSpace(a), cframe:PointToWorldSpace(b), width, height,
+			{ Color = color or wood, Material = material or Enum.Material.Wood, Parent = parent or model, CanCollide = false })
 	end
-	local function neon(color: Color3): { [string]: any }
-		return { Color = color, Material = Enum.Material.Neon, CanCollide = false }
+	local function lamp(position: Vector3)
+		block("LanternPost", Vector3.new(0.45, 3.8, 0.45), position + Vector3.new(0, FLOOR_TOP + 1.9, 0), { Color = wood, Material = Enum.Material.Wood })
+		local core = block("WarmLantern", Vector3.new(0.85, 1.05, 0.85), position + Vector3.new(0, FLOOR_TOP + 3.5, 0), { Color = gold, Material = Enum.Material.Neon, CanCollide = false })
+		for _, y in { 2.92, 4.08 } do block("LanternFrame", Vector3.new(1.12, 0.16, 1.12), position + Vector3.new(0, FLOOR_TOP + y, 0), { Color = Color3.fromRGB(69, 50, 31), Material = Enum.Material.Metal }) end
+		local light = Instance.new("PointLight"); light.Color = gold; light.Range = 11; light.Brightness = 1.1; light.Parent = core
 	end
-
-	-- فانوس صغير على عمود
-	local function lantern(position: Vector3)
-		block("LanternPost", Vector3.new(0.6, 3, 0.6), position + Vector3.new(0, FLOOR_TOP + 1.5, 0), {
-			Color = Color3.fromRGB(70, 50, 35),
-			Material = Enum.Material.Wood,
-		})
-		block("LanternCap", Vector3.new(1.6, 0.4, 1.6), position + Vector3.new(0, FLOOR_TOP + 4.6, 0), {
-			Color = Color3.fromRGB(45, 40, 40),
-			Material = Enum.Material.Metal,
-		})
-		local light = block("Lantern", Vector3.new(1.2, 1.4, 1.2), position + Vector3.new(0, FLOOR_TOP + 3.7, 0), neon(theme.LanternColor))
-		glow(light, theme.LanternColor, 12)
+	local function fence(a: Vector3, b: Vector3, pieces: number)
+		for i = 0, pieces do
+			local p = a:Lerp(b, i / pieces)
+			block("PerimeterFencePost", Vector3.new(0.65, 2.8, 0.65), p + Vector3.new(0, FLOOR_TOP + 1.4, 0), { Color = wood, Material = Enum.Material.Wood })
+		end
+		for i = 1, pieces do
+			for _, y in { 0.9, 2.05 } do beam("PerimeterFenceRail", a:Lerp(b, (i - 1) / pieces) + Vector3.new(0, FLOOR_TOP + y, 0), a:Lerp(b, i / pieces) + Vector3.new(0, FLOOR_TOP + y, 0), 0.27, 0.38) end
+		end
 	end
 
-	-- شجرة على حسب النسخة (بلوكات زي التصميم)
-	local function tree(position: Vector3, scale: number)
-		local base = position + Vector3.new(0, FLOOR_TOP, 0)
-		local trunkColor = Color3.fromRGB(105, 70, 40)
-		if theme.Foliage == "Oak" then
-			block("Trunk", Vector3.new(1.4, 5, 1.4) * scale, base + Vector3.new(0, 2.5 * scale, 0), { Color = trunkColor, Material = Enum.Material.Wood })
-			block("Leaves", Vector3.new(5, 4, 5) * scale, base + Vector3.new(0, 6 * scale, 0), { Color = theme.FoliageColor, Material = Enum.Material.Grass, CanCollide = false })
-			block("Leaves", Vector3.new(3.4, 2.4, 3.4) * scale, base + Vector3.new(0.6 * scale, 8.6 * scale, -0.4 * scale), { Color = theme.FoliageColor:Lerp(Color3.new(1, 1, 1), 0.1), Material = Enum.Material.Grass, CanCollide = false })
-		elseif theme.Foliage == "Pine" then
-			block("Trunk", Vector3.new(1, 2, 1) * scale, base + Vector3.new(0, 1 * scale, 0), { Color = trunkColor, Material = Enum.Material.Wood })
-			for i, width in { 5, 3.8, 2.6, 1.4 } do
-				block("Pine", Vector3.new(width, 1.6, width) * scale, base + Vector3.new(0, (1.6 + i * 1.5) * scale, 0), { Color = if i % 2 == 0 then Color3.fromRGB(60, 120, 80) else theme.FoliageColor, Material = Enum.Material.Snow, CanCollide = false })
-			end
-		elseif theme.Foliage == "Palm" then
-			block("Trunk", Vector3.new(0.9, 8, 0.9) * scale, base + Vector3.new(0, 4 * scale, 0), { Color = Color3.fromRGB(150, 110, 60), Material = Enum.Material.Wood })
-			for i = 0, 3 do
-				local leafCFrame = at(base + Vector3.new(0, 8 * scale, 0)) * CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, 0, -1.8 * scale) * CFrame.Angles(math.rad(-20), 0, 0)
-				makePart({ Name = "PalmLeaf", Size = Vector3.new(1.4, 0.3, 4) * scale, CFrame = leafCFrame, Color = theme.FoliageColor, Material = Enum.Material.Grass, CanCollide = false, Parent = model })
-			end
-		elseif theme.Foliage == "Spikes" then
-			for i, height in { 4, 2.6, 2.2 } do
-				local offset = Vector3.new((i - 2) * 1.2, height / 2, (i % 2) * 0.8)
-				makePart({ Name = "Spike", Size = Vector3.new(1, height, 1) * scale, CFrame = at(base + offset * scale) * CFrame.Angles(0, math.rad(45), math.rad((i - 2) * 12)), Color = theme.FoliageColor, Material = Enum.Material.Neon, Parent = model })
-			end
-		elseif theme.Foliage == "Dead" then
-			block("Trunk", Vector3.new(1, 5, 1) * scale, base + Vector3.new(0, 2.5 * scale, 0), { Color = theme.FoliageColor, Material = Enum.Material.Wood })
-			for _, side in { -1, 1 } do
-				makePart({ Name = "Branch", Size = Vector3.new(0.5, 2.6, 0.5) * scale, CFrame = at(base + Vector3.new(side * 0.9, 5 * scale, 0)) * CFrame.Angles(0, 0, side * -0.7), Color = theme.FoliageColor, Material = Enum.Material.Wood, Parent = model })
+	block("Rim", Vector3.new(PLOT_SIZE, FLOOR_TOP, PLOT_SIZE), Vector3.new(0, FLOOR_TOP / 2, 0), { Color = Color3.fromRGB(106, 80, 44), Material = Enum.Material.Ground })
+	block("Floor", Vector3.new(PLOT_SIZE, 0.16, PLOT_SIZE), Vector3.new(0, FLOOR_TOP, 0), { Color = Color3.fromRGB(91, 158, 62), Material = Enum.Material.Grass })
+	fence(Vector3.new(-28.6, 0, -28.6), Vector3.new(-28.6, 0, 28.6), 8)
+	fence(Vector3.new(28.6, 0, -28.6), Vector3.new(28.6, 0, 28.6), 8)
+	fence(Vector3.new(-28.6, 0, 28.6), Vector3.new(28.6, 0, 28.6), 8)
+	fence(Vector3.new(-28.6, 0, -28.6), Vector3.new(-6, 0, -28.6), 3)
+	fence(Vector3.new(6, 0, -28.6), Vector3.new(28.6, 0, -28.6), 3)
+
+	-- Broad stone arch with an open walk-through centre. Each voussoir is editable.
+	for _, x in { -5.4, 5.4 } do
+		block("ArchFoot", Vector3.new(2.7, 0.6, 3.2), Vector3.new(x, FLOOR_TOP + 0.3, -27.7))
+		for tier = 1, 3 do block("ArchPillarStone", Vector3.new(2.05, 1.75, 2.55), Vector3.new(x, FLOOR_TOP + 0.6 + (tier - 0.5) * 1.75, -27.7), { Color = stone:Lerp(Color3.new(1, 1, 1), tier % 2 * 0.06) }) end
+	end
+	for i = 0, 6 do
+		local angle = i * math.pi / 6
+		block("ArchCurveStone", Vector3.new(2.6, 2, 2.6), Vector3.new(math.cos(angle) * 5.4, FLOOR_TOP + 5.55 + math.sin(angle) * 3.8, -27.7),
+			{ CFrame = at(Vector3.new(math.cos(angle) * 5.4, FLOOR_TOP + 5.55 + math.sin(angle) * 3.8, -27.7)) * CFrame.Angles(0, 0, angle - math.pi / 2) })
+	end
+
+	-- Pale stepping-stone paths fork from the arch towards the three starting pens.
+	local function path(a: Vector3, b: Vector3, rows: number)
+		local direction = (b - a).Unit
+		local side = Vector3.new(-direction.Z, 0, direction.X)
+		for i = 0, rows do
+			local point = a:Lerp(b, i / rows) + Vector3.new(0, FLOOR_TOP + 0.15, 0)
+			for _, offset in { -0.88, 0.88 } do
+				block("PathStone", Vector3.new(1.45, 0.18, 1.8), point + side * offset,
+					{ Color = if i % 2 == 0 then Color3.fromRGB(195, 194, 165) else Color3.fromRGB(174, 179, 151), CFrame = CFrame.lookAt(cframe:PointToWorldSpace(point + side * offset), cframe:PointToWorldSpace(point + side * offset + direction)), CanCollide = false })
 			end
 		end
 	end
+	path(Vector3.new(0, 0, -29), Vector3.new(0, 0, -19), 5)
+	path(Vector3.new(0, 0, -21), Vector3.new(-19, 0, -15), 8)
+	path(Vector3.new(0, 0, -21), Vector3.new(19, 0, -15), 8)
+	path(Vector3.new(11, 0, 2), Vector3.new(20, 0, 5), 5)
 
-	local baseColor = Config.PlotColors[index] or Color3.fromRGB(110, 120, 140)
-
-	-- المنصة: حافة (عشب) وجواها البلاط، قاعدة على الأرض على طول
-	block("Rim", Vector3.new(PLOT_SIZE, FLOOR_TOP, PLOT_SIZE), Vector3.new(0, FLOOR_TOP / 2, 0), {
-		Color = theme.RimColor,
-		Material = theme.RimMaterial,
-	})
-	block("Floor", Vector3.new(PLOT_SIZE - 4, 0.1, PLOT_SIZE - 4), Vector3.new(0, FLOOR_TOP + 0.05, 0), {
-		Color = theme.FloorColor,
-		Material = theme.FloorMaterial,
-	})
-
-	-- 4 أعمدة في الأركان وفوقها كريستالة أو شعلة أو فانوس، وعليها راية
-	for _, sx in { -1, 1 } do
-		for _, sz in { -1, 1 } do
-			local corner = Vector3.new(sx * 26.5, 0, sz * 26.5)
-			block("Pillar", Vector3.new(5, 8, 5), corner + Vector3.new(0, FLOOR_TOP + 4, 0))
-			block("PillarCap", Vector3.new(6, 1, 6), corner + Vector3.new(0, FLOOR_TOP + 8.5, 0))
-			block("Banner", Vector3.new(0.2, 4, 2.6), corner + Vector3.new(-sx * 2.6, FLOOR_TOP + 4.5, 0), {
-				Color = theme.BannerColor,
-				Material = Enum.Material.Fabric,
-			})
-			block("BannerEmblem", Vector3.new(0.25, 1.4, 1.2), corner + Vector3.new(-sx * 2.65, FLOOR_TOP + 5, 0), {
-				Color = Color3.fromRGB(240, 190, 60),
-				Material = Enum.Material.Foil,
-			})
-			local topY = FLOOR_TOP + 9
-			local top: BasePart
-			if theme.PillarTop == "Crystal" then
-				top = makePart({
-					Name = "Crystal",
-					Size = Vector3.new(1.8, 4, 1.8),
-					CFrame = at(corner + Vector3.new(0, topY + 2, 0)) * CFrame.Angles(0, math.rad(45), 0),
-					Color = theme.PillarTopColor,
-					Material = Enum.Material.Neon,
-					Parent = model,
-				})
-				for i = 0, 3 do
-					makePart({
-						Name = "Crystal",
-						Size = Vector3.new(0.9, 2.2, 0.9),
-						CFrame = at(corner + Vector3.new(0, topY + 1, 0)) * CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(0, 0, -1.4) * CFrame.Angles(math.rad(-25), 0, 0),
-						Color = theme.PillarTopColor,
-						Material = Enum.Material.Neon,
-						Parent = model,
-					})
-				end
-			elseif theme.PillarTop == "Flame" then
-				block("Brazier", Vector3.new(3, 1, 3), corner + Vector3.new(0, topY + 0.5, 0), { Color = Color3.fromRGB(40, 35, 35), Material = Enum.Material.Metal })
-				top = block("FlameCore", Vector3.new(1.6, 1.6, 1.6), corner + Vector3.new(0, topY + 1.8, 0), neon(theme.PillarTopColor))
-				local fire = Instance.new("Fire")
-				fire.Color = theme.PillarTopColor
-				fire.SecondaryColor = theme.PillarTopColor:Lerp(Color3.new(1, 1, 1), 0.4)
-				fire.Size = 4
-				fire.Heat = 6
-				fire.Parent = top
-			else
-				block("LanternFrame", Vector3.new(2.6, 0.5, 2.6), corner + Vector3.new(0, topY + 3.4, 0), { Color = Color3.fromRGB(45, 40, 40), Material = Enum.Material.Metal })
-				top = block("Lantern", Vector3.new(2, 2.6, 2), corner + Vector3.new(0, topY + 1.8, 0), neon(theme.PillarTopColor))
-			end
-			glow(top, theme.PillarTopColor, 18)
+	-- A small timber caretaker cottage and low-poly oak, with no waterside area.
+	local cottage = Vector3.new(21, FLOOR_TOP, 11)
+	block("CottageFoundation", Vector3.new(11, 0.45, 10), cottage + Vector3.new(0, 0.22, 0))
+	for i = 0, 8 do
+		local x = cottage.X - 4.8 + i * 1.2
+		block("CottageWallPlank", Vector3.new(1.13, 5.6, 8.7), Vector3.new(x, cottage.Y + 3.15, cottage.Z), { Color = if i % 2 == 0 then lightWood else wood, Material = Enum.Material.Wood })
+	end
+	for _, x in { -5.15, 5.15 } do block("CottageCornerBeam", Vector3.new(0.5, 6.5, 0.6), cottage + Vector3.new(x, 3.25, -4.55), { Color = Color3.fromRGB(89, 57, 29), Material = Enum.Material.Wood }) end
+	block("CottageDoor", Vector3.new(2.25, 4.2, 0.24), cottage + Vector3.new(0, 2.35, -4.55), { Color = Color3.fromRGB(101, 64, 31), Material = Enum.Material.Wood })
+	block("DoorHandle", Vector3.new(0.18, 0.25, 0.18), cottage + Vector3.new(0.65, 2.35, -4.73), { Color = gold, Material = Enum.Material.Metal, CanCollide = false })
+	block("CottageWindow", Vector3.new(2, 1.9, 0.2), cottage + Vector3.new(-3.1, 3.7, -4.55), { Color = Color3.fromRGB(255, 208, 94), Material = Enum.Material.Neon })
+	for _, x in { -4.15, -3.1, -2.05 } do block("WindowMullion", Vector3.new(0.14, 2.2, 0.3), cottage + Vector3.new(x, 3.7, -4.7), { Color = wood, Material = Enum.Material.Wood }) end
+	block("WindowMullion", Vector3.new(2.2, 0.14, 0.3), cottage + Vector3.new(-3.1, 3.7, -4.7), { Color = wood, Material = Enum.Material.Wood })
+	for _, side in { -1, 1 } do
+		for strip = 0, 6 do
+			local roof = block("CottageRoofBoard", Vector3.new(6.9, 0.3, 1.62), cottage + Vector3.new(side * 2.9, 7.5, -4.8 + strip * 1.6), { Color = if strip % 2 == 0 then Color3.fromRGB(213, 163, 65) else Color3.fromRGB(194, 135, 48), Material = Enum.Material.WoodPlanks })
+			roof.CFrame *= CFrame.Angles(0, 0, side * math.rad(-27))
 		end
 	end
+	block("RoofRidge", Vector3.new(0.45, 0.45, 12), cottage + Vector3.new(0, 9, 0), { Color = Color3.fromRGB(116, 76, 32), Material = Enum.Material.Wood })
+	local treeAt = Vector3.new(23.5, FLOOR_TOP, 24)
+	block("OakTrunk", Vector3.new(1.65, 7.2, 1.65), treeAt + Vector3.new(0, 3.6, 0), { Color = Color3.fromRGB(108, 69, 34), Material = Enum.Material.Wood })
+	for i, offset in { Vector3.new(0, 8.2, 0), Vector3.new(-2.3, 7.8, 0.5), Vector3.new(1.5, 9.4, -0.8), Vector3.new(0.8, 7.4, 2) } do
+		local leaves = block("FacetedOakCanopy", Vector3.new(5, 4.8, 5), treeAt + offset, { Color = Color3.fromRGB(73 + i * 6, 130 + i * 5, 45), Material = Enum.Material.Grass, CanCollide = false })
+		leaves.CFrame *= CFrame.Angles(math.rad(i * 13), math.rad(i * 29), math.rad(14))
+	end
+	for _, p in { Vector3.new(-26, 0, -15), Vector3.new(26, 0, -15), Vector3.new(10, 0, 5), Vector3.new(27, 0, 4) } do lamp(p) end
 
-	-- النص: قاعدة حجر بدرجتين وعليها شجرة كبيرة أو كريستالة أو كورة، وفوانيس على الأركان
-	block("CenterBase", Vector3.new(14, 1.2, 14), Vector3.new(0, FLOOR_TOP + 0.6, 0))
-	block("CenterTop", Vector3.new(10, 1.2, 10), Vector3.new(0, FLOOR_TOP + 1.8, 0))
-	local centerY = FLOOR_TOP + 2.4
-	for _, sx in { -1, 1 } do
-		for _, sz in { -1, 1 } do
-			local post = block("CenterLantern", Vector3.new(0.9, 1.2, 0.9), Vector3.new(sx * 6, FLOOR_TOP + 1.8, sz * 6), neon(theme.LanternColor))
-			glow(post, theme.LanternColor, 8)
-		end
-	end
-	if theme.Center == "Tree" or theme.Center == "GoldenTree" then
-		local golden = theme.Center == "GoldenTree"
-		if not golden then
-			block("Water", Vector3.new(9, 0.2, 9), Vector3.new(0, centerY + 0.1, 0), {
-				Color = theme.CenterColor,
-				Material = Enum.Material.Glass,
-				Transparency = 0.2,
-				CanCollide = false,
-			})
-		end
-		block("CenterTrunk", Vector3.new(2, 7, 2), Vector3.new(0, centerY + 3.5, 0), {
-			Color = if golden then theme.CenterColor else Color3.fromRGB(105, 70, 40),
-			Material = if golden then Enum.Material.Foil else Enum.Material.Wood,
-		})
-		local leafColor = if golden then theme.CenterColor:Lerp(Color3.new(1, 1, 0.6), 0.2) else theme.FoliageColor
-		local leafMaterial = if golden then Enum.Material.Foil else Enum.Material.Grass
-		for _, leaf in {
-			{ Vector3.new(8, 4, 8), Vector3.new(0, 8.5, 0) },
-			{ Vector3.new(5, 3, 5), Vector3.new(1, 11.5, -0.5) },
-			{ Vector3.new(4, 3, 4), Vector3.new(-2.5, 9.5, 2) },
-		} do
-			block("CenterLeaves", leaf[1], Vector3.new(0, centerY, 0) + leaf[2], { Color = leafColor, Material = leafMaterial, CanCollide = false })
-		end
-	elseif theme.Center == "Crystal" or theme.Center == "Flame" then
-		local crystal = makePart({
-			Name = "CenterCrystal",
-			Size = Vector3.new(3, 8, 3),
-			CFrame = at(Vector3.new(0, centerY + 4, 0)) * CFrame.Angles(0, math.rad(45), 0),
-			Color = theme.CenterColor,
-			Material = Enum.Material.Neon,
-			Parent = model,
-		})
-		for i = 0, 3 do
-			makePart({
-				Name = "CenterCrystal",
-				Size = Vector3.new(1.4, 4, 1.4),
-				CFrame = at(Vector3.new(0, centerY + 2, 0)) * CFrame.Angles(0, i * math.pi / 2 + 0.4, 0) * CFrame.new(0, 0, -2.4) * CFrame.Angles(math.rad(-22), 0, 0),
-				Color = theme.CenterColor,
-				Material = Enum.Material.Neon,
-				Parent = model,
-			})
-		end
-		glow(crystal, theme.CenterColor, 22)
-		if theme.Center == "Flame" then
-			local fire = Instance.new("Fire")
-			fire.Color = theme.CenterColor
-			fire.Size = 8
-			fire.Parent = crystal
-		end
-	else -- Orb
-		block("OrbStand", Vector3.new(3, 2, 3), Vector3.new(0, centerY + 1, 0))
-		local orb = block("Orb", Vector3.new(4.5, 4.5, 4.5), Vector3.new(0, centerY + 4.4, 0), {
-			Shape = Enum.PartType.Ball,
-			Color = theme.CenterColor,
-			Material = Enum.Material.Neon,
-		})
-		glow(orb, theme.CenterColor, 22)
-	end
-
-	-- 4 جناين صغيرة بين النص والأطراف
-	for _, sx in { -1, 1 } do
-		for _, sz in { -1, 1 } do
-			local patch = Vector3.new(sx * 13, 0, sz * 11)
-			block("Garden", Vector3.new(8, 0.4, 8), patch + Vector3.new(0, FLOOR_TOP + 0.2, 0), {
-				Color = theme.GardenColor,
-				Material = theme.GardenMaterial,
-			})
-			block("Bush", Vector3.new(2.6, 2, 2.6), patch + Vector3.new(sx * 1.5, FLOOR_TOP + 1.2, sz * 1.5), {
-				Color = theme.FoliageColor:Lerp(Color3.new(0, 0, 0), 0.15),
-				Material = Enum.Material.Grass,
-				CanCollide = false,
-			})
-			block("Bush", Vector3.new(1.6, 1.4, 1.6), patch + Vector3.new(-sx * 1.6, FLOOR_TOP + 0.9, -sz * 1.2), {
-				Color = theme.FoliageColor,
-				Material = Enum.Material.Grass,
-				CanCollide = false,
-			})
-		end
-	end
-
-	-- ديكور الأطراف: شجر ورا وفوانيس وسور حجر واطي متكسّر
-	tree(Vector3.new(-14, 0, 27.5), 1)
-	tree(Vector3.new(14, 0, 27.5), 1)
-	tree(Vector3.new(-27.5, 0, 14), 0.8)
-	tree(Vector3.new(27.5, 0, -1), 0.8)
-	for _, position in {
-		Vector3.new(0, 0, 27.5),
-		Vector3.new(-27.5, 0, -1),
-		Vector3.new(27.5, 0, 14),
-		Vector3.new(-27.5, 0, -15),
-		Vector3.new(27.5, 0, -15),
-		Vector3.new(-9.5, 0, -27.5),
-		Vector3.new(9.5, 0, -27.5),
-	} do
-		lantern(position)
-	end
-	for _, piece in {
-		{ Vector3.new(7, 1.6, 1.4), Vector3.new(-20.5, 0, 28.4) },
-		{ Vector3.new(7, 1.6, 1.4), Vector3.new(20.5, 0, 28.4) },
-		{ Vector3.new(1.4, 1.6, 6), Vector3.new(-28.4, 0, 21) },
-		{ Vector3.new(1.4, 1.6, 6), Vector3.new(28.4, 0, 21) },
-	} do
-		block("LowWall", piece[1], piece[2] + Vector3.new(0, FLOOR_TOP + 0.8, 0))
-	end
-
-	-- أماكن الوحوش: قاعدة حجر وعليها إطار نيون وجواه بلاطة غامقة
 	local pedestals: { BasePart } = {}
 	for slot = 1, Config.MaxSlots do
-		local slotCFrame = cframe * slotLocalCFrame(slot)
-		makePart({
-			Name = "PadBase",
-			Size = Vector3.new(PAD_SIZE + 1.2, 0.6, PAD_SIZE + 1.2),
-			CFrame = slotCFrame * CFrame.new(0, -0.45, 0),
-			Color = theme.StoneColor,
-			Material = theme.StoneMaterial,
-			Parent = model,
-		})
-		local pad = makePart({
-			Name = "Pedestal_" .. slot,
-			Size = Vector3.new(PAD_SIZE, 0.3, PAD_SIZE),
-			CFrame = slotCFrame,
-			Parent = model,
-		})
-		setPadState(pad, true)
-		makePart({
-			Name = "PadInner",
-			Size = Vector3.new(PAD_SIZE - 1, 0.34, PAD_SIZE - 1),
-			CFrame = slotCFrame,
-			Color = Color3.fromRGB(25, 30, 40),
-			Material = Enum.Material.SmoothPlastic,
-			Parent = model,
-		})
+		local position = SLOT_POSITIONS[slot]
+		local radius = if slot <= Config.BaseSlots then 6.4 else 4.4
+		local habitat = Instance.new("Model"); habitat.Name = "Habitat_" .. slot; habitat:SetAttribute("Slot", slot); habitat.Parent = model
+		local unlocked = Instance.new("Model"); unlocked.Name = "UnlockedGeometry"; unlocked.Parent = habitat
+		local locked = Instance.new("Model"); locked.Name = "LockedGeometry"; locked.Parent = habitat
+		local pad = block("Pedestal_" .. slot, Vector3.new(0.28, radius * 2, radius * 2), position + Vector3.new(0, FLOOR_TOP + 0.22, 0), { Shape = Enum.PartType.Cylinder, CFrame = at(position + Vector3.new(0, FLOOR_TOP + 0.22, 0)) * CFrame.Angles(0, 0, math.pi / 2), Parent = habitat })
+		habitat.PrimaryPart = pad
+		for i = 0, 11 do
+			local angle = i * math.pi / 6
+			local nextAngle = (i + 1) * math.pi / 6
+			local a = position + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+			local b = position + Vector3.new(math.cos(nextAngle) * radius, 0, math.sin(nextAngle) * radius)
+			block("HabitatFencePost", Vector3.new(0.55, 2.5, 0.55), a + Vector3.new(0, FLOOR_TOP + 1.25, 0), { Color = wood, Material = Enum.Material.Wood, Parent = unlocked, CanCollide = false })
+			-- Leave the front centre open for access to eggs and care prompts.
+			if i ~= 8 and i ~= 9 then
+				for _, y in { 0.72, 1.72 } do beam("HabitatRoundRail", a + Vector3.new(0, FLOOR_TOP + y, 0), b + Vector3.new(0, FLOOR_TOP + y, 0), 0.27, 0.36, unlocked, lightWood) end
+			end
+		end
+		local expansion = block("FutureExpansion", Vector3.new(radius * 2 + 0.6, 0.22, radius * 2 + 0.6), position + Vector3.new(0, FLOOR_TOP + 0.42, 0), { Color = Color3.fromRGB(124, 119, 81), Material = Enum.Material.Slate, CanCollide = false, Parent = locked })
+		local gui = Instance.new("SurfaceGui"); gui.Face = Enum.NormalId.Top; gui.CanvasSize = Vector2.new(384, 384); gui.LightInfluence = 0; gui.Parent = expansion
+		local label = Instance.new("TextLabel"); label.BackgroundTransparency = 1; label.Size = UDim2.fromScale(1, 1); label.Font = Enum.Font.FredokaOne; label.TextScaled = true; label.TextColor3 = gold; label.Text = "🔒\nFUTURE\nEXPANSION"; label.Parent = gui
+		for _, side in { -1, 1 } do
+			for dash = 0, 2 do
+				local v = (dash - 1) * radius * 0.68
+				block("ExpansionBoundaryDash", Vector3.new(1.8, 0.08, 0.16), position + Vector3.new(v, FLOOR_TOP + 0.56, side * (radius + 0.55)), { Color = gold, Material = Enum.Material.Neon, CanCollide = false, Parent = locked })
+				block("ExpansionBoundaryDash", Vector3.new(0.16, 0.08, 1.8), position + Vector3.new(side * (radius + 0.55), FLOOR_TOP + 0.56, v), { Color = gold, Material = Enum.Material.Neon, CanCollide = false, Parent = locked })
+			end
+		end
+		for _, item in habitat:GetDescendants() do if item:IsA("BasePart") then item:SetAttribute("VisibleTransparency", item.Transparency); item:SetAttribute("VisibleCanCollide", item.CanCollide); item:SetAttribute("VisibleCanQuery", item.CanQuery) end end
 		pedestals[slot] = pad
+		setPadState(pad, slot <= Config.BaseSlots)
 	end
 
-	-- قدام: صندوق تجميع الفلوس، ويافطة بلون القاعدة عليها اسم صاحبها
-	local collector = block("Collector", Vector3.new(6, 0.4, 6), Vector3.new(0, FLOOR_TOP + 0.2, -22), {
-		Color = Color3.fromRGB(60, 230, 90),
-		Material = Enum.Material.Neon,
-		CanCollide = false,
-	})
-	block("Chest", Vector3.new(3, 1.8, 2), Vector3.new(0, FLOOR_TOP + 0.9, -19.4), {
-		Color = Color3.fromRGB(120, 75, 40),
-		Material = Enum.Material.Wood,
-	})
-	block("ChestLid", Vector3.new(3.2, 0.6, 2.2), Vector3.new(0, FLOOR_TOP + 2.1, -19.4), {
-		Color = Color3.fromRGB(240, 190, 60),
-		Material = Enum.Material.Foil,
-	})
-	local collectorGui, collectorLabel = makeBillboard(collector, UDim2.fromOffset(200, 50), Vector3.new(0, 5, 0), 80)
-	collectorGui.AlwaysOnTop = false -- مايبانش من ورا القواعد التانية
+	local collector = block("Collector", Vector3.new(4.3, 0.2, 3.2), Vector3.new(-23, FLOOR_TOP + 0.18, -24.2), { Color = gold, Material = Enum.Material.Neon, CanCollide = false })
+	block("Chest", Vector3.new(2.6, 1.3, 1.55), Vector3.new(-23, FLOOR_TOP + 0.85, -22.7), { Color = wood, Material = Enum.Material.Wood })
+	block("ChestLid", Vector3.new(2.7, 0.4, 1.65), Vector3.new(-23, FLOOR_TOP + 1.7, -22.7), { Color = lightWood, Material = Enum.Material.Wood })
+	for _, x in { -23.85, -22.15 } do block("ChestBand", Vector3.new(0.19, 1.55, 1.72), Vector3.new(x, FLOOR_TOP + 1, -22.7), { Color = gold, Material = Enum.Material.Metal, CanCollide = false }) end
+	local collectorGui, collectorLabel = makeBillboard(collector, UDim2.fromOffset(200, 50), Vector3.new(0, 4.4, 0), 80)
+	collectorGui.AlwaysOnTop = false
 	collectorLabel.Text = "💰 0"
-
-	-- اسم صاحب القاعدة عايم فوق قدامها (من غير يافطة)
-	local signAnchor = block("NameAnchor", Vector3.new(1, 1, 1), Vector3.new(0, FLOOR_TOP + 14, -27), {
-		Transparency = 1,
-		CanCollide = false,
-		CanQuery = false,
-		CastShadow = false,
-	})
-	local signGui, signLabel = makeBillboard(signAnchor, UDim2.fromScale(22, 3.5), Vector3.new(0, 0, 0), 200)
-	signGui.AlwaysOnTop = false -- عشان لافتات القواعد مايركبوش على بعض
+	local signAnchor = block("NameAnchor", Vector3.new(1, 1, 1), Vector3.new(0, FLOOR_TOP + 12, -27), { Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false })
+	local signGui, signLabel = makeBillboard(signAnchor, UDim2.fromScale(22, 3.5), Vector3.zero, 200)
+	signGui.AlwaysOnTop = false
 	signLabel.Text = "Empty Base"
-	signLabel.TextColor3 = baseColor:Lerp(Color3.new(1, 1, 1), 0.4)
-
-	-- حاجز القفل على حافة القاعدة القدامية، بيتعمل بس لو السرقة مفتوحة
-	-- (خامة الـ ForceField بتنوّر خط على الأرض مكان ما بتلمسها حتى وهي شفافة)
+	signLabel.TextColor3 = (Config.PlotColors[index] or gold):Lerp(Color3.new(1, 1, 1), 0.4)
 	local barrier: BasePart? = nil
-	if Config.Steal.Enabled then
-		barrier = block("LockBarrier", Vector3.new(PLOT_SIZE, 10, 1), Vector3.new(0, FLOOR_TOP + 5, -HALF), {
-			Color = Color3.fromRGB(255, 40, 40),
-			Material = Enum.Material.ForceField,
-			Transparency = 1,
-			CanCollide = false,
-		})
-	end
-
-	-- زرار القفل بيتعمل بس لو السرقة شغالة
 	local lockLabel: TextLabel? = nil
 	local lockPrompt: ProximityPrompt? = nil
 	if Config.Steal.Enabled then
-		local lockButton = block("LockButton", Vector3.new(4, 1, 4), Vector3.new(-7, FLOOR_TOP + 0.5, -21), {
-			Color = Color3.fromRGB(230, 50, 50),
-			Material = Enum.Material.SmoothPlastic,
-		})
-		local _, label = makeBillboard(lockButton, UDim2.fromOffset(200, 50), Vector3.new(0, 4, 0))
-		label.Text = "🔓 Lock Base"
-		lockLabel = label
-		lockPrompt = makePrompt(lockButton, "LockPrompt", "Lock Base", Enum.KeyCode.E, 0.5)
+		barrier = block("LockBarrier", Vector3.new(PLOT_SIZE, 10, 1), Vector3.new(0, FLOOR_TOP + 5, -HALF), { Color = Color3.fromRGB(255, 40, 40), Material = Enum.Material.ForceField, Transparency = 1, CanCollide = false })
+		local button = block("LockButton", Vector3.new(3, 0.5, 3), Vector3.new(-9, FLOOR_TOP + 0.4, -23), { Color = Color3.fromRGB(210, 70, 60) })
+		local _, label = makeBillboard(button, UDim2.fromOffset(200, 50), Vector3.new(0, 4, 0)); label.Text = "🔓 Lock Base"; lockLabel = label
+		lockPrompt = makePrompt(button, "LockPrompt", "Lock Base", Enum.KeyCode.E, 0.5)
 	end
-
-	local monstersFolder = Instance.new("Folder")
-	monstersFolder.Name = "Monsters"
-	monstersFolder.Parent = model
-
-	local eggsFolder = Instance.new("Folder")
-	eggsFolder.Name = "Eggs"
-	eggsFolder.Parent = model
-
-	local plot: Plot = {
-		Index = index,
-		Model = model,
-		CFrame = cframe,
-		Owner = nil,
-		LockedUntil = 0,
-		LockCooldownUntil = 0,
-		Pedestals = pedestals,
-		MonstersFolder = monstersFolder,
-		EggsFolder = eggsFolder,
-		Barrier = barrier,
-		CollectorLabel = collectorLabel,
-		LockLabel = lockLabel,
-		SignLabel = signLabel,
-		LockPrompt = lockPrompt,
-		SpawnCFrame = at(Vector3.new(0, FLOOR_TOP + 3, -14)) * CFrame.Angles(0, math.pi, 0),
-	}
-
-	collector.Touched:Connect(function(hit)
+	-- Upgrades are bought in the base: step up to the pad and press the prompt.
+	local upgradePad = block("UpgradePad", Vector3.new(3, 0.5, 3), Vector3.new(23, FLOOR_TOP + 0.4, -24.2), { Color = Color3.fromRGB(70, 150, 230), Material = Enum.Material.Neon })
+	local _, upgradeLabel = makeBillboard(upgradePad, UDim2.fromOffset(220, 60), Vector3.new(0, 4, 0), 80)
+	upgradeLabel.Text = "⬆️ Upgrade Base"
+	local upgradePrompt = makePrompt(upgradePad, "UpgradePrompt", "Buy Upgrade", Enum.KeyCode.E, 0.3)
+	local monstersFolder = Instance.new("Folder"); monstersFolder.Name = "Monsters"; monstersFolder.Parent = model
+	local eggsFolder = Instance.new("Folder"); eggsFolder.Name = "Eggs"; eggsFolder.Parent = model
+	local plot: Plot = { Index = index, Model = model, CFrame = cframe, Owner = nil, LockedUntil = 0, LockCooldownUntil = 0, Pedestals = pedestals, MonstersFolder = monstersFolder, EggsFolder = eggsFolder, Barrier = barrier, CollectorLabel = collectorLabel, LockLabel = lockLabel, SignLabel = signLabel, LockPrompt = lockPrompt, UpgradeLabel = upgradeLabel, SpawnCFrame = at(Vector3.new(0, FLOOR_TOP + 3, -23)) * CFrame.Angles(0, math.pi, 0) }
+	local function collect(hit: BasePart)
 		local player = Players:GetPlayerFromCharacter(hit.Parent)
-		if player and player == plot.Owner then
-			PlotService.Callbacks.Collect(player)
-		end
-	end)
-
-	if lockPrompt then
-		lockPrompt.Triggered:Connect(function(player)
-			if player == plot.Owner then
-				PlotService.Callbacks.Lock(player)
-			end
-		end)
+		if player and player == plot.Owner then PlotService.Callbacks.Collect(player) end
 	end
-
-	-- لو القاعدة مقفولة، أي حد غير صاحبها بيترمي برّه.
+	collector.Touched:Connect(collect)
+	upgradePrompt.Triggered:Connect(function(player) if player == plot.Owner then PlotService.Callbacks.Upgrade(player) end end)
+	if lockPrompt then lockPrompt.Triggered:Connect(function(player) if player == plot.Owner then PlotService.Callbacks.Lock(player) end end) end
 	if barrier then
 		barrier.Touched:Connect(function(hit)
-			if os.clock() >= plot.LockedUntil then
-				return
-			end
+			if os.clock() >= plot.LockedUntil then return end
 			local character = hit.Parent
 			local player = Players:GetPlayerFromCharacter(character)
-			if not player or player == plot.Owner or not character then
-				return
-			end
+			if not player or player == plot.Owner or not character then return end
 			local root = (character :: Model):FindFirstChild("HumanoidRootPart") :: BasePart?
-			if root then
-				root.CFrame = cframe * CFrame.new(0, 3, -HALF - 10)
-			end
+			if root then root.CFrame = cframe * CFrame.new(0, 3, -HALF - 10) end
 		end)
 	end
-
 	return plot
 end
 
@@ -1011,6 +838,7 @@ function PlotService.RenderMonster(player: Player, monster: MonsterMath.MonsterD
 		return
 	end
 	PlotService.RemoveMonster(player, monster.Id)
+	if monster.Slot < 1 or monster.Slot > Config.MaxSlots then return end
 
 	local model = PlotService.BuildMonsterModel(monster)
 	local body = model.PrimaryPart :: BasePart
@@ -1057,6 +885,10 @@ function PlotService.UpdateMonster(player: Player, monster: MonsterMath.MonsterD
 	if not plot then
 		return
 	end
+	if monster.Slot < 1 or monster.Slot > Config.MaxSlots then
+		PlotService.RemoveMonster(player, monster.Id)
+		return
+	end
 	local model = plot.MonstersFolder:FindFirstChild(monster.Id) :: Model?
 	if not model or rebuild then
 		PlotService.RenderMonster(player, monster)
@@ -1078,6 +910,7 @@ function PlotService.RenderEgg(player: Player, eggId: string, eggType: string, s
 		return
 	end
 	PlotService.RemoveEgg(player, eggId)
+	if slot < 1 or slot > Config.MaxSlots then return end
 	local egg = Config.Eggs[eggType]
 	local part = makePart({
 		Name = eggId,
@@ -1138,6 +971,13 @@ function PlotService.SetPending(player: Player, amount: number)
 	local plot = plotByPlayer[player]
 	if plot then
 		plot.CollectorLabel.Text = "💰 " .. MonsterMath.FormatNumber(amount) .. "\nStep here to collect"
+	end
+end
+
+function PlotService.SetUpgradeLabel(player: Player, text: string)
+	local plot = plotByPlayer[player]
+	if plot then
+		plot.UpgradeLabel.Text = text
 	end
 end
 
@@ -1203,8 +1043,8 @@ function PlotService.Release(player: Player)
 		plot.LockPrompt:SetAttribute("OwnerUserId", nil)
 	end
 	PlotService.SetLockVisual(plot, false, "🔓 Lock Base")
-	for _, pedestal in plot.Pedestals do
-		setPadState(pedestal, true)
+	for slot, pedestal in plot.Pedestals do
+		setPadState(pedestal, slot <= Config.BaseSlots)
 	end
 	plotByPlayer[player] = nil
 end

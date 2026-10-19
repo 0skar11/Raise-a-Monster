@@ -18,15 +18,17 @@ local CombatService = require(script.Parent.CombatService)
 local MonetizationService = {}
 
 local owned: { [Player]: { [string]: boolean } } = {}
-local boostUntil: { [Player]: number } = {}
 local lastPrompt: { [Player]: number } = {}
+local lastGearAction: { [Player]: number } = {}
+local processingReceipts: { [string]: boolean } = {}
 
 local function giveWeapons(player: Player)
 	local profile = DataService.Get(player)
 	CombatService.GiveWeapons(
 		player,
 		MonetizationService.GetOwnedPasses(player),
-		if profile then profile.Data.Weapons else {}
+		if profile then profile.Data.Weapons else {},
+		if profile then profile.Data.EquippedWeapon else "Bat"
 	)
 end
 
@@ -40,7 +42,8 @@ function MonetizationService.GetOwnedPasses(player: Player): { [string]: boolean
 end
 
 function MonetizationService.BoostLeft(player: Player): number
-	return math.max(0, (boostUntil[player] or 0) - os.clock())
+	local profile = DataService.Get(player)
+	return math.max(0, (profile and profile.Data.SpeedBoostUntil or 0) - os.time())
 end
 
 -- لما الـ Pass يتفعّل (اشترى أو دخل وهو معاه)
@@ -56,16 +59,25 @@ local function onPassGranted(player: Player, name: string)
 end
 
 local function grantPass(player: Player, name: string)
-	owned[player] = owned[player] or {}
-	if owned[player][name] then
+	local session = owned[player]
+	if not session or session[name] then
 		return
 	end
-	owned[player][name] = true
+	session[name] = true
 	onPassGranted(player, name)
 end
 
 -- Developer Products: بيرجع true لو اتنفذ
 local function grantProduct(player: Player, name: string): boolean
+	local product = Config.Products[name]
+	if product and product.Coins then
+		if not DataService.Get(player) then
+			return false
+		end
+		DataService.AddCoins(player, product.Coins)
+		MonsterService.Notify(player, "💰 +" .. tostring(product.Coins) .. " coins!", "success")
+		return true
+	end
 	if name == "InstantHatch" then
 		if not MonsterService.HatchAllNow(player) then
 			MonsterService.Notify(player, "You have no eggs to hatch right now!", "error")
@@ -80,8 +92,12 @@ local function grantProduct(player: Player, name: string): boolean
 		end
 		return true
 	elseif name == "SpeedBoost" then
-		local start = math.max(os.clock(), boostUntil[player] or 0)
-		boostUntil[player] = start + Config.SpeedBoost.Duration
+		local profile = DataService.Get(player)
+		if not profile then
+			return false
+		end
+		local start = math.max(os.time(), profile.Data.SpeedBoostUntil)
+		profile.Data.SpeedBoostUntil = start + Config.SpeedBoost.Duration
 		CharacterService.SetSpeedFactor(player, "Boost", Config.SpeedBoost.Multiplier)
 		MonsterService.Notify(player, "💨 Speed Boost for 10 minutes!", "success")
 		return true
@@ -98,13 +114,18 @@ local function buyPass(player: Player, name: unknown)
 		return
 	end
 	local pass = Config.Gamepasses[name]
-	if not pass then
+	if not pass or pass.Hidden then
 		return
 	end
 	if MonetizationService.HasPass(player, name) then
 		MonsterService.Notify(player, "You already own " .. pass.Name .. "!", "info")
 		return
 	end
+	local profile = DataService.Get(player)
+	if not profile or profile.LoadFailed or not owned[player] then return end
+	local now = os.clock()
+	if lastPrompt[player] and now - lastPrompt[player] < Config.Monetization.PromptCooldown then return end
+	lastPrompt[player] = now
 	if pass.Id == 0 then
 		if RunService:IsStudio() then
 			grantPass(player, name)
@@ -114,20 +135,21 @@ local function buyPass(player: Player, name: unknown)
 		end
 		return
 	end
-	MarketplaceService:PromptGamePassPurchase(player, pass.Id)
+	local ok = pcall(function() MarketplaceService:PromptGamePassPurchase(player, pass.Id) end)
+	if not ok then MonsterService.Notify(player, "The purchase window could not open. Please try again.", "error") end
 end
 
 local function buyWeapon(player: Player, name: unknown)
-	if type(name) ~= "string" or not Config.WeaponStats[name] then
+	if type(name) ~= "string" or #name > 64 or not Config.WeaponStats[name] then
 		return
 	end
 	local profile = DataService.Get(player)
 	local price = Config.WeaponCoinPrices[name]
 	local pass = Config.Gamepasses[name]
-	if not profile or not price or not pass then
+	if not profile or type(profile.Data.Weapons) ~= "table" or not price or not pass then
 		return
 	end
-	if profile.Data.Weapons[name] or MonetizationService.HasPass(player, name) then
+	if profile.Data.Weapons[name] == true or MonetizationService.HasPass(player, name) then
 		MonsterService.Notify(player, "You already own " .. pass.Name .. "!", "info")
 		return
 	end
@@ -136,17 +158,26 @@ local function buyWeapon(player: Player, name: unknown)
 		return
 	end
 	profile.Data.Weapons[name] = true
+	profile.Data.EquippedWeapon = name
 	giveWeapons(player)
-	local backpack = player:FindFirstChildOfClass("Backpack")
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	local weapon = (backpack and backpack:FindFirstChild(pass.Name)) or (character and character:FindFirstChild(pass.Name))
-	if humanoid and weapon and weapon:IsA("Tool") then
-		humanoid:EquipTool(weapon)
-	end
 	MonsterService.Notify(player, "⚔️ You bought " .. pass.Name .. "!", "success")
 	MonsterService.PushState(player)
 	task.spawn(DataService.Save, player)
+end
+
+local function equipWeapon(player: Player, name: unknown)
+	if type(name) ~= "string" or #name > 64 or (name ~= "Bat" and not Config.WeaponStats[name]) then return end
+	local profile = DataService.Get(player)
+	if not profile or type(profile.Data.Weapons) ~= "table" then return end
+	if name ~= "Bat" and profile.Data.Weapons[name] ~= true and not MonetizationService.HasPass(player, name) then return end
+	local now = os.clock()
+	if lastGearAction[player] and now - lastGearAction[player] < Config.Security.GearEquipCooldown then return end
+	lastGearAction[player] = now
+	if profile.Data.EquippedWeapon == name then return end
+	profile.Data.EquippedWeapon = name
+	giveWeapons(player)
+	MonsterService.PushState(player)
+	DataService.QueueSave(player)
 end
 
 local function buyProduct(player: Player, name: unknown)
@@ -157,8 +188,13 @@ local function buyProduct(player: Player, name: unknown)
 	if not product then
 		return
 	end
+	local profile = DataService.Get(player)
+	if not profile or profile.LoadFailed then
+		MonsterService.Notify(player, "Purchases are unavailable while saving is offline.", "error")
+		return
+	end
 	local now = os.clock()
-	if lastPrompt[player] and now - lastPrompt[player] < 1 then
+	if lastPrompt[player] and now - lastPrompt[player] < Config.Monetization.PromptCooldown then
 		return
 	end
 	lastPrompt[player] = now
@@ -176,22 +212,30 @@ local function buyProduct(player: Player, name: unknown)
 	MarketplaceService:PromptProductPurchase(player, product.Id)
 end
 
-local function loadPasses(player: Player)
+local function loadPasses(player: Player, session: { [string]: boolean })
 	for name, pass in Config.Gamepasses do
 		if pass.Id ~= 0 then
-			local ok, has = pcall(function()
-				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.Id)
-			end)
-			if ok and has then
-				grantPass(player, name)
+			for attempt = 1, Config.Monetization.OwnershipRetries do
+				if owned[player] ~= session then return end
+				local ok, has = pcall(function()
+					return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.Id)
+				end)
+				-- A Marketplace response can arrive after PlayerRemoving or another setup.
+				if owned[player] ~= session then return end
+				if ok then
+					if has then grantPass(player, name) end
+					break
+				end
+				if attempt < Config.Monetization.OwnershipRetries then task.wait(attempt * Config.Monetization.OwnershipRetryDelay) end
 			end
 		end
 	end
 end
 
 function MonetizationService.SetupPlayer(player: Player)
-	owned[player] = owned[player] or {}
-	task.spawn(loadPasses, player)
+	local session = {}
+	owned[player] = session
+	task.spawn(loadPasses, player, session)
 end
 
 -- بيتنادى كل ما الشخصية تتولد
@@ -203,17 +247,18 @@ end
 
 function MonetizationService.CleanupPlayer(player: Player)
 	owned[player] = nil
-	boostUntil[player] = nil
 	lastPrompt[player] = nil
+	lastGearAction[player] = nil
 end
 
 function MonetizationService.Init(remotes: { [string]: RemoteEvent })
 	remotes.BuyPass.OnServerEvent:Connect(buyPass)
 	remotes.BuyWeapon.OnServerEvent:Connect(buyWeapon)
+	remotes.EquipWeapon.OnServerEvent:Connect(equipWeapon)
 	remotes.BuyProduct.OnServerEvent:Connect(buyProduct)
 
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
-		if not purchased then
+		if not purchased or passId <= 0 or not owned[player] then
 			return
 		end
 		for name, pass in Config.Gamepasses do
@@ -226,16 +271,34 @@ function MonetizationService.Init(remotes: { [string]: RemoteEvent })
 
 	MarketplaceService.ProcessReceipt = function(receipt)
 		local player = Players:GetPlayerByUserId(receipt.PlayerId)
-		if not player or not DataService.Get(player) then
+		local profile = player and DataService.Get(player)
+		if not player or not profile or profile.LoadFailed or type(receipt.PurchaseId) ~= "string" then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		for name, product in Config.Products do
-			if product.Id == receipt.ProductId then
-				if grantProduct(player, name) then
-					MonsterService.PushState(player)
-					task.spawn(DataService.Save, player)
-					return Enum.ProductPurchaseDecision.PurchaseGranted
+			if product.Id > 0 and product.Id == receipt.ProductId then
+				local purchaseId = receipt.PurchaseId
+				if profile.Data.ProcessedReceipts[purchaseId] then
+					return if DataService.Save(player)
+						then Enum.ProductPurchaseDecision.PurchaseGranted
+						else Enum.ProductPurchaseDecision.NotProcessedYet
 				end
+				if processingReceipts[purchaseId] then
+					return Enum.ProductPurchaseDecision.NotProcessedYet
+				end
+				processingReceipts[purchaseId] = true
+				local granted = grantProduct(player, name)
+				if granted then
+					profile.Data.ProcessedReceipts[purchaseId] = true
+					local saved = DataService.Save(player)
+					processingReceipts[purchaseId] = nil
+					if saved then
+						MonsterService.PushState(player)
+						return Enum.ProductPurchaseDecision.PurchaseGranted
+					end
+					return Enum.ProductPurchaseDecision.NotProcessedYet
+				end
+				processingReceipts[purchaseId] = nil
 				return Enum.ProductPurchaseDecision.NotProcessedYet
 			end
 		end
@@ -246,13 +309,12 @@ function MonetizationService.Init(remotes: { [string]: RemoteEvent })
 	task.spawn(function()
 		while true do
 			task.wait(1)
-			for player, untilTime in boostUntil do
-				if os.clock() >= untilTime then
-					boostUntil[player] = nil
+			for _, player in Players:GetPlayers() do
+				local profile = DataService.Get(player)
+				if profile and profile.Data.SpeedBoostUntil > 0 and os.time() >= profile.Data.SpeedBoostUntil then
+					profile.Data.SpeedBoostUntil = 0
 					CharacterService.SetSpeedFactor(player, "Boost", nil)
-					if player.Parent then
-						MonsterService.Notify(player, "Your Speed Boost ended.", "info")
-					end
+					MonsterService.Notify(player, "Your Speed Boost ended.", "info")
 				end
 			end
 		end

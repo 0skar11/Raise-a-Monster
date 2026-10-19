@@ -12,6 +12,10 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local UI = require(script.UI)
 local Features = require(script.Features)
 local MonsterAnimate = require(script.MonsterAnimate)
+local GearAnimate = require(script.GearAnimate)
+local CombatFx = require(script.CombatFx)
+local Settings = require(script.Settings)
+local MonsterInventory = require(script.MonsterInventory)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -20,12 +24,15 @@ local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
 local state: any = nil
 local openMonsterId: string? = nil
 local sellConfirmUntil = 0
+local inventory: any = nil
 
 Features.Init(ui, remotes, function()
 	return state
 end, function()
 	return openMonsterId
 end)
+
+Settings.Init(ui)
 
 -- تحديث الواجهة ---------------------------------------------------------------------
 
@@ -101,6 +108,20 @@ local function refreshMonsterPanel()
 		ui.PlayButton.BackgroundColor3 = UI.Colors.Pink
 	end
 
+	local count = #(state.FollowingIds or {})
+	local limit = state.FollowerLimit or Config.Followers.MaxCount
+	local minimumLevel = state.FollowerMinLevel or Config.Followers.MinLevel
+	local canFollow = monster.CanFollow == true and count < limit
+	ui.FollowButton.Active = canFollow or monster.Following == true
+	ui.FollowButton.Selectable = ui.FollowButton.Active
+	ui.FollowButton.BackgroundColor3 = if monster.Following then UI.Colors.Green elseif canFollow then UI.Colors.Blue else UI.Colors.Gray
+	ui.FollowButton.Text = if monster.Following then string.format("Stop following · %d/%d", count, limit)
+		elseif canFollow then string.format("Follow · %d/%d · +damage", count, limit)
+		elseif monster.Level < minimumLevel then string.format("Adult Lv %d+ required · %d/%d", minimumLevel, count, limit)
+		elseif monster.Available == false then "Unavailable while carried or in use"
+		elseif count >= limit then string.format("%d/%d following · stop one first", count, limit)
+		else "This monster is unavailable to follow"
+
 	if os.clock() < sellConfirmUntil then
 		ui.SellButton.Text = "Tap again to confirm sell"
 	else
@@ -115,34 +136,29 @@ local function refresh()
 	ui.CoinsLabel.Text = "💰 " .. MonsterMath.FormatNumber(state.Coins)
 	local production = 0
 	for _, monster in state.Monsters do
-		if not monster.Carried then
+		if monster.Placed == true and not monster.Carried then
 			production += monster.Production
 		end
 	end
-	ui.PendingLabel.Text = string.format(
-		"+%s/s · %s waiting at your base",
-		MonsterMath.FormatNumber(production),
-		MonsterMath.FormatNumber(state.PendingCoins)
-	)
+	ui.PendingLabel.Text = string.format("+%s/s", MonsterMath.FormatNumber(production))
 
 	for eggType, eggButton in ui.EggButtons do
 		local egg = Config.Eggs[eggType]
 		eggButton.BackgroundColor3 = if state.Coins >= egg.Cost then UI.Colors.Green else UI.Colors.Gray
 	end
 
-	local used = #state.Monsters + #state.Eggs
-	ui.SlotsInfo.Text = string.format("🏠 Base slots: %d / %d  (used: %d)", state.UnlockedSlots, state.MaxSlots, used)
-	if state.NextSlotCost then
-		ui.SlotsButton.Text = "Unlock slot · 💰 " .. MonsterMath.FormatNumber(state.NextSlotCost)
-		ui.SlotsButton.BackgroundColor3 = if state.Coins >= state.NextSlotCost then UI.Colors.Green else UI.Colors.Gray
-	else
-		ui.SlotsButton.Text = "MAX"
-		ui.SlotsButton.BackgroundColor3 = UI.Colors.Gray
-	end
-
 	refreshMonsterPanel()
 	Features.Refresh()
+	if inventory then inventory.Refresh() end
 end
+
+inventory = MonsterInventory.Init(ui, remotes, function() return state end, function(id)
+	openMonsterId = id
+	sellConfirmUntil = 0
+	UI.Open(ui, ui.MonsterFrame)
+	refreshMonsterPanel()
+end)
+ui.InventoryButton.Activated:Connect(function() inventory.Open() end)
 
 -- الأحداث -------------------------------------------------------------------------------
 
@@ -156,7 +172,7 @@ remotes.Notify.OnClientEvent:Connect(function(text: string, kind: string)
 end)
 
 remotes.OpenShop.OnClientEvent:Connect(function()
-	UI.Open(ui, ui.ShopFrame)
+	UI.Open(ui, ui.GearFrame)
 end)
 
 remotes.OpenMonster.OnClientEvent:Connect(function(monsterId: string)
@@ -169,9 +185,6 @@ end)
 ui.ShopButton.Activated:Connect(function()
 	UI.Toggle(ui, ui.ShopFrame)
 end)
-ui.UpgradesButton.Activated:Connect(function()
-	UI.Toggle(ui, ui.UpgradesFrame)
-end)
 
 for eggType, eggButton in ui.EggButtons do
 	eggButton.Activated:Connect(function()
@@ -179,9 +192,12 @@ for eggType, eggButton in ui.EggButtons do
 	end)
 end
 
-ui.SlotsButton.Activated:Connect(function()
-	remotes.BuyUpgrade:FireServer("Slots")
+ui.FollowButton.Activated:Connect(function()
+	local monster = findMonster(openMonsterId)
+	local hasCapacity = state and #(state.FollowingIds or {}) < (state.FollowerLimit or Config.Followers.MaxCount)
+	if monster and (monster.Following or monster.CanFollow and hasCapacity) then remotes.ToggleFollower:FireServer(monster.Id) end
 end)
+
 ui.FeedButton.Activated:Connect(function()
 	if openMonsterId then
 		remotes.FeedMonster:FireServer(openMonsterId)
@@ -273,6 +289,10 @@ end)
 
 -- أنيميشن الوحوش (Idle / Walk / Attack) من MonsterAnimator
 MonsterAnimate.Start()
+GearAnimate.Start()
+
+-- ضربات الوحوش، أرقام الضرر، والموسيقى
+CombatFx.Start(ui, remotes, UI.Button)
 
 -- العدّاد في لوحة الوحش (Play cooldown) بيتحدث مع كل StateUpdate، وكمان كل نص ثانية.
 task.spawn(function()

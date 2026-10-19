@@ -6,6 +6,17 @@ local Config = {}
 Config.StartingCoins = 150
 Config.DataStoreName = "RaiseAMonster_v1"
 Config.AutosaveInterval = 60 -- ثواني
+Config.DataSave = {
+	MaxRetries = 3,
+	RetryDelay = 1,
+	SessionTimeout = 180,
+	ShutdownTimeout = 25,
+}
+Config.Monetization = {
+	OwnershipRetries = 3,
+	OwnershipRetryDelay = 1,
+	PromptCooldown = 1,
+}
 
 -- أبعاد الأرض والممرات؛ القواعد الستة تفضل في مكانها الحالي.
 Config.Map = {
@@ -198,6 +209,12 @@ Config.Food = {
 	Cost = 13, -- ثابت حسب المرحلة، عشان أكل الوحوش يفضل في متناول البداية
 	Hunger = 35,
 	Xp = 15,
+}
+
+Config.AutoFeeder = {
+	Interval = 30,
+	Threshold = 70,
+	FeedCooldown = 0.15, -- نفس مهلة الأكل اليدوي، ومشتركة مع الأكل التلقائي
 }
 
 Config.Play = {
@@ -484,24 +501,24 @@ Config.NestsPerZone = 3
 Config.NestRarityWeights = { Common = 35, Uncommon = 25, Rare = 18, Epic = 12, Legendary = 7, Mythic = 3 }
 Config.MotherScale = 1.6 -- الأم = نسخة الـ Adult مكبّرة
 -- ضربة الأم = MotherDamage بتاع المنطقة × الرقم ده حسب ندرة الوحش
-Config.MotherDamageByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3, Mythic = 4 }
+Config.MotherDamageByRarity = { Common = 1.15, Uncommon = 1.5, Rare = 1.95, Epic = 2.55, Legendary = 3.45, Mythic = 4.6 } -- +15%
 -- دم الأم = MotherHealth بتاع المنطقة × الرقم ده حسب ندرة الوحش
 Config.MotherHealthByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3, Mythic = 4 }
 Config.BabiesPerNest = 3
 
 Config.PlayerBaseHealth = 100
-Config.Shop = { Position = Vector3.new(Config.Map.ZonesStartX - 35, 0, -Config.Map.NestZ), Yaw = -90, TeleportOffset = Vector3.new(0, 4, 12) }
+Config.Shop = { Position = Vector3.new(Config.Map.ZonesStartX - 8, 0, -55), Yaw = -90, TeleportOffset = Vector3.new(0, 4, 12) }
 Config.WalkSpeed = 25 -- سرعة المشي ثابتة (الافتراضي في Roblox 16)
 
 Config.SpeedAccessories = {
-	SwiftSneakers = { Name = "Swift Sneakers", Description = "Blue neon sneakers", Price = 650, Multiplier = 1.05, HealthBonus = 15, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
-	FlameBoots = { Name = "Flame Boots", Description = "Boots with a fiery trail", Price = 1950, Multiplier = 1.08, HealthBonus = 30, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
-	IceSkates = { Name = "Ice Skates", Description = "Frozen skates that glide", Price = 4550, Multiplier = 1.10, HealthBonus = 50, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
-	WindScarf = { Name = "Wind Scarf", Description = "A scarf carried by the wind", Price = 9100, Multiplier = 1.12, HealthBonus = 75, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
-	LightningBoots = { Name = "Lightning Boots", Description = "Boots charged with lightning", Price = 18200, Multiplier = 1.15, HealthBonus = 100, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
-	ShadowCloak = { Name = "Shadow Cloak", Description = "A cloak that moves like smoke", Price = 227500, Multiplier = 1.40, HealthBonus = 350, Order = 9, Color = Color3.fromRGB(125, 75, 210) },
-	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 71500, Multiplier = 1.22, HealthBonus = 190, Order = 7, Color = Color3.fromRGB(195, 80, 255) },
-	GoldenWings = { Name = "Golden Wings", Description = "Radiant wings for maximum speed", Price = 130000, Multiplier = 1.30, HealthBonus = 250, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
+	SwiftSneakers = { Name = "Neon Dash Sneakers", Description = "Neon sneakers that leave a streak and pulse as you run", Price = 650, Multiplier = 1.05, HealthBonus = 15, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
+	FlameBoots = { Name = "Ember Stompers", Description = "Boots that ignite while you run", Price = 1950, Multiplier = 1.08, HealthBonus = 30, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
+	IceSkates = { Name = "Frost Glide Skates", Description = "Frozen skates that shed snow sparkles as you glide", Price = 4550, Multiplier = 1.10, HealthBonus = 50, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
+	WindScarf = { Name = "Zephyr Scarf", Description = "A scarf that ripples in the wind", Price = 9100, Multiplier = 1.12, HealthBonus = 75, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
+	LightningBoots = { Name = "Storm Strike Boots", Description = "Boots that crackle with lightning when you move", Price = 18200, Multiplier = 1.15, HealthBonus = 100, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
+	ShadowCloak = { Name = "Umbral Cloak", Description = "A cloak wrapped in orbiting shadow shards", Price = 227500, Multiplier = 1.40, HealthBonus = 350, Order = 9, Color = Color3.fromRGB(125, 75, 210) },
+	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 71500, Multiplier = 1.22, HealthBonus = 190, Order = 7, Color = Color3.fromRGB(255, 95, 225) },
+	GoldenWings = { Name = "Sunfeather Wings", Description = "Radiant wings that flap faster the quicker you go", Price = 130000, Multiplier = 1.30, HealthBonus = 250, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
 } :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, HealthBonus: number, Order: number, Color: Color3 } }
 
 -- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
@@ -540,6 +557,7 @@ Config.Combat = {
 	BatReach = 7, -- قد إيه تبعد عن حرف الأم وتقدر تضربها بالمضرب
 	MotherRegenDelay = 20, -- لو محدش ضربها المدة دي الـ HP بيرجع كامل
 	MotherChaseSpeed = 16, -- سرعتها وهي بتجري ورا اللي ضربها (أبطأ من اللاعب 25 عشان يقدر يهرب)
+	MotherNoticeRange = 32, -- أي لاعب يقرب من الأم لحد المسافة دي بتجري وراه حتى لو ماضربهاش
 	MotherLeashRange = 70, -- لو اللاعب بعد عن عشها أكتر من كده بترجع
 	TakeHoldDuration = 1,
 	CritChance = 0.12, -- فرصة الضربة القاضية
@@ -607,6 +625,8 @@ Config.Music = {
 }
 
 Config.Security = {
+	GearEquipCooldown = 0.5,
+	GearSaveInterval = 5,
 	TradeCooldown = 5,
 	ArenaCooldown = 5,
 	FreeEggCooldown = 300,
@@ -618,11 +638,12 @@ Config.Security = {
 -- لو الـ Id = 0: في Studio الزرار بيدّيهولك مجاناً عشان التجربة، وفي اللعبة الحقيقية بيقول "Coming soon".
 export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number, Hidden: boolean? }
 Config.Gamepasses = {
-	CoinBoost = { Id = 2025938655, Name = "Coin Booster", Description = "Legacy income boost", Price = 99, Order = 0, Hidden = true },
-	VIP = { Id = 0, Name = "VIP", Description = "x2 coins from all your monsters", Price = 299, Order = 1 },
+	CoinBoost = { Id = 0, Name = "Coin Booster", Description = "Legacy income boost", Price = 99, Order = 0, Hidden = true },
+	VIP = { Id = 2036579024, Name = "VIP", Description = "x2 coins from all your monsters", Price = 299, Order = 1 },
 	VIPSword = { Id = 0, Name = "VIP Sword", Description = "A strong sword for the monster zones", Price = 199, Order = 2 },
-	AutoCollect = { Id = 0, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
-	ExtraSlots = { Id = 0, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
+	AutoCollect = { Id = 2038162860, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
+	ExtraSlots = { Id = 2036429020, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
+	AutoFeeder = { Id = 2037406772, Name = "Auto-Feeder", Description = "Feeds hungry monsters using your coins and grants normal feeding XP", Price = 99, Order = 5 },
 	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
 	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
 	ForestSword = { Id = 0, Name = "Forest Sword", Description = "A nature-forged sword", Price = 149, Order = 11 },
@@ -644,15 +665,15 @@ Config.Products = {
 Config.VIPCoinMultiplier = 2
 Config.CoinBoostMultiplier = 1.5
 Config.ExtraSlotsAmount = 2
-Config.VIPSword = { DamageMultiplier = 3.75, ExtraReach = 3 }
+Config.VIPSword = { DamageMultiplier = 4.3, ExtraReach = 3 }
 Config.WeaponStats = {
-	IronBat = { Template = "IronBat", DamageMultiplier = 1.5, ExtraReach = 0.5 },
-	VIPSword = { Template = "IceSword", DamageMultiplier = 3.75, ExtraReach = 3 },
-	IronSword = { Template = "IronSword", DamageMultiplier = 1.9, ExtraReach = 1 },
-	ForestSword = { Template = "ForestSword", DamageMultiplier = 2.25, ExtraReach = 1.5 },
-	DesertSword = { Template = "DesertSword", DamageMultiplier = 2.65, ExtraReach = 2 },
-	IceSword = { Template = "IceSword", DamageMultiplier = 3.15, ExtraReach = 2.5 },
-	LavaSword = { Template = "LavaSword", DamageMultiplier = 4.4, ExtraReach = 4 },
+	IronBat = { Template = "IronBat", DamageMultiplier = 1.7, ExtraReach = 0.5 },
+	VIPSword = { Template = "VoidBat", DamageMultiplier = 4.3, ExtraReach = 3 },
+	IronSword = { Template = "IronSword", DamageMultiplier = 2.2, ExtraReach = 1 },
+	ForestSword = { Template = "ForestSword", DamageMultiplier = 2.6, ExtraReach = 1.5 },
+	DesertSword = { Template = "DesertSword", DamageMultiplier = 3.05, ExtraReach = 2 },
+	IceSword = { Template = "IceSword", DamageMultiplier = 3.6, ExtraReach = 2.5 },
+	LavaSword = { Template = "LavaSword", DamageMultiplier = 5.05, ExtraReach = 4 },
 } :: { [string]: { Template: string, DamageMultiplier: number, ExtraReach: number } }
 -- معدات القتال تُشترى بعملات اللعبة من المتجر، مش بـ Robux.
 -- Early upgrades are affordable; later tiers follow the five-zone economy.
@@ -803,7 +824,9 @@ end
 
 -- Monster Arena: معارك 1 ضد 1. الكسبان بياخد فلوس والوحش اللي خسر --------------------------
 Config.Arena = {
-	Position = Vector3.new(20, 0, 150), -- في الساحة
+	-- Two arenas on the grass at both ends of the base row (left and right of the bases).
+	Positions = { Vector3.new(-40, 0, 238), Vector3.new(-40, 0, -238) },
+	Radius = 22,
 	RequestTimeout = 60,
 	RequestCooldown = 3,
 	TurnTime = 0.8,

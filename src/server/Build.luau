@@ -17,6 +17,15 @@ function Build.MakePart(props: { [string]: any }): Part
 	return part
 end
 
+-- Separate editable Parts, shared by sanctuary fences, paths and arch details.
+function Build.MakeBeam(name: string, startPosition: Vector3, endPosition: Vector3, width: number, height: number, props: { [string]: any }): Part
+	local all = table.clone(props)
+	all.Name = name
+	all.Size = Vector3.new(width, height, (endPosition - startPosition).Magnitude)
+	all.CFrame = CFrame.lookAt((startPosition + endPosition) / 2, endPosition)
+	return Build.MakePart(all)
+end
+
 function Build.MakeBillboard(
 	adornee: BasePart,
 	size: UDim2,

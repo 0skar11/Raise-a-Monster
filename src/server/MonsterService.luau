@@ -9,6 +9,7 @@ local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
 local CharacterService = require(script.Parent.CharacterService)
+local FollowerService = require(script.Parent.FollowerService)
 
 type Remotes = { [string]: RemoteEvent }
 
@@ -16,6 +17,8 @@ local MonsterService = {}
 
 -- الوحوش اللي حد شايلها دلوقتي (بيتملى من StealService): carried[owner][monsterId] = true
 MonsterService.Carried = {} :: { [Player]: { [string]: boolean } }
+-- العروض المفتوحة محجوزة لحد تأكيد أو إلغاء التبادل.
+MonsterService.Trading = {} :: { [Player]: { [string]: boolean } }
 
 -- Hooks بتتربط في init.server (عشان مايبقاش فيه require دايري بين الخدمات)
 MonsterService.HasPass = function(_player: Player, _name: string): boolean
@@ -29,6 +32,8 @@ local remotes: Remotes
 local lastPlay: { [Player]: { [string]: number } } = {}
 local lastAction: { [Player]: number } = {}
 local lastCollect: { [Player]: number } = {}
+local lastFeed: { [Player]: { [string]: number } } = {}
+local lastAutoFeed: { [Player]: number } = {}
 
 local function rateLimited(player: Player): boolean
 	local now = os.clock()
@@ -48,13 +53,22 @@ function MonsterService.IsCarried(owner: Player, monsterId: string): boolean
 	return set ~= nil and set[monsterId] == true
 end
 
+function MonsterService.IsUnavailable(owner: Player, monsterId: string): boolean
+	local trading = MonsterService.Trading[owner]
+	return MonsterService.IsCarried(owner, monsterId) or (trading ~= nil and trading[monsterId] == true)
+end
+
+function MonsterService.IsPlaced(player: Player, monster: MonsterMath.MonsterData): boolean
+	return monster.Slot >= 1 and monster.Slot % 1 == 0 and monster.Slot <= MonsterService.GetUnlockedSlots(player)
+end
+
 function MonsterService.GetUnlockedSlots(player: Player): number
 	local profile = DataService.Get(player)
 	if not profile then
 		return 0
 	end
 	local extra = if MonsterService.HasPass(player, "ExtraSlots") then Config.ExtraSlotsAmount else 0
-	return math.min(Config.MaxSlots, Config.BaseSlots + profile.Data.SlotUpgrades + extra)
+	return math.min(Config.MaxSlots, Config.BaseSlots + (profile.Data.SlotUpgrades or 0) + extra)
 end
 
 function MonsterService.GetFreeSlot(player: Player): number?
@@ -64,7 +78,7 @@ function MonsterService.GetFreeSlot(player: Player): number?
 	end
 	local used: { [number]: boolean } = {}
 	for _, monster in profile.Data.Monsters do
-		used[monster.Slot] = true
+		if MonsterService.IsPlaced(player, monster) then used[monster.Slot] = true end
 	end
 	for _, egg in profile.Data.Eggs do
 		used[egg.Slot] = true
@@ -99,10 +113,14 @@ function MonsterService.PushState(player: Player)
 	local data = profile.Data
 	local now = os.clock()
 
+	local followingIds = FollowerService.GetIds(player)
 	local monsters = {}
+	local placedCount = 0
 	for id, monster in data.Monsters do
 		local species = Config.Species[monster.Species]
 		local played = lastPlay[player] and lastPlay[player][id] or 0
+		local placed = MonsterService.IsPlaced(player, monster)
+		if placed then placedCount += 1 end
 		table.insert(monsters, {
 			Id = id,
 			Species = monster.Species,
@@ -121,9 +139,16 @@ function MonsterService.PushState(player: Player)
 			FoodCost = MonsterMath.GetFoodCost(monster),
 			PlayReadyIn = math.max(0, Config.MiniGames.Cooldown - (now - played)),
 			Slot = monster.Slot,
+			Placed = placed,
+			Benched = not placed,
+			Available = not MonsterService.IsUnavailable(player, id),
+			InTrade = MonsterService.Trading[player] ~= nil and MonsterService.Trading[player][id] == true,
+			ActualIncome = MonsterMath.GetProduction(monster) * MonsterService.GetCoinMultiplier(player),
 			Hat = monster.Hat,
 			Glasses = monster.Glasses,
 			Carried = MonsterService.IsCarried(player, id),
+			Following = table.find(followingIds, id) ~= nil,
+			CanFollow = FollowerService.IsEligible(player, monster),
 		})
 	end
 
@@ -132,6 +157,7 @@ function MonsterService.PushState(player: Player)
 	for _, egg in data.Eggs do
 		table.insert(eggs, {
 			Id = egg.Id,
+			Slot = egg.Slot,
 			EggType = egg.EggType,
 			SecondsLeft = math.max(0, egg.HatchAt - nowTime),
 		})
@@ -139,6 +165,12 @@ function MonsterService.PushState(player: Player)
 
 	local nextSlotCost = Config.SlotUpgradeCosts[data.SlotUpgrades + 1]
 	local nextLockCost = Config.LockUpgradeCosts[data.LockUpgrades + 1]
+
+	PlotService.SetUpgradeLabel(
+		player,
+		if nextSlotCost then string.format("⬆️ New slot · 💰 %s\n%d / %d slots", MonsterMath.FormatNumber(nextSlotCost), MonsterService.GetUnlockedSlots(player), Config.MaxSlots)
+			else "⬆️ Slots MAX"
+	)
 
 	local state: { [string]: any } = {
 		Coins = data.Coins,
@@ -151,13 +183,21 @@ function MonsterService.PushState(player: Player)
 		LockedFor = math.max(0, plot.LockedUntil - now),
 		LockCooldown = math.max(0, plot.LockCooldownUntil - now),
 		Monsters = monsters,
+		PlacedCount = placedCount,
+		BenchCount = #monsters - placedCount,
+		FollowingIds = followingIds,
+		FollowerLimit = Config.Followers.MaxCount,
+		FollowerMinLevel = FollowerService.GetMinLevel(),
+		FollowerDamageBonus = FollowerService.GetDamageBonus(player),
 		Eggs = eggs,
 		Stats = data.Stats,
 		SaveDisabled = profile.LoadFailed,
 		Accessories = data.Accessories,
 		SpeedAccessories = data.SpeedAccessories,
 		Weapons = data.Weapons,
-		SpeedAccessoryMultiplier = CharacterService.GetSpeedAccessoryMultiplier(data.SpeedAccessories),
+		EquippedWeapon = data.EquippedWeapon,
+		EquippedSpeedAccessory = data.EquippedSpeedAccessory,
+		SpeedAccessoryMultiplier = CharacterService.GetSpeedAccessoryMultiplier(data.SpeedAccessories, data.EquippedSpeedAccessory),
 		CoinMultiplier = MonsterService.GetCoinMultiplier(player),
 	}
 	for key, value in MonsterService.ExtraState(player) do
@@ -169,7 +209,94 @@ end
 
 -- VIP بيضاعف الفلوس
 function MonsterService.GetCoinMultiplier(player: Player): number
-	return if MonsterService.HasPass(player, "VIP") then Config.VIPCoinMultiplier else 1
+	local multiplier = if MonsterService.HasPass(player, "VIP") then Config.VIPCoinMultiplier else 1
+	return multiplier * (if MonsterService.HasPass(player, "CoinBoost") then Config.CoinBoostMultiplier else 1)
+end
+
+local function saveInventory(player: Player)
+	MonsterService.PushState(player)
+	DataService.QueueSave(player)
+end
+
+-- النقل والتبديل بيتحققوا بالكامل على السيرفر، وبدون حذف أي ملكية.
+function MonsterService.PlaceMonster(player: Player, id: unknown, slot: unknown): (boolean, string)
+	if type(id) ~= "string" or #id == 0 or #id > 128 or type(slot) ~= "number"
+		or slot ~= slot or slot % 1 ~= 0 or slot < 1 or slot > MonsterService.GetUnlockedSlots(player) then
+		return false, "Choose an unlocked slot."
+	end
+	local profile = DataService.Get(player)
+	local monster = profile and profile.Data.Monsters[id]
+	if not profile or not monster or MonsterService.IsUnavailable(player, id) then return false, "This monster is unavailable." end
+	for _, egg in profile.Data.Eggs do
+		if egg.Slot == slot then return false, "That slot has an egg." end
+	end
+	local displaced: MonsterMath.MonsterData? = nil
+	for otherId, other in profile.Data.Monsters do
+		if otherId ~= id and other.Slot == slot then
+			if MonsterService.IsUnavailable(player, otherId) then return false, "That slot is reserved." end
+			displaced = other
+			break
+		end
+	end
+	if monster.Slot == slot then return true, "Already placed here." end
+	local oldSlot = if MonsterService.IsPlaced(player, monster) then monster.Slot else 0
+	monster.Slot = slot
+	if displaced then displaced.Slot = oldSlot end
+	PlotService.RemoveMonster(player, id)
+	if displaced then PlotService.RemoveMonster(player, displaced.Id) end
+	PlotService.RenderMonster(player, monster)
+	if displaced and displaced.Slot > 0 then PlotService.RenderMonster(player, displaced) end
+	saveInventory(player)
+	return true, if displaced then "Monsters swapped. Your collection is safe." else "Monster placed."
+end
+
+function MonsterService.BenchMonster(player: Player, id: unknown): (boolean, string)
+	if type(id) ~= "string" or #id == 0 or #id > 128 then return false, "Invalid monster." end
+	local profile = DataService.Get(player)
+	local monster = profile and profile.Data.Monsters[id]
+	if not monster or MonsterService.IsUnavailable(player, id) then return false, "This monster is unavailable." end
+	monster.Slot = 0
+	PlotService.RemoveMonster(player, id)
+	saveInventory(player)
+	return true, "Monster moved to your bench."
+end
+
+function MonsterService.AutoPlace(player: Player): (boolean, string)
+	local profile = DataService.Get(player)
+	if not profile then return false, "Your collection is loading." end
+	local unlocked = MonsterService.GetUnlockedSlots(player)
+	local reserved: { [number]: boolean } = {}
+	for _, egg in profile.Data.Eggs do
+		if egg.Slot >= 1 and egg.Slot <= unlocked then reserved[egg.Slot] = true end
+	end
+	local candidates: { MonsterMath.MonsterData } = {}
+	for id, monster in profile.Data.Monsters do
+		if MonsterService.IsUnavailable(player, id) then
+			if MonsterService.IsPlaced(player, monster) then reserved[monster.Slot] = true end
+		else
+			table.insert(candidates, monster)
+		end
+	end
+	-- GetProduction includes level, stage, mutation, accessories and current needs.
+	table.sort(candidates, function(a, b)
+		local incomeA, incomeB = MonsterMath.GetProduction(a), MonsterMath.GetProduction(b)
+		if incomeA ~= incomeB then return incomeA > incomeB end
+		local placedA, placedB = MonsterService.IsPlaced(player, a), MonsterService.IsPlaced(player, b)
+		if placedA ~= placedB then return placedA end
+		return a.Id < b.Id
+	end)
+	local slots = {}
+	for slot = 1, unlocked do if not reserved[slot] then table.insert(slots, slot) end end
+	local changed = {}
+	for index, monster in candidates do
+		local target = slots[index] or 0
+		if monster.Slot ~= target then monster.Slot = target; table.insert(changed, monster) end
+	end
+	-- Commit every assignment before updating models, so slots cannot overlap.
+	for _, monster in changed do PlotService.RemoveMonster(player, monster.Id) end
+	for _, monster in changed do if monster.Slot > 0 then PlotService.RenderMonster(player, monster) end end
+	saveInventory(player)
+	return true, "Highest income monsters placed. Others are safe on your bench."
 end
 
 -- البيض والفقس --------------------------------------------------------------------
@@ -227,12 +354,12 @@ local function buyEgg(player: Player, eggType: unknown)
 	MonsterService.AddEgg(player, eggType)
 end
 
--- بيحط بيضة في أول مكان فاضي في القاعدة
+-- بيحط البيضة في مكان فاضي، أو يحفظ بيضة المكافأة على البنش لحد الفقس.
 function MonsterService.AddEgg(player: Player, eggType: string): boolean
 	local egg = Config.Eggs[eggType]
 	local profile = DataService.Get(player)
-	local slot = MonsterService.GetFreeSlot(player)
-	if not egg or not profile or not slot then
+	local slot = MonsterService.GetFreeSlot(player) or 0
+	if not egg or not profile then
 		return false
 	end
 	local id = DataService.NewId(player)
@@ -242,9 +369,9 @@ function MonsterService.AddEgg(player: Player, eggType: string): boolean
 		Slot = slot,
 		HatchAt = os.time() + egg.HatchTime,
 	}
-	PlotService.RenderEgg(player, id, eggType, slot)
-	MonsterService.Notify(player, "🥚 " .. egg.DisplayName .. " placed in your base! Wait for it to hatch.", "success")
-	MonsterService.PushState(player)
+	if slot > 0 then PlotService.RenderEgg(player, id, eggType, slot) end
+	MonsterService.Notify(player, "🥚 " .. egg.DisplayName .. (if slot > 0 then " placed in your base!" else " saved to your bench!") .. " Wait for it to hatch.", "success")
+	saveInventory(player)
 	return true
 end
 
@@ -267,9 +394,9 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	end
 	local egg = Config.Eggs[eggData.EggType]
 	local species = if egg then rollWeighted(egg.Weights) else "Blobby"
-	-- وحوش Secret: فرصة صغيرة جداً من أي بيضة (وأكبر شوية من بيضة الحظ)
+	-- بيضة الحظ محصورة في جدولها؛ الأنواع التانية ممكن تطلع Secret.
 	local secretChance = Config.SecretChance * (if eggData.EggType == "Lucky" then Config.LuckyEggSecretMultiplier else 1)
-	if math.random() < secretChance then
+	if (not egg or egg.AllowSecret ~= false) and math.random() < secretChance then
 		species = Config.SecretSpecies[math.random(1, #Config.SecretSpecies)]
 	end
 	local monster: MonsterMath.MonsterData = {
@@ -287,7 +414,7 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	profile.Data.Stats.Hatched += 1
 
 	PlotService.RemoveEgg(player, eggData.Id)
-	PlotService.RenderMonster(player, monster)
+	if monster.Slot > 0 then PlotService.RenderMonster(player, monster) end
 
 	local rarity = Config.Species[species].Rarity
 	MonsterService.Notify(player, "🐣 Hatched! You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")", "success")
@@ -296,11 +423,11 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	end
 end
 
--- بيدّي اللاعب وحش جديد Level 1 في أول مكان فاضي (لما يوصّل وحش شايله لقاعدته مثلاً).
+-- الوحش الجديد يروح أول مكان فاضي، والزيادة محفوظة على البنش.
 function MonsterService.AddMonster(player: Player, species: string, mutation: string?): boolean
 	local profile = DataService.Get(player)
-	local slot = MonsterService.GetFreeSlot(player)
-	if not profile or not Config.Species[species] or not slot then
+	local slot = MonsterService.GetFreeSlot(player) or 0
+	if not profile or not Config.Species[species] then
 		return false
 	end
 	local monster: MonsterMath.MonsterData = {
@@ -314,40 +441,42 @@ function MonsterService.AddMonster(player: Player, species: string, mutation: st
 		Slot = slot,
 	}
 	profile.Data.Monsters[monster.Id] = monster
-	PlotService.RenderMonster(player, monster)
+	if slot > 0 then PlotService.RenderMonster(player, monster) end
 	local rarity = Config.Species[species].Rarity
-	MonsterService.Notify(player, "🐾 You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")! It's in your base.", "success")
+	MonsterService.Notify(player, "🐾 You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")! " .. (if slot > 0 then "It's in your base." else "Saved to your bench."), "success")
 	if rarity == "Secret" then
 		MonsterService.Announce("🌌 " .. player.DisplayName .. " got a SECRET monster: " .. MonsterMath.GetDisplayName(monster) .. "!", Color3.fromRGB(200, 120, 255))
 	end
-	MonsterService.PushState(player)
+	saveInventory(player)
 	return true
 end
 
 -- بيشيل وحش من بيانات اللاعب ويرجّعه (للـ Trading والـ Arena)
-function MonsterService.TakeMonsterData(player: Player, monsterId: string): MonsterMath.MonsterData?
+function MonsterService.TakeMonsterData(player: Player, monsterId: string, allowTrade: boolean?): MonsterMath.MonsterData?
 	local profile = DataService.Get(player)
 	local monster = profile and profile.Data.Monsters[monsterId]
-	if not profile or not monster or MonsterService.IsCarried(player, monsterId) then
+	if not profile or not monster or MonsterService.IsCarried(player, monsterId)
+		or (not allowTrade and MonsterService.IsUnavailable(player, monsterId)) then
 		return nil
 	end
 	profile.Data.Monsters[monsterId] = nil
+	FollowerService.Remove(player, monsterId)
 	PlotService.RemoveMonster(player, monsterId)
 	return monster
 end
 
--- بيحط وحش (جاي من لاعب تاني) في أول مكان فاضي، بنفس الـ Level والطفرة
+-- بيحفظ الوحش الجاي من لاعب تاني بنفس مستواه وتجهيزه حتى لو القاعدة مليانة.
 function MonsterService.InsertMonsterData(player: Player, monster: MonsterMath.MonsterData): boolean
 	local profile = DataService.Get(player)
-	local slot = MonsterService.GetFreeSlot(player)
-	if not profile or not slot then
+	local slot = MonsterService.GetFreeSlot(player) or 0
+	if not profile or not Config.Species[monster.Species] then
 		return false
 	end
 	local copy: MonsterMath.MonsterData = table.clone(monster)
 	copy.Id = DataService.NewId(player)
 	copy.Slot = slot
 	profile.Data.Monsters[copy.Id] = copy
-	PlotService.RenderMonster(player, copy)
+	if slot > 0 then PlotService.RenderMonster(player, copy) end
 	return true
 end
 
@@ -357,28 +486,33 @@ function MonsterService.CountFreeSlots(player: Player): number
 	if not profile then
 		return 0
 	end
-	local used = 0
-	for _ in profile.Data.Monsters do
-		used += 1
+	local used: { [number]: boolean } = {}
+	local unlocked = MonsterService.GetUnlockedSlots(player)
+	for _, monster in profile.Data.Monsters do
+		if MonsterService.IsPlaced(player, monster) then used[monster.Slot] = true end
 	end
-	for _ in profile.Data.Eggs do
-		used += 1
+	for _, egg in profile.Data.Eggs do
+		if egg.Slot >= 1 and egg.Slot <= unlocked then used[egg.Slot] = true end
 	end
-	return math.max(0, MonsterService.GetUnlockedSlots(player) - used)
+	local count = 0
+	for slot = 1, unlocked do if not used[slot] then count += 1 end end
+	return count
 end
 
--- قوة ضربة اللاعب في الوحوش الأم: كل ما وحوشك تنتج أكتر ضربتك بتبقى أقوى.
+-- قوة الضربة من المرافقين المختارين فقط؛ دخل الوحوش ملوش علاقة بالضرر.
 function MonsterService.GetAttackDamage(player: Player): number
-	local profile = DataService.Get(player)
-	local production = 0
-	if profile then
-		for id, monster in profile.Data.Monsters do
-			if not MonsterService.IsCarried(player, id) then
-				production += MonsterMath.GetProduction(monster)
-			end
-		end
-	end
-	return math.floor(Config.Combat.BaseDamage + production * Config.Combat.DamagePerProduction)
+	return Config.Combat.BaseDamage + FollowerService.GetDamageBonus(player)
+end
+
+function MonsterService.GetFollowerDamageBonus(player: Player): number
+	return FollowerService.GetDamageBonus(player)
+end
+
+local function toggleFollower(player: Player, id: unknown)
+	if rateLimited(player) then return end
+	local success, message = FollowerService.Toggle(player, id)
+	MonsterService.Notify(player, message, if success then "success" else "error")
+	MonsterService.PushState(player)
 end
 
 -- التربية ---------------------------------------------------------------------------
@@ -426,40 +560,68 @@ local function getOwnMonster(player: Player, monsterId: unknown): MonsterMath.Mo
 	if not monster then
 		return nil
 	end
-	if MonsterService.IsCarried(player, monsterId) then
-		MonsterService.Notify(player, "This monster is being stolen! Catch the thief!", "error")
+	if MonsterService.IsUnavailable(player, monsterId) then
+		MonsterService.Notify(player, "This monster is unavailable while carried or offered in a trade.", "error")
 		return nil
 	end
 	return monster
 end
 
-local function feed(player: Player, monsterId: unknown)
-	if rateLimited(player) then
-		return
+-- كل أكلة بتراجع الملكية وتخصم تمنها على السيرفر قبل أي XP أو تحديث للمجسم.
+-- الجزء اللي بيخصم ويحدّث الجوع والمهلة مفيهوش أي دالة بتعمل yield.
+local function feedOwnedMonster(player: Player, monsterId: string, now: number): (boolean, string?)
+	local profile = DataService.Get(player)
+	local monster = profile and profile.Data.Monsters[monsterId]
+	if not monster or MonsterService.IsUnavailable(player, monsterId) then
+		return false, nil
 	end
-	local monster = getOwnMonster(player, monsterId)
-	if not monster then
-		return
+	local previous = lastFeed[player] and lastFeed[player][monsterId]
+	if previous and now - previous < Config.AutoFeeder.FeedCooldown then
+		return false, nil
 	end
 	if monster.Hunger >= 99 then
-		MonsterService.Notify(player, "Your monster is already full!", "info")
-		return
+		return false, "Your monster is already full!"
 	end
 	if not DataService.TrySpend(player, MonsterMath.GetFoodCost(monster)) then
-		MonsterService.Notify(player, "Not enough coins for food!", "error")
-		return
+		return false, "Not enough coins for food!"
 	end
+	lastFeed[player] = lastFeed[player] or {}
+	lastFeed[player][monsterId] = now
 	monster.Hunger = math.min(100, monster.Hunger + Config.Food.Hunger)
 	addXp(player, monster, Config.Food.Xp)
 	PlotService.UpdateMonster(player, monster, false)
-	MonsterService.PushState(player)
+	return true, nil
+end
+
+local function feed(player: Player, monsterId: unknown)
+	if rateLimited(player) then return end
+	local monster = getOwnMonster(player, monsterId)
+	if not monster then return end
+	local fed, message = feedOwnedMonster(player, monster.Id, os.clock())
+	if message then MonsterService.Notify(player, message, if monster.Hunger >= 99 then "info" else "error") end
+	if fed then MonsterService.PushState(player) end
+end
+
+local function autoFeedPlayer(player: Player, now: number)
+	local previous = lastAutoFeed[player]
+	if previous and now - previous < Config.AutoFeeder.Interval then return end
+	-- نعمل محاولة واحدة بعد أي توقف؛ مفيش تعويض أكلات أو XP عن وقت قديم.
+	lastAutoFeed[player] = now
+	if not MonsterService.HasPass(player, "AutoFeeder") then return end
+	local profile = DataService.Get(player)
+	if not profile then return end
+	for id, monster in profile.Data.Monsters do
+		if MonsterService.IsPlaced(player, monster) and monster.Hunger <= Config.AutoFeeder.Threshold then
+			feedOwnedMonster(player, id, now)
+		end
+	end
 end
 
 -- ألعاب صغيرة مع الوحش (بدل زرار Play) ----------------------------------------------------
--- Catch: كور بتظهر على الشاشة وانت بتمسكها (الكلاينت بيعدّ والسيرفر بيتأكد من الوقت والحد الأقصى).
+-- Catch: السيرفر يعدّ المحاولات المقبولة ويحدد النقاط؛ نتيجة الكلاينت لا تمنح XP.
 -- Run: بتجري مع وحشك، والسيرفر بيقيس المسافة اللي مشيتها بنفسه.
 
-type ActiveGame = { MonsterId: string, Game: string, StartedAt: number, Distance: number }
+type ActiveGame = { MonsterId: string, Game: string, StartedAt: number, Distance: number, Catches: number, LastCatchAt: number }
 local activeGames: { [Player]: ActiveGame } = {}
 
 local function finishGame(player: Player, game: ActiveGame, xp: number)
@@ -495,14 +657,22 @@ local function startMiniGame(player: Player, monsterId: unknown, gameName: unkno
 	end
 	lastPlay[player][monster.Id] = now
 
-	local game: ActiveGame = { MonsterId = monster.Id, Game = gameName :: string, StartedAt = now, Distance = 0 }
+	local catchSettings = Config.MiniGames.Catch
+	local game: ActiveGame = {
+		MonsterId = monster.Id,
+		Game = gameName :: string,
+		StartedAt = now,
+		Distance = 0,
+		Catches = 0,
+		LastCatchAt = now - catchSettings.MinCatchInterval,
+	}
 	activeGames[player] = game
 	if gameName == "Catch" then
-		local duration = Config.MiniGames.Catch.Duration
+		local duration = catchSettings.Duration
 		remotes.MiniGameState:FireClient(player, { Game = "Catch", TimeLeft = duration })
 		-- لو الكلاينت مابعتش النتيجة، اللعبة بتخلص لوحدها
 		task.delay(duration + 6, function()
-			finishGame(player, game, 0)
+			finishGame(player, game, game.Catches * catchSettings.XpPerCatch)
 		end)
 		return
 	end
@@ -535,18 +705,34 @@ local function startMiniGame(player: Player, monsterId: unknown, gameName: unkno
 	end)
 end
 
-local function finishCatch(player: Player, score: unknown)
+local function recordCatch(player: Player)
 	local game = activeGames[player]
-	if not game or game.Game ~= "Catch" or type(score) ~= "number" then
+	if not game or game.Game ~= "Catch" then
 		return
 	end
 	local settings = Config.MiniGames.Catch
-	local elapsed = os.clock() - game.StartedAt
-	if elapsed < settings.Duration - 1.5 then
-		return -- بدري أوي
+	local now = os.clock()
+	if now - game.StartedAt > settings.Duration or game.Catches >= settings.MaxCatches then
+		return
 	end
-	local catches = math.clamp(math.floor(score), 0, settings.MaxCatches)
-	finishGame(player, game, catches * settings.XpPerCatch)
+	if now - game.LastCatchAt < settings.MinCatchInterval then
+		return
+	end
+	game.LastCatchAt = now
+	game.Catches += 1
+	remotes.MiniGameState:FireClient(player, { Game = "Catch", Score = game.Catches })
+end
+
+local function finishCatch(player: Player)
+	local game = activeGames[player]
+	if not game or game.Game ~= "Catch" then
+		return
+	end
+	local settings = Config.MiniGames.Catch
+	if os.clock() - game.StartedAt < settings.Duration - 1.5 then
+		return -- السيرفر لا يقبل الإنهاء قبل انتهاء الجولة
+	end
+	finishGame(player, game, game.Catches * settings.XpPerCatch)
 end
 
 -- الإكسسوارات ------------------------------------------------------------------------------
@@ -560,7 +746,8 @@ local function buySpeedAccessory(player: Player, name: unknown)
 	if not accessory or not profile then
 		return
 	end
-	if profile.Data.SpeedAccessories[name] then
+	if type(profile.Data.SpeedAccessories) ~= "table" then return end
+	if profile.Data.SpeedAccessories[name] == true then
 		MonsterService.Notify(player, "You already own " .. accessory.Name .. "!", "info")
 		return
 	end
@@ -569,10 +756,27 @@ local function buySpeedAccessory(player: Player, name: unknown)
 		return
 	end
 	profile.Data.SpeedAccessories[name] = true
-	CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories)
+	profile.Data.EquippedSpeedAccessory = name
+	CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories, name)
 	MonsterService.Notify(player, "🏃 You bought " .. accessory.Name .. "!", "success")
 	MonsterService.PushState(player)
 	task.spawn(DataService.Save, player)
+end
+
+local lastGearEquip: { [Player]: number } = {}
+local function equipSpeedAccessory(player: Player, name: unknown)
+	if name ~= nil and (type(name) ~= "string" or #name > 64 or not Config.SpeedAccessories[name]) then return end
+	local profile = DataService.Get(player)
+	if not profile or type(profile.Data.SpeedAccessories) ~= "table" then return end
+	if name ~= nil and profile.Data.SpeedAccessories[name] ~= true then return end
+	local now = os.clock()
+	if lastGearEquip[player] and now - lastGearEquip[player] < Config.Security.GearEquipCooldown then return end
+	lastGearEquip[player] = now
+	if profile.Data.EquippedSpeedAccessory == name then return end
+	profile.Data.EquippedSpeedAccessory = name :: string?
+	CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories, name :: string?)
+	MonsterService.PushState(player)
+	DataService.QueueSave(player)
 end
 
 local function buyAccessory(player: Player, name: unknown, monsterId: unknown)
@@ -648,13 +852,15 @@ local function sell(player: Player, monsterId: unknown)
 	end
 	local value = MonsterMath.GetSellValue(monster)
 	profile.Data.Monsters[monster.Id] = nil
+	FollowerService.Remove(player, monster.Id)
 	DataService.AddCoins(player, value)
 	PlotService.RemoveMonster(player, monster.Id)
 	MonsterService.Notify(player, "Sold " .. MonsterMath.GetDisplayName(monster) .. " for " .. MonsterMath.FormatNumber(value) .. " 💰", "success")
 	MonsterService.PushState(player)
 end
 
-local function buyUpgrade(player: Player, upgrade: unknown)
+-- Called from the base's upgrade pad (PlotService.Callbacks.Upgrade); there is no remote for this anymore.
+function MonsterService.BuyUpgrade(player: Player, upgrade: unknown)
 	if rateLimited(player) then
 		return
 	end
@@ -765,9 +971,9 @@ local function tickPlayer(player: Player, dt: number)
 	local multiplier = MonsterService.GetCoinMultiplier(player)
 
 	for id, monster in data.Monsters do
-		monster.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * dt)
-		monster.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * dt)
-		if not MonsterService.IsCarried(player, id) then
+		if MonsterService.IsPlaced(player, monster) and not MonsterService.IsCarried(player, id) then
+			monster.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * dt)
+			monster.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * dt)
 			data.PendingCoins += MonsterMath.GetProduction(monster) * multiplier * dt
 			if monster.Hunger >= 50 and monster.Happiness >= 50 then
 				addXp(player, monster, Config.PassiveXpPerSecond * dt)
@@ -776,22 +982,18 @@ local function tickPlayer(player: Player, dt: number)
 		end
 	end
 
+	autoFeedPlayer(player, os.clock())
+
 	local now = os.time()
 	for _, egg in data.Eggs do
 		if now >= egg.HatchAt then
 			hatch(player, egg)
-		else
+		elseif egg.Slot > 0 then
 			PlotService.UpdateEggTimer(player, egg.Id, egg.EggType, egg.HatchAt - now)
 		end
 	end
 
-	-- ضمان إن مفيش لاعب يعلق من غير وحوش ولا فلوس.
-	if next(data.Monsters) == nil and next(data.Eggs) == nil and data.Coins + data.PendingCoins < Config.Eggs.Basic.Cost then
-		local id = DataService.NewId(player)
-		data.Eggs[id] = { Id = id, EggType = "Basic", Slot = 1, HatchAt = os.time() + 5 }
-		PlotService.RenderEgg(player, id, "Basic", 1)
-		MonsterService.Notify(player, "🎁 Here is a free egg to get you back on your feet!", "success")
-	end
+	-- Players start with a bat and collect monsters from the zones; no automatic eggs.
 
 	-- Auto-Collect: الفلوس بتروح المحفظة لوحدها
 	if MonsterService.HasPass(player, "AutoCollect") and data.PendingCoins >= 1 then
@@ -813,23 +1015,30 @@ function MonsterService.SetupPlayer(player: Player)
 	end
 	local data = profile.Data
 
-	PlotService.SetUnlockedSlots(player, MonsterService.GetUnlockedSlots(player))
+	local unlocked = MonsterService.GetUnlockedSlots(player)
+	DataService.NormalizeMonsterSlots(data, unlocked)
+	PlotService.SetUnlockedSlots(player, unlocked)
 	for _, monster in data.Monsters do
-		PlotService.RenderMonster(player, monster)
+		if monster.Slot > 0 then PlotService.RenderMonster(player, monster) end
 	end
 	for _, egg in data.Eggs do
-		PlotService.RenderEgg(player, egg.Id, egg.EggType, egg.Slot)
+		if egg.Slot > 0 then PlotService.RenderEgg(player, egg.Id, egg.EggType, egg.Slot) end
 	end
 	PlotService.SetPending(player, data.PendingCoins)
 	MonsterService.PushState(player)
 end
 
 function MonsterService.CleanupPlayer(player: Player)
+	FollowerService.CleanupPlayer(player)
 	lastPlay[player] = nil
 	activeGames[player] = nil
 	lastAction[player] = nil
 	lastCollect[player] = nil
+	lastGearEquip[player] = nil
+	lastFeed[player] = nil
+	lastAutoFeed[player] = nil
 	MonsterService.Carried[player] = nil
+	MonsterService.Trading[player] = nil
 end
 
 function MonsterService.OpenMonster(who: Player, owner: Player, monsterId: string)
@@ -841,15 +1050,26 @@ end
 
 function MonsterService.Init(allRemotes: Remotes)
 	remotes = allRemotes
+	FollowerService.Init(MonsterService.IsUnavailable, MonsterService.PushState)
+	local function inventoryAction(action: (Player, any, any) -> (boolean, string), player: Player, id: any?, slot: any?)
+		if rateLimited(player) then return end
+		local success, message = action(player, id, slot)
+		MonsterService.Notify(player, message, if success then "success" else "error")
+	end
+	if remotes.PlaceMonster then remotes.PlaceMonster.OnServerEvent:Connect(function(player, id, slot) inventoryAction(MonsterService.PlaceMonster, player, id, slot) end) end
+	if remotes.BenchMonster then remotes.BenchMonster.OnServerEvent:Connect(function(player, id) inventoryAction(MonsterService.BenchMonster :: any, player, id) end) end
+	if remotes.AutoPlaceMonsters then remotes.AutoPlaceMonsters.OnServerEvent:Connect(function(player) inventoryAction(MonsterService.AutoPlace :: any, player) end) end
+	remotes.ToggleFollower.OnServerEvent:Connect(toggleFollower)
 	remotes.BuyEgg.OnServerEvent:Connect(buyEgg)
 	remotes.FeedMonster.OnServerEvent:Connect(feed)
 	remotes.MiniGameStart.OnServerEvent:Connect(startMiniGame)
+	remotes.MiniGameCatch.OnServerEvent:Connect(recordCatch)
 	remotes.MiniGameFinish.OnServerEvent:Connect(finishCatch)
 	remotes.BuyAccessory.OnServerEvent:Connect(buyAccessory)
 	remotes.BuySpeedAccessory.OnServerEvent:Connect(buySpeedAccessory)
+	remotes.EquipSpeedAccessory.OnServerEvent:Connect(equipSpeedAccessory)
 	remotes.EquipAccessory.OnServerEvent:Connect(equipAccessory)
 	remotes.SellMonster.OnServerEvent:Connect(sell)
-	remotes.BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
 
 	task.spawn(function()
 		local last = os.clock()

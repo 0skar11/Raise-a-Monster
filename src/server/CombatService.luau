@@ -1,14 +1,59 @@
 --!strict
--- الأسلحة والضرب: المضرب الخشبي للجميع، والأسلحة الإضافية من متجر الـ Gamepass.
+-- الأسلحة والضرب: المضرب للجميع، والأسلحة بعملات اللعبة مع دعم ملكية الـ Gamepass القديمة.
 -- أي حاجة ممكن تتضرب (الوحوش الأم، الـ Big Boss) بتتسجل هنا كـ Target،
 -- ولو مفيش Target قريب السلاح بيضرب أقرب لاعب (برّه القواعد بس).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Debris = game:GetService("Debris")
+
 local Config = require(ReplicatedStorage.Shared.Config)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
+
+-- تشغيل صوت في مكان معين
+local function playSound(parent: Instance, soundId: string, volume: number?)
+	local sound = Instance.new("Sound")
+	sound.SoundId = soundId
+	sound.Volume = volume or 1
+	sound.Parent = parent
+	sound:Play()
+	Debris:AddItem(sound, 3)
+end
+
+-- عمل مؤثر بصري (VFX) بسيط عند الإصابة
+local function spawnHitVfx(position: Vector3, color: Color3?)
+	local part = Instance.new("Part")
+	part.Name = "HitEffect"
+	part.Size = Vector3.new(0.5, 0.5, 0.5)
+	part.Position = position
+	part.Anchored = true
+	part.CanCollide = false
+	part.Transparency = 1
+	part.Parent = workspace
+
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = part
+
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Color = ColorSequence.new(color or Color3.fromRGB(255, 220, 100))
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.LightEmission = 1
+	emitter.Texture = "rbxassetid://243098777" -- لمعة بسيطة
+	emitter.Speed = NumberRange.new(5, 10)
+	emitter.Lifetime = NumberRange.new(0.2, 0.4)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Rate = 0
+	emitter.Parent = attachment
+
+	emitter:Emit(10)
+	Debris:AddItem(part, 1)
+end
 
 export type Target = {
 	Part: BasePart,
@@ -19,6 +64,8 @@ export type Target = {
 type Tag = { Attacker: Player, Time: number }
 
 local CombatService = {}
+
+local remotes = Remotes.Get()
 
 local targets: { [Target]: boolean } = {}
 local lastSwing: { [Player]: number } = {}
@@ -69,6 +116,7 @@ function CombatService.GetKiller(victim: Player): Player?
 end
 
 local function swing(player: Player, tool: Tool, damageMultiplier: number, extraReach: number, pvpDamage: number)
+	if tool.Parent ~= player.Character or tool:GetAttribute("GameWeaponOwner") ~= player.UserId then return end
 	local now = os.clock()
 	if lastSwing[player] and now - lastSwing[player] < Config.Combat.AttackCooldown then
 		return
@@ -80,7 +128,21 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 		return
 	end
 
-	-- أنيميشن الضربة بتاع R6
+	-- أصوات الضرب
+	local handle = tool:FindFirstChild("Handle") :: BasePart?
+	if handle then
+		playSound(handle, Config.Combat.Sounds.Swing, 0.6)
+	end
+
+	-- أنيميشن الضربة (تحريك السيف للأمام والخلف برمجياً)
+	task.spawn(function()
+		local originalGrip = tool.Grip
+		tool.Grip = originalGrip * CFrame.Angles(math.rad(45), 0, 0)
+		task.wait(0.15)
+		tool.Grip = originalGrip
+	end)
+
+	-- أنيميشن الذراع (Slash)
 	local animation = Instance.new("StringValue")
 	animation.Name = "toolanim"
 	animation.Value = "Slash"
@@ -99,7 +161,13 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 		end
 	end
 	if best then
-		best.OnHit(player, math.floor(MonsterService.GetAttackDamage(player) * damageMultiplier))
+		local crit = math.random() < Config.Combat.CritChance
+		local damage = math.floor(MonsterService.GetAttackDamage(player) * damageMultiplier * (if crit then Config.Combat.CritMultiplier else 1))
+		local hitPosition = best.Part.Position
+		best.OnHit(player, damage)
+		playSound(best.Part, Config.Combat.Sounds.Hit, if crit then 1 else 0.8)
+		spawnHitVfx(hitPosition, if crit then Color3.fromRGB(255, 170, 40) else nil)
+		remotes.HitFeedback:FireClient(player, hitPosition + Vector3.new(0, best.Radius + 2, 0), damage, crit)
 		return
 	end
 
@@ -124,17 +192,55 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 	end
 	if victim then
 		local victimHumanoid = getHumanoid(victim)
-		if victimHumanoid then
+		local victimRoot = getRoot(victim)
+		if victimHumanoid and victimRoot then
 			tags[victim] = { Attacker = player, Time = now }
-			victimHumanoid:TakeDamage(pvpDamage)
+			local damage = math.floor((pvpDamage + MonsterService.GetFollowerDamageBonus(player) * Config.Followers.PvpDamageScale) * damageMultiplier)
+			victimHumanoid:TakeDamage(damage)
+			playSound(victimRoot, Config.Combat.Sounds.Hit, 0.8)
+			spawnHitVfx(victimRoot.Position)
+			remotes.HitFeedback:FireClient(player, victimRoot.Position + Vector3.new(0, 3, 0), damage, false)
+			remotes.PlayerHurt:FireClient(victim, damage, Color3.fromRGB(255, 60, 60))
 		end
 	end
 end
 
--- Each Handle's long axis maps to tool-local -Z. Rotate the grip so it points
--- along the character's forward direction when equipped.
-local function setForwardGrip(tool: Tool)
-	tool.Grip = CFrame.new(0, -0.65, 0) * CFrame.Angles(0, math.rad(90), 0)
+-- Templates extend along Handle +X. With Roblox's equipped-tool hold pose,
+-- a -90 degree Z grip puts the barrel above the hand instead of forward.
+-- The blade direction is measured from the model itself (handle origin -> centre of the other parts),
+-- so a template authored along another axis still ends up pointing straight up.
+local function bladeAxis(tool: Tool): Vector3
+	local handle = tool:FindFirstChild("Handle")
+	if not handle or not handle:IsA("BasePart") then return Vector3.xAxis end
+	local sum, count = Vector3.zero, 0
+	for _, item in tool:GetDescendants() do
+		if item:IsA("BasePart") and item ~= handle then
+			sum += handle.CFrame:PointToObjectSpace(item.CFrame.Position)
+			count += 1
+		end
+	end
+	local direction = if count > 0 then sum / count else Vector3.zero
+	if direction.Magnitude < 0.2 then
+		-- Single-part weapon: use the longest side of the handle.
+		local size = handle.Size
+		direction = if size.X >= size.Y and size.X >= size.Z then Vector3.xAxis elseif size.Y >= size.Z then Vector3.yAxis else Vector3.zAxis
+	end
+	local ax, ay, az = math.abs(direction.X), math.abs(direction.Y), math.abs(direction.Z)
+	if ax >= ay and ax >= az then return Vector3.xAxis * math.sign(direction.X) end
+	if ay >= az then return Vector3.yAxis * math.sign(direction.Y) end
+	return Vector3.zAxis * math.sign(direction.Z)
+end
+
+local function setUprightGrip(tool: Tool)
+	local axis = bladeAxis(tool)
+	if axis == Vector3.xAxis then
+		tool.Grip = CFrame.new(-0.15, 0, 0) * CFrame.Angles(0, 0, math.rad(-90))
+		return
+	end
+	-- Grip maps the hand's up direction onto the blade axis (Handle = hand * Grip^-1).
+	local helper = if math.abs(axis.Y) < 0.9 then Vector3.yAxis else Vector3.zAxis
+	local right = helper:Cross(axis).Unit
+	tool.Grip = CFrame.fromMatrix(-0.15 * axis, right, axis, right:Cross(axis))
 end
 
 local function cloneWeaponTemplate(name: string): Tool
@@ -142,7 +248,7 @@ local function cloneWeaponTemplate(name: string): Tool
 	local template = folder:WaitForChild(name)
 	assert(template:IsA("Tool"), "Weapon template is missing or invalid: " .. name)
 	local tool = template:Clone() :: Tool
-	setForwardGrip(tool)
+	setUprightGrip(tool)
 	return tool
 end
 
@@ -151,6 +257,7 @@ local function makeBat(): Tool
 	tool.Name = "Bat"
 	tool.ToolTip = "Hit the mother monsters!"
 	tool.CanBeDropped = false
+	tool:SetAttribute("GameWeaponKey", "Bat")
 	return tool
 end
 
@@ -161,48 +268,42 @@ local function makeSword(passName: string): Tool
 	tool.Name = Config.Gamepasses[passName].Name
 	tool.ToolTip = Config.Gamepasses[passName].Description
 	tool.CanBeDropped = false
+	tool:SetAttribute("GameWeaponKey", passName)
 	return tool
 end
--- بيدّي اللاعب أسلحته (بيتنادى كل ما الشخصية تتولد، عشان الـ Backpack بيتمسح)
-function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: boolean }, ownedWeapons: { [string]: boolean })
+-- سلاح واحد ظاهر؛ تبديله مايمسحش ملكية الأسلحة التانية.
+function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: boolean }, ownedWeapons: { [string]: boolean }, selected: string?)
 	local backpack = player:FindFirstChildOfClass("Backpack")
-	if not backpack then
-		return
-	end
+	if not backpack then return end
 	local character = player.Character
-	local function has(name: string): boolean
-		return backpack:FindFirstChild(name) ~= nil or (character ~= nil and character:FindFirstChild(name) ~= nil)
-	end
-	local bat = (backpack:FindFirstChild("Bat") or (character and character:FindFirstChild("Bat"))) :: Tool?
-	if not bat then
-		bat = makeBat()
-		bat.Activated:Connect(function()
-			swing(player, bat :: Tool, 1, 0, Config.PvP.BatDamage)
-		end)
-		bat.Parent = backpack
-	end
-	if bat then
-		setForwardGrip(bat)
-	end
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid and bat then
-		humanoid:EquipTool(bat)
-	end
-	for passName, stats in Config.WeaponStats do
-		local displayName = Config.Gamepasses[passName].Name
-		if ownedPasses[passName] or ownedWeapons[passName] then
-			local existingSword = backpack:FindFirstChild(displayName) or (character and character:FindFirstChild(displayName))
-			if existingSword and existingSword:IsA("Tool") then
-				setForwardGrip(existingSword)
-			elseif not existingSword then
-				local sword = makeSword(passName)
-				sword.Activated:Connect(function()
-					swing(player, sword, stats.DamageMultiplier, stats.ExtraReach, Config.PvP.SwordDamage)
-				end)
-				sword.Parent = backpack
+	local key = selected or "Bat"
+	if key ~= "Bat" and (not Config.WeaponStats[key] or (ownedPasses[key] ~= true and ownedWeapons[key] ~= true)) then key = "Bat" end
+	local starterGear = player:FindFirstChild("StarterGear")
+	local containers: { Instance } = { backpack }
+	if character then table.insert(containers, character) end
+	if starterGear then table.insert(containers, starterGear) end
+	local equippedTool: Tool? = nil
+	for _, container in containers do
+		for _, item in container:GetChildren() do
+			local itemKey = item:GetAttribute("GameWeaponKey")
+			if item:IsA("Tool") and item:GetAttribute("GameWeaponOwner") == player.UserId and type(itemKey) == "string" and (itemKey == "Bat" or Config.WeaponStats[itemKey]) then
+				if itemKey == key and not equippedTool and container ~= starterGear then equippedTool = item else item:Destroy() end
 			end
 		end
 	end
+	if not equippedTool then
+		local stats = Config.WeaponStats[key]
+		local created = if key == "Bat" then makeBat() else makeSword(key)
+		created:SetAttribute("GameWeaponOwner", player.UserId)
+		created.Activated:Connect(function()
+			swing(player, created, if stats then stats.DamageMultiplier else 1, if stats then stats.ExtraReach else 0, if stats then Config.PvP.SwordDamage else Config.PvP.BatDamage)
+		end)
+		created.Parent = backpack
+		equippedTool = created
+	end
+	setUprightGrip(equippedTool)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then humanoid:EquipTool(equippedTool) end
 end
 
 function CombatService.CleanupPlayer(player: Player)
