@@ -52,6 +52,8 @@ local function onPassGranted(player: Player, name: string)
 		giveWeapons(player)
 	elseif Config.WeaponStats[name] then
 		giveWeapons(player)
+	elseif name == "AutoCollect" then
+		PlotService.SetCollectorEnabled(player, false)
 	elseif name == "ExtraSlots" then
 		local unlocked = MonsterService.GetUnlockedSlots(player)
 		PlotService.SetUnlockedSlots(player, unlocked)

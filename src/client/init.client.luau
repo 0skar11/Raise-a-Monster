@@ -5,6 +5,10 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
+-- Roblox's Tab player list already provides player names and the Coins leaderstat.
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
@@ -16,10 +20,13 @@ local GearAnimate = require(script.GearAnimate)
 local CombatFx = require(script.CombatFx)
 local Settings = require(script.Settings)
 local MonsterInventory = require(script.MonsterInventory)
+local Effects = require(script.Effects)
+local CashCounterFormatter = require(script.CashCounterFormatter)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
 local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
+CashCounterFormatter.Start(player:WaitForChild("PlayerGui"))
 
 local state: any = nil
 local openMonsterId: string? = nil
@@ -134,6 +141,7 @@ local function refresh()
 		return
 	end
 	ui.CoinsLabel.Text = "💰 " .. MonsterMath.FormatNumber(state.Coins)
+	Effects.OnCoins(ui, state.Coins)
 	local production = 0
 	for _, monster in state.Monsters do
 		if monster.Placed == true and not monster.Carried then
@@ -169,6 +177,7 @@ end)
 
 remotes.Notify.OnClientEvent:Connect(function(text: string, kind: string)
 	UI.Toast(ui, text, kind)
+	Effects.OnNotify(kind)
 end)
 
 remotes.OpenShop.OnClientEvent:Connect(function()
@@ -293,6 +302,7 @@ GearAnimate.Start()
 
 -- ضربات الوحوش، أرقام الضرر، والموسيقى
 CombatFx.Start(ui, remotes, UI.Button)
+Effects.Start(ui)
 
 -- العدّاد في لوحة الوحش (Play cooldown) بيتحدث مع كل StateUpdate، وكمان كل نص ثانية.
 task.spawn(function()

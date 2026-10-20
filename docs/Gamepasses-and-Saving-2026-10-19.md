@@ -27,11 +27,13 @@ After syncing the source, stop Play and start it again. A Studio temporary sessi
 
 - Independent review and regression checks passed: 47 persistence checks, 20 gamepass checks, receipt processing and 77 save-queue checks.
 - Extra-slot rejoin coverage includes 30 checks for delayed ownership, failed requests, preserved assignments and inactive locked slots. The saving-warning renderer has three checks.
-- All 33 production Luau files compiled successfully. Rojo build passed.
+- All 34 production Luau files in the final merged snapshot compiled successfully, including the incoming Effects module. Rojo rebuilt the tracked place file from this source.
 - A separate build of the selected commit files over HEAD passed using the repository's build script.
-- Two full-suite failures reproduce on the previous local baseline: approved geometry and an outdated gear UI caption assertion.
+- The full 12-script suite was run in an isolated checkout containing the committed feature and incoming base changes. Two failures reproduce on the previous local baseline: approved geometry and an outdated gear UI caption assertion.
 - No Studio instance was connected through MCP. Real purchase, live DataStore rejoin, device and multiplayer behavior were not verified. No static type analyzer was installed.
 
 ## Delivery scope
 
 The selected source files include existing local feature work needed by the current shop and server APIs. Other local edits, the deleted place file, and unrelated untracked artifacts are preserved outside this commit.
+
+Merge conflicts preserve selected gear, health behavior, current gear prices and shop placement while retaining the incoming UI Effects hooks and their Audio/UIEffects configuration. The existing AnimationRigs asset is included as the follower regression fixture so the checks run from a clean checkout without relying on untracked local files.
