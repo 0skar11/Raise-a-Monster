@@ -224,7 +224,7 @@ function UI.Create(playerGui: PlayerGui): UI
 		item.NextSelectionDown = navigationButtons[navigationOrder[if index < #navigationOrder then index + 1 else 1]]
 	end
 
-	-- Wallet and quick travel stay together at the center of the safe HUD area.
+	-- Keep quick travel compact at the top and place the wallet with the left HUD.
 	local walletTravel = Instance.new("Frame")
 	walletTravel.Name = "WalletTravel"
 	walletTravel.AnchorPoint = Vector2.new(0.5, 0)
@@ -234,13 +234,14 @@ function UI.Create(playerGui: PlayerGui): UI
 	walletTravel.Parent = hud
 	local coinsFrame = Instance.new("Frame")
 	coinsFrame.Name = "Wallet"
-	coinsFrame.Position = UDim2.fromOffset(98, 0)
+	coinsFrame.Position = UDim2.fromOffset(0, 0)
 	coinsFrame.Size = UDim2.fromOffset(200, 46)
 	coinsFrame.BackgroundColor3 = COLORS.Panel
 	coinsFrame.BackgroundTransparency = 0
 	GuiTheme.Gloss(coinsFrame)
 	coinsFrame.ZIndex = 0
-	coinsFrame.Parent = walletTravel
+	coinsFrame.AnchorPoint = Vector2.new(0, 1)
+	coinsFrame.Parent = hud
 	corner(coinsFrame, 14)
 	stroke(coinsFrame, COLORS.Yellow, 2)
 	GuiTheme.Icon(coinsFrame, "Coins", UDim2.fromOffset(38, 38), UDim2.fromOffset(4, 4))
@@ -255,7 +256,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	pendingLabel.TextColor3 = COLORS.SubText
 
 	local shopButton = navigationButtons.Shop
-	local homeButton = button(walletTravel, "Home", COLORS.Panel, UDim2.fromOffset(90, 34), UDim2.fromOffset(0, 6))
+	local homeButton = button(walletTravel, "Home", COLORS.Panel, UDim2.fromOffset(90, 34), UDim2.fromOffset(208, 6))
 	homeButton.Name = "HomeButton"
 	homeButton.ZIndex = 0
 	homeButton.TextSize = 16
@@ -276,36 +277,33 @@ function UI.Create(playerGui: PlayerGui): UI
 		hud.Size = UDim2.fromOffset(viewport.X, viewport.Y)
 		local stacked = viewport.X < 520
 		if stacked then
-			local groupWidth = math.min(200, math.max(1, viewport.X - 24))
-			local walletWidth = math.min(180, groupWidth)
+			local groupWidth = math.min(288, math.max(1, viewport.X - 24))
 			local homeWidth = math.floor((groupWidth - 12) / 3)
-			walletTravel.Size = UDim2.fromOffset(groupWidth, 86)
-			coinsFrame.Size = UDim2.fromOffset(walletWidth, 46)
-			coinsFrame.Position = UDim2.fromOffset((groupWidth - walletWidth) / 2, 0)
+			walletTravel.Size = UDim2.fromOffset(groupWidth, 40)
 			homeButton.Size = UDim2.fromOffset(homeWidth, 34)
-			homeButton.Position = UDim2.fromOffset(0, 52)
+			homeButton.Position = UDim2.fromOffset(0, 3)
 			teleportShopButton.Size = UDim2.fromOffset(homeWidth, 34)
-			teleportShopButton.Position = UDim2.fromOffset(homeWidth + 6, 52)
+			teleportShopButton.Position = UDim2.fromOffset(homeWidth + 6, 3)
 			teleportArenaButton.Size = UDim2.fromOffset(groupWidth - homeWidth * 2 - 12, 34)
-			teleportArenaButton.Position = UDim2.fromOffset(homeWidth * 2 + 12, 52)
+			teleportArenaButton.Position = UDim2.fromOffset(homeWidth * 2 + 12, 3)
 		else
-			walletTravel.Size = UDim2.fromOffset(494, 46)
-			coinsFrame.Size = UDim2.fromOffset(200, 46)
-			coinsFrame.Position = UDim2.fromOffset(98, 0)
+			walletTravel.Size = UDim2.fromOffset(288, 46)
 			homeButton.Size = UDim2.fromOffset(90, 34)
 			homeButton.Position = UDim2.fromOffset(0, 6)
 			teleportShopButton.Size = UDim2.fromOffset(90, 34)
-			teleportShopButton.Position = UDim2.fromOffset(306, 6)
+			teleportShopButton.Position = UDim2.fromOffset(98, 6)
 			teleportArenaButton.Size = UDim2.fromOffset(90, 34)
-			teleportArenaButton.Position = UDim2.fromOffset(404, 6)
+			teleportArenaButton.Position = UDim2.fromOffset(196, 6)
 		end
 		coinsLabel.TextSize = 24
 		local height = if viewport.X < 600 then 44 else 48
 		local gap = if viewport.Y >= 560 then 8 else 6
 		local width = height
 		local contentHeight = #navigationOrder * (height + gap) + 12
-		local top = math.max(if stacked then 100 else 62, math.floor((viewport.Y - contentHeight) / 2))
-		local available = math.max(44, viewport.Y - top - 12)
+		local walletHeight = 46
+		local walletGap = 8
+		local top = math.max(8, viewport.Y - contentHeight - walletHeight - walletGap - 12)
+		local available = math.max(44, viewport.Y - top - walletHeight - walletGap - 12)
 		navigation.Position = UDim2.fromOffset(8, top)
 		navigation.Size = UDim2.fromOffset(width + 12, math.min(contentHeight, available))
 		navigation.CanvasSize = UDim2.fromOffset(0, contentHeight)
@@ -315,6 +313,8 @@ function UI.Create(playerGui: PlayerGui): UI
 			item.Size = UDim2.fromOffset(width, height)
 			item.Position = UDim2.fromOffset(4, (index - 1) * (height + gap) + 6)
 		end
+		coinsFrame.Size = UDim2.fromOffset(math.min(200, math.max(1, viewport.X - 24)), walletHeight)
+		coinsFrame.Position = UDim2.fromOffset(8, viewport.Y - 12)
 	end
 
 	local panels: { Frame } = {}
@@ -482,15 +482,30 @@ function UI.Create(playerGui: PlayerGui): UI
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = toasts
 
+	-- The pixel-style travel bar is authored in StarterGui (visible in Studio without Play).
+	-- When present it replaces the generated Home / To Shop / To Arena buttons.
+	local travelBar = playerGui:WaitForChild("TravelBar", 5)
+	local travelHome, travelShop, travelArena = homeButton, teleportShopButton, teleportArenaButton
+	if travelBar then
+		local barFrame = travelBar:FindFirstChild("Bar")
+		local home = barFrame and barFrame:FindFirstChild("HomeButton")
+		local shop = barFrame and barFrame:FindFirstChild("TeleportShopButton")
+		local arena = barFrame and barFrame:FindFirstChild("TeleportArenaButton")
+		if home and shop and arena then
+			travelHome, travelShop, travelArena = home, shop, arena
+			homeButton.Visible, teleportShopButton.Visible, teleportArenaButton.Visible = false, false, false
+		end
+	end
+
 	rescale()
 	return {
 		Gui = gui,
 		Hud = hud,
 		NavigationButtons = navigationButtons,
 		InventoryButton = navigationButtons.Inventory,
-		HomeButton = homeButton,
-		TeleportShopButton = teleportShopButton,
-		TeleportArenaButton = teleportArenaButton,
+		HomeButton = travelHome,
+		TeleportShopButton = travelShop,
+		TeleportArenaButton = travelArena,
 		CoinsLabel = coinsLabel,
 		PendingLabel = pendingLabel,
 		ShopButton = shopButton,

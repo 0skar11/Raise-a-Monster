@@ -10,6 +10,10 @@
         "EnvironmentSpecularScale": 1
       }
     },
+    "StarterGui": {
+      "$ignoreUnknownInstances": true,
+      "TravelBar": { "$path": "assets/TravelBar.rbxmx" }
+    },
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
