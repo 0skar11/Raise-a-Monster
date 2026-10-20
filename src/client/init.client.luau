@@ -21,10 +21,12 @@ local CombatFx = require(script.CombatFx)
 local Settings = require(script.Settings)
 local MonsterInventory = require(script.MonsterInventory)
 local Effects = require(script.Effects)
+local CashCounterFormatter = require(script.CashCounterFormatter)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
 local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
+CashCounterFormatter.Start(player:WaitForChild("PlayerGui"))
 
 local state: any = nil
 local openMonsterId: string? = nil
