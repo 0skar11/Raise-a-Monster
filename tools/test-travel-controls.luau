@@ -9,14 +9,15 @@ local function signal()
 	return s
 end
 local methods = {}
-function methods:IsA(class) return self.ClassName == class or (class == "GuiObject" and (self.ClassName == "Frame" or self.ClassName == "TextLabel" or self.ClassName == "TextButton" or self.ClassName == "ImageLabel")) end
+function methods:IsA(class) return self.ClassName == class or (class == "GuiObject" and (self.ClassName == "Frame" or self.ClassName == "TextLabel" or self.ClassName == "TextButton" or self.ClassName == "ImageLabel" or self.ClassName == "ImageButton")) end
+function methods:GetFullName() return if self.Parent then self.Parent:GetFullName() .. "." .. self.Name else self.Name end
 function methods:GetChildren() return table.clone(self.Children) end
 function methods:GetDescendants() local out = {}; for _, child in self.Children do table.insert(out, child); for _, nested in child:GetDescendants() do table.insert(out, nested) end end; return out end
 function methods:FindFirstChild(name) for _, child in self.Children do if child.Name == name then return child end end end
 function methods:IsDescendantOf(ancestor) local p = self.Parent; while p do if p == ancestor then return true end; p = p.Parent end; return false end
 function methods:GetPropertyChangedSignal(name) if not self.Signals[name] then self.Signals[name] = signal() end; return self.Signals[name] end
 local function node(class, name, props)
-	local values = { Name = name, Visible = true, Enabled = true, Text = "", AbsolutePosition = roblox.Vector2.new(300, 40), AbsoluteSize = roblox.Vector2.new(130, 44) }
+	local values = { Name = name, Visible = true, Enabled = true, Text = "", Image = "", ImageTransparency = 0, AbsolutePosition = roblox.Vector2.new(300, 40), AbsoluteSize = roblox.Vector2.new(130, 44) }
 	for key, value in props or {} do values[key] = value end
 	return setmetatable({ ClassName = class, Children = {}, Signals = {}, Values = values, Activated = signal(), DescendantAdded = signal(), DescendantRemoving = signal() }, {
 		__index = function(self, key) return methods[key] or self.Values[key] end,
@@ -34,9 +35,11 @@ end
 local pending = {}
 local function flush() while #pending > 0 do local batch = pending; pending = {}; for _, callback in batch do callback() end end end
 local workspace = node("Workspace", "Workspace", { CurrentCamera = node("Camera", "Camera", { ViewportSize = roblox.Vector2.new(1280, 720) }) })
+local diagnostics = {}
 local controls = luau.load(fs.readFile("src/client/TravelControls.luau"), { environment = {
 	game = { GetService = function(_, name) assert(name == "Workspace"); return workspace end },
 	task = { defer = function(callback) table.insert(pending, callback) end }, Vector2 = roblox.Vector2, UDim2 = roblox.UDim2,
+	print = function(message) table.insert(diagnostics, tostring(message)) end,
 }, injectGlobals = true })()
 local checks = 0
 local function check(condition, message) checks += 1; assert(condition, message) end
@@ -77,6 +80,62 @@ local shop = node("ScreenGui", "ShopGui"); local shopTitle = node("TextLabel", "
 check(shopTitle.Visible and shop.Enabled, "The actual shop GUI must not be hidden")
 local unknown = node("ImageLabel", "UnidentifiedArtwork"); add(legacy, unknown); flush()
 check(unknown.Visible, "Unknown image-only artwork must not be guessed or deleted")
+-- Reproduce the observed three old images above/behind the real primary row.
+local primaryPositions = { HomeButton = 307, TeleportShopButton = 451, TeleportArenaButton = 595 }
+for name, x in primaryPositions do
+	buttons[name].AbsolutePosition = roblox.Vector2.new(x, 240)
+	buttons[name].AbsoluteSize = roblox.Vector2.new(136, 44)
+end
+local imageRoots = { node("ScreenGui", "Framewisp_ImageHome"), node("ScreenGui", "Framewisp_ImageShop"), node("ScreenGui", "Framewisp_ImageArena") }
+local imageLayer = node("Frame", "Layer", { Visible = false })
+add(imageRoots[1], imageLayer)
+local oldImages = {
+	node("ImageLabel", "Imported1", { Image = "rbxassetid://10001", AbsolutePosition = roblox.Vector2.new(306, 219), AbsoluteSize = roblox.Vector2.new(111, 40) }),
+	node("ImageButton", "Imported2", { Image = "rbxassetid://10002", AbsolutePosition = roblox.Vector2.new(453, 205), AbsoluteSize = roblox.Vector2.new(137, 48) }),
+	node("ImageLabel", "Imported3", { Image = "rbxassetid://10003", AbsolutePosition = roblox.Vector2.new(620, 218), AbsoluteSize = roblox.Vector2.new(116, 40) }),
+}
+add(imageLayer, oldImages[1]); add(imageRoots[2], oldImages[2]); add(imageRoots[3], oldImages[3])
+for _, imageRoot in imageRoots do add(root, imageRoot) end; flush()
+check(oldImages[2].Visible and oldImages[3].Visible, "A hidden ancestor makes the image row incomplete; preserve the other columns")
+imageLayer.Visible = true; flush()
+check(not oldImages[1].Visible and not oldImages[2].Visible and not oldImages[3].Visible, "Exact screenshot positions match and hide all three image-only imports when their parent becomes visible")
+check(imageRoots[1].Enabled and imageLayer.Visible, "Image cleanup never disables whole retained GUI containers")
+local matchedMessages = 0
+for _, message in diagnostics do if message:find("Matched legacy image row", 1, true) then matchedMessages += 1 end end
+check(matchedMessages == 1 and diagnostics[#diagnostics]:find("rbxassetid://10001", 1, true) ~= nil, "A successful row reports its actual paths and asset IDs once")
+oldImages[1].Visible = true; flush()
+check(not oldImages[1].Visible and not oldImages[2].Visible and not oldImages[3].Visible, "Controller-owned hidden state remains an originally visible coherent group")
+local messageCount = #diagnostics
+add(imageRoots[2], node("Frame", "Unrelated")); flush()
+check(#diagnostics == messageCount, "Unrelated refreshes do not spam diagnostic logs")
+local ambiguity = node("ImageLabel", "AnotherImport", { Image = "rbxassetid://20001", AbsolutePosition = oldImages[1].AbsolutePosition, AbsoluteSize = oldImages[1].AbsoluteSize })
+add(imageRoots[1], ambiguity); flush()
+check(oldImages[1].Visible and oldImages[2].Visible and oldImages[3].Visible and ambiguity.Visible, "Ambiguous image columns are all preserved instead of guessing")
+remove(imageRoots[1], ambiguity); flush()
+check(not oldImages[1].Visible and not oldImages[2].Visible and not oldImages[3].Visible, "Removing ambiguity restores the uniquely identified row")
+oldImages[3].Image = ""; flush()
+check(oldImages[1].Visible and oldImages[2].Visible, "Partial rows and empty image placeholders do not suppress other UI")
+oldImages[3].Image = "rbxassetid://10003"; flush()
+check(not oldImages[1].Visible and not oldImages[2].Visible and not oldImages[3].Visible, "Late image content is matched without requiring a tree or geometry change")
+imageRoots[3].Enabled = false; flush()
+check(oldImages[1].Visible and oldImages[2].Visible, "Disabled retained roots invalidate the group and restore its other images")
+imageRoots[3].Enabled = true; flush()
+oldImages[2].AbsolutePosition = roblox.Vector2.new(453, 300); flush()
+check(oldImages[1].Visible and oldImages[2].Visible and oldImages[3].Visible, "An image moved away from the primary row restores the whole unmatched group")
+oldImages[2].AbsolutePosition = roblox.Vector2.new(453, 205); flush()
+local cashRoot = node("ScreenGui", "CashCounter")
+local protectedImage = node("ImageLabel", "CashGraphic", { Image = "rbxassetid://10001", AbsolutePosition = oldImages[1].AbsolutePosition, AbsoluteSize = oldImages[1].AbsoluteSize })
+add(cashRoot, protectedImage); add(root, cashRoot); flush()
+check(protectedImage.Visible and not oldImages[1].Visible, "CashCounter is excluded even with matching content and geometry")
+oldImages[3].AbsolutePosition = roblox.Vector2.new(620, 247); flush()
+check(oldImages[1].Visible and oldImages[2].Visible and oldImages[3].Visible, "Three images with inconsistent row heights are not treated as one old travel bar")
+oldImages[3].AbsolutePosition = roblox.Vector2.new(620, 218); flush()
+remove(imageRoots[3], oldImages[3]); add(cashRoot, oldImages[3]); flush()
+check(oldImages[1].Visible and oldImages[2].Visible and oldImages[3].Visible, "Reparenting an image outside the retained travel roots restores it")
+remove(cashRoot, oldImages[3]); add(imageRoots[3], oldImages[3]); flush()
+for _, imageRoot in imageRoots do remove(root, imageRoot) end; remove(root, cashRoot); flush()
+check(oldImages[1].Visible and oldImages[2].Visible and oldImages[3].Visible and oldImages[1].Signals.Image:Count() == 0, "Removed retained roots restore images and release their subscriptions")
+for _, button in buttons do button.AbsolutePosition = roblox.Vector2.new(300, 40); button.AbsoluteSize = roblox.Vector2.new(130, 44) end; flush()
 local side = node("TextLabel", "Shop", { Text = "SHOP", AbsolutePosition = roblox.Vector2.new(10, 400) }); add(legacy, side); flush()
 check(side.Visible, "Side navigation remains outside legacy top-travel cleanup")
 local toShop = node("ScreenGui", "ToShop"); local importedImage = node("ImageLabel", "Imported"); add(toShop, importedImage); add(root, toShop); flush()

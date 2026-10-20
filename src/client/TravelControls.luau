@@ -13,6 +13,9 @@ end
 local function legacyRoot(gui: Instance): boolean
 	return gui:IsA("ScreenGui") and (gui.Name:match("^Framewisp_") ~= nil or gui.Name == "ToShop" or gui.Name == "ToHome" or gui.Name == "ToArena")
 end
+local function imageObject(instance: Instance): boolean
+	return instance:IsA("ImageLabel") or instance:IsA("ImageButton")
+end
 
 function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextButton }, teleport: (string) -> ()): () -> ()
 	if active[playerGui] then active[playerGui]() end
@@ -23,6 +26,8 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 	local geometryWatched: { [Instance]: { RBXScriptConnection } } = {}
 	local connections: { RBXScriptConnection } = {}
 	local cameraConnection: RBXScriptConnection? = nil
+	local reportedImages: { [Instance]: string } = {}
+	local reportedMissing = false
 	local refresh: () -> ()
 	local function schedule()
 		if pending or stopped then return end
@@ -44,15 +49,44 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 	end
 	local function watchGeometry(instance: Instance)
 		if geometryWatched[instance] then return end
-		geometryWatched[instance] = { instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(schedule), instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(schedule) }
+		geometryWatched[instance] = { instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(schedule), instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(schedule), instance:GetPropertyChangedSignal("Visible"):Connect(schedule) }
+	end
+	local function originallyVisible(instance: Instance): boolean
+		local current: Instance? = instance
+		while current and current ~= playerGui do
+			if current:IsA("GuiObject") then
+				local record = hidden[current :: GuiObject]
+				if not (if record then record.Visible else (current :: GuiObject).Visible) then return false end
+			elseif current:IsA("ScreenGui") and not (current :: ScreenGui).Enabled then
+				return false
+			end
+			current = current.Parent
+		end
+		return current == playerGui
+	end
+	local function imageColumn(image: GuiObject, button: TextButton): boolean
+		local position, size = image.AbsolutePosition, image.AbsoluteSize
+		local target, targetSize = button.AbsolutePosition, button.AbsoluteSize
+		if targetSize.X < 60 or targetSize.Y <= 0 then return false end
+		local view = viewport()
+		local centerX, centerY = position.X + size.X / 2, position.Y + size.Y / 2
+		return size.X >= math.max(60, targetSize.X * 0.65) and size.X <= math.min(220, targetSize.X * 1.4)
+			and size.Y >= math.max(18, targetSize.Y * 0.4) and size.Y <= math.min(100, targetSize.Y * 1.8)
+			and position.X >= 0 and position.X + size.X <= view.X and position.Y >= 0
+			and math.abs(centerX - (target.X + targetSize.X / 2)) <= math.max(18, math.min(40, targetSize.X * 0.3))
+			and centerY >= target.Y - targetSize.Y * 0.8 and centerY <= target.Y + targetSize.Y * 0.65
+	end
+	local function imageDescription(image: GuiObject): string
+		local position, size = image.AbsolutePosition, image.AbsoluteSize
+		return string.format("%s [%s] x=%.0f y=%.0f w=%.0f h=%.0f", image:GetFullName(), (image :: ImageLabel).Image, position.X, position.Y, size.X, size.Y)
 	end
 	refresh = function()
 		local selected: { [string]: TextButton } = fallback
 		local primary: ScreenGui? = nil
 		local suppress: { [GuiObject]: boolean } = {}
 		for _, gui in playerGui:GetChildren() do
+			if gui:IsA("ScreenGui") and not watched[gui] then watched[gui] = { gui:GetPropertyChangedSignal("Enabled"):Connect(schedule), gui:GetPropertyChangedSignal("Name"):Connect(schedule) } end
 			if gui.Name ~= "TravelBar" or not gui:IsA("ScreenGui") then continue end
-			if not watched[gui] then watched[gui] = { gui:GetPropertyChangedSignal("Enabled"):Connect(schedule), gui:GetPropertyChangedSignal("Name"):Connect(schedule) } end
 			if not gui.Enabled then continue end
 			local bar = gui:FindFirstChild("Bar")
 			if not bar or not bar:IsA("GuiObject") then continue end
@@ -66,6 +100,8 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 			if not complete then continue end
 			if primary then suppress[bar] = true; continue end
 			primary, selected = gui, buttons
+			watchGeometry(bar)
+			for _, button in buttons do watchGeometry(button) end
 			local scale = bar:FindFirstChild("ResponsiveScale")
 			if scale and scale:IsA("UIScale") then scale.Scale = 1 end
 			local width = math.min(424, math.max(24, viewport().X - 24))
@@ -85,9 +121,21 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 		end
 		for button, connection in bound do if not wanted[button] then connection:Disconnect(); bound[button] = nil end end
 		if primary then
+			local images: { GuiObject } = {}
 			for _, gui in playerGui:GetChildren() do
 				if not legacyRoot(gui) then continue end
 				for _, instance in gui:GetDescendants() do
+					if imageObject(instance) then
+						watchGeometry(instance)
+						local ancestor = instance.Parent
+						while ancestor and ancestor ~= gui do
+							if ancestor:IsA("GuiObject") then watchGeometry(ancestor) end
+							ancestor = ancestor.Parent
+						end
+						if not watched[instance] then watched[instance] = { instance:GetPropertyChangedSignal("Image"):Connect(schedule), instance:GetPropertyChangedSignal("ImageTransparency"):Connect(schedule) } end
+						local image = instance :: ImageLabel
+						if image.Image ~= "" and image.ImageTransparency < 1 and originallyVisible(image) then table.insert(images, image) end
+					end
 					if instance:IsA("TextLabel") or instance:IsA("TextButton") then
 						if not watched[instance] then watched[instance] = { instance:GetPropertyChangedSignal("Text"):Connect(schedule), instance:GetPropertyChangedSignal("Name"):Connect(schedule) } end
 					end
@@ -103,6 +151,41 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 						branch = branch.Parent :: GuiObject; watchGeometry(branch)
 					end
 					suppress[branch] = true
+				end
+			end
+			-- Image-only imports have no semantic labels. Suppress them only when
+			-- exactly one visible image aligns with each of the three real buttons.
+			local columns: { { GuiObject } } = { {}, {}, {} }
+			for _, image in images do
+				for index, name in order do
+					if imageColumn(image, selected[name]) then table.insert(columns[index], image) end
+				end
+			end
+			local group: { GuiObject }? = nil
+			if #columns[1] == 1 and #columns[2] == 1 and #columns[3] == 1 then
+				local a, b, c = columns[1][1], columns[2][1], columns[3][1]
+				local ay = a.AbsolutePosition.Y + a.AbsoluteSize.Y / 2
+				local by = b.AbsolutePosition.Y + b.AbsoluteSize.Y / 2
+				local cy = c.AbsolutePosition.Y + c.AbsoluteSize.Y / 2
+				if a ~= b and b ~= c and a ~= c and math.max(ay, by, cy) - math.min(ay, by, cy) <= 18 then group = { a, b, c } end
+			end
+			if group then
+				local changed, details = false, {}
+				for _, image in group do
+					suppress[image] = true
+					local source = (image :: ImageLabel).Image
+					if reportedImages[image] ~= source then changed = true; reportedImages[image] = source end
+					table.insert(details, imageDescription(image))
+				end
+				if changed then print("[TravelControls] Matched legacy image row: " .. table.concat(details, " | ")) end
+			elseif not reportedMissing and selected.HomeButton.AbsoluteSize.X >= 60 then
+				local details = {}
+				for _, image in images do
+					if image.AbsolutePosition.Y <= selected.HomeButton.AbsolutePosition.Y + selected.HomeButton.AbsoluteSize.Y and #details < 15 then table.insert(details, imageDescription(image)) end
+				end
+				if #details > 0 then
+					reportedMissing = true
+					print("[TravelControls] Unmatched legacy images (preserved): " .. table.concat(details, " | "))
 				end
 			end
 		end
@@ -124,6 +207,7 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 			if instance:IsDescendantOf(playerGui) then continue end
 			for _, connection in list do connection:Disconnect() end; geometryWatched[instance] = nil
 		end
+		for instance in reportedImages do if not instance:IsDescendantOf(playerGui) then reportedImages[instance] = nil end end
 	end
 	local function watchCamera()
 		if cameraConnection then cameraConnection:Disconnect() end
