@@ -482,30 +482,15 @@ function UI.Create(playerGui: PlayerGui): UI
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = toasts
 
-	-- The pixel-style travel bar is authored in StarterGui (visible in Studio without Play).
-	-- When present it replaces the generated Home / To Shop / To Arena buttons.
-	local travelBar = playerGui:WaitForChild("TravelBar", 5)
-	local travelHome, travelShop, travelArena = homeButton, teleportShopButton, teleportArenaButton
-	if travelBar then
-		local barFrame = travelBar:FindFirstChild("Bar")
-		local home = barFrame and barFrame:FindFirstChild("HomeButton")
-		local shop = barFrame and barFrame:FindFirstChild("TeleportShopButton")
-		local arena = barFrame and barFrame:FindFirstChild("TeleportArenaButton")
-		if home and shop and arena then
-			travelHome, travelShop, travelArena = home, shop, arena
-			homeButton.Visible, teleportShopButton.Visible, teleportArenaButton.Visible = false, false, false
-		end
-	end
-
 	rescale()
 	return {
 		Gui = gui,
 		Hud = hud,
 		NavigationButtons = navigationButtons,
 		InventoryButton = navigationButtons.Inventory,
-		HomeButton = travelHome,
-		TeleportShopButton = travelShop,
-		TeleportArenaButton = travelArena,
+		HomeButton = homeButton,
+		TeleportShopButton = teleportShopButton,
+		TeleportArenaButton = teleportArenaButton,
 		CoinsLabel = coinsLabel,
 		PendingLabel = pendingLabel,
 		ShopButton = shopButton,
