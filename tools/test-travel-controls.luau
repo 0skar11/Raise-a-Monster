@@ -1,0 +1,110 @@
+-- Exercise the real controller with GUI/signal fixtures, including late authored bars.
+local fs, luau, roblox = require("@lune/fs"), require("@lune/luau"), require("@lune/roblox")
+local function signal()
+	local callbacks = {}
+	local s = {}
+	function s:Connect(callback) local key = {}; callbacks[key] = callback; return { Disconnect = function() callbacks[key] = nil end } end
+	function s:Fire(...) for key, callback in table.clone(callbacks) do if callbacks[key] then callback(...) end end end
+	function s:Count() local n = 0; for _ in callbacks do n += 1 end; return n end
+	return s
+end
+local methods = {}
+function methods:IsA(class) return self.ClassName == class or (class == "GuiObject" and (self.ClassName == "Frame" or self.ClassName == "TextLabel" or self.ClassName == "TextButton" or self.ClassName == "ImageLabel")) end
+function methods:GetChildren() return table.clone(self.Children) end
+function methods:GetDescendants() local out = {}; for _, child in self.Children do table.insert(out, child); for _, nested in child:GetDescendants() do table.insert(out, nested) end end; return out end
+function methods:FindFirstChild(name) for _, child in self.Children do if child.Name == name then return child end end end
+function methods:IsDescendantOf(ancestor) local p = self.Parent; while p do if p == ancestor then return true end; p = p.Parent end; return false end
+function methods:GetPropertyChangedSignal(name) if not self.Signals[name] then self.Signals[name] = signal() end; return self.Signals[name] end
+local function node(class, name, props)
+	local values = { Name = name, Visible = true, Enabled = true, Text = "", AbsolutePosition = roblox.Vector2.new(300, 40), AbsoluteSize = roblox.Vector2.new(130, 44) }
+	for key, value in props or {} do values[key] = value end
+	return setmetatable({ ClassName = class, Children = {}, Signals = {}, Values = values, Activated = signal(), DescendantAdded = signal(), DescendantRemoving = signal() }, {
+		__index = function(self, key) return methods[key] or self.Values[key] end,
+		__newindex = function(self, key, value) if self.Values[key] ~= value then self.Values[key] = value; self:GetPropertyChangedSignal(key):Fire() end end,
+	})
+end
+local function add(parent, child)
+	child.Parent = parent; table.insert(parent.Children, child)
+	local p = parent; while p do p.DescendantAdded:Fire(child); p = p.Parent end
+end
+local function remove(parent, child)
+	local p = parent; while p do p.DescendantRemoving:Fire(child); p = p.Parent end
+	table.remove(parent.Children, assert(table.find(parent.Children, child))); child.Parent = nil
+end
+local pending = {}
+local function flush() while #pending > 0 do local batch = pending; pending = {}; for _, callback in batch do callback() end end end
+local workspace = node("Workspace", "Workspace", { CurrentCamera = node("Camera", "Camera", { ViewportSize = roblox.Vector2.new(1280, 720) }) })
+local controls = luau.load(fs.readFile("src/client/TravelControls.luau"), { environment = {
+	game = { GetService = function(_, name) assert(name == "Workspace"); return workspace end },
+	task = { defer = function(callback) table.insert(pending, callback) end }, Vector2 = roblox.Vector2, UDim2 = roblox.UDim2,
+}, injectGlobals = true })()
+local checks = 0
+local function check(condition, message) checks += 1; assert(condition, message) end
+local root = node("PlayerGui", "PlayerGui")
+local fallback = {}
+for _, name in { "HomeButton", "TeleportShopButton", "TeleportArenaButton" } do fallback[name] = node("TextButton", name) end
+local sent = {}
+local function teleport(destination) table.insert(sent, destination) end
+local stop = controls.Start(root, fallback, teleport); flush()
+fallback.HomeButton.Activated:Fire()
+check(sent[#sent] == "Home" and fallback.HomeButton.Visible, "Fallback works before the primary bar arrives")
+local gui, bar = node("ScreenGui", "TravelBar"), node("Frame", "Bar")
+add(gui, bar); add(root, gui); flush()
+check(fallback.HomeButton.Visible, "Incomplete authored bar must not remove working fallback")
+local buttons = {}
+for name in fallback do buttons[name] = node("TextButton", name); add(bar, buttons[name]) end
+local scale = node("UIScale", "ResponsiveScale", { Scale = 1 }); add(bar, scale); flush()
+for name, button in fallback do check(not button.Visible and button.Activated:Count() == 0, "Primary replaces fallback without a second active binding: " .. name) end
+for name, destination in { HomeButton = "Home", TeleportShopButton = "Shop", TeleportArenaButton = "Arena" } do
+	buttons[name].Activated:Fire(); check(sent[#sent] == destination and buttons[name].Activated:Count() == 1, "Primary fires the correct destination exactly once: " .. name)
+end
+local legacy = node("ScreenGui", "Framewisp_OldTravel")
+local oldButton = node("Frame", "ButtonShell")
+local text = node("TextLabel", "Caption", { Text = "HOME" })
+local image = node("ImageLabel", "OldArtwork")
+add(oldButton, text); add(oldButton, image); add(legacy, oldButton)
+local unrelated = node("TextLabel", "Balance", { Text = "14k", AbsolutePosition = roblox.Vector2.new(10, 600) }); add(legacy, unrelated)
+add(root, legacy); flush()
+check(not oldButton.Visible and image.Visible, "Hide only the identified small legacy branch, preserving its children for restoration")
+check(unrelated.Visible and legacy.Enabled, "A mixed legacy ScreenGui and its cash content are not disabled")
+oldButton.Visible = true
+check(not oldButton.Visible, "The old updater cannot reactivate the duplicate travel artwork")
+oldButton.AbsoluteSize = roblox.Vector2.new(500, 300); flush()
+check(oldButton.Visible and not text.Visible and image.Visible, "A legacy shell expanded into unrelated UI must be restored; hide only the still-valid caption")
+oldButton.AbsoluteSize = roblox.Vector2.new(130, 44); flush()
+check(not oldButton.Visible and text.Visible, "A bounded shell may be suppressed again without changing its child's original visibility")
+local shop = node("ScreenGui", "ShopGui"); local shopTitle = node("TextLabel", "Title", { Text = "SHOP" }); add(shop, shopTitle); add(root, shop); flush()
+check(shopTitle.Visible and shop.Enabled, "The actual shop GUI must not be hidden")
+local unknown = node("ImageLabel", "UnidentifiedArtwork"); add(legacy, unknown); flush()
+check(unknown.Visible, "Unknown image-only artwork must not be guessed or deleted")
+local side = node("TextLabel", "Shop", { Text = "SHOP", AbsolutePosition = roblox.Vector2.new(10, 400) }); add(legacy, side); flush()
+check(side.Visible, "Side navigation remains outside legacy top-travel cleanup")
+local toShop = node("ScreenGui", "ToShop"); local importedImage = node("ImageLabel", "Imported"); add(toShop, importedImage); add(root, toShop); flush()
+check(not importedImage.Visible, "The known standalone ToShop artwork is suppressed")
+local lateShell = node("Frame", "LateShell")
+local lateHome = node("TextLabel", "LateCaption", { Text = "HOME", AbsoluteSize = roblox.Vector2.zero })
+add(lateShell, lateHome); add(legacy, lateShell); flush()
+check(lateShell.Visible, "An unlaid-out candidate must not hide an unidentified branch")
+lateHome.AbsoluteSize = roblox.Vector2.new(130, 44); flush()
+check(not lateShell.Visible, "Legacy artwork hides when delayed GUI layout becomes valid without a text/tree change")
+lateHome.AbsolutePosition = roblox.Vector2.new(300, 400); flush()
+check(lateShell.Visible, "A candidate moved outside top travel bounds is restored")
+workspace.CurrentCamera.ViewportSize = roblox.Vector2.new(360, 640); flush()
+check(bar.Size.X.Offset == 336 and math.abs(buttons.TeleportArenaButton.Position.X.Offset + buttons.TeleportArenaButton.Size.X.Offset - 336) < 0.001, "Primary row fits a small viewport with 12px side margins")
+check(buttons.HomeButton.Size.Y.Offset == 44 and scale.Scale == 1, "Mobile travel controls retain 44px touch height")
+workspace.CurrentCamera.ViewportSize = roblox.Vector2.new(1280, 720); flush()
+gui.Enabled = false; flush()
+check(fallback.HomeButton.Visible and oldButton.Visible and importedImage.Visible, "Disabling primary restores fallback and previously visible legacy branches")
+gui.Enabled = true; flush()
+check(not fallback.HomeButton.Visible and not oldButton.Visible and buttons.HomeButton.Activated:Count() == 1, "Re-enabling primary does not duplicate action connections")
+remove(root, gui); flush()
+check(fallback.HomeButton.Visible and buttons.HomeButton.Activated:Count() == 0 and oldButton.Visible, "Removed bars release actions and restore fallback")
+add(root, gui); flush()
+check(not fallback.HomeButton.Visible and buttons.HomeButton.Activated:Count() == 1, "A respawn/reinserted bar binds only once")
+for i = 1, 10 do local extra = node("TextLabel", "Unrelated" .. i); add(legacy, extra); flush() end
+check(buttons.HomeButton.Activated:Count() == 1, "Unrelated GUI additions cannot accumulate click handlers")
+local stopAgain = controls.Start(root, fallback, teleport); flush(); stop()
+check(buttons.HomeButton.Activated:Count() == 1, "Repeated Start replaces subscriptions; old Stop cannot stop the new controller")
+stopAgain(); stopAgain(); flush()
+check(fallback.HomeButton.Visible and oldButton.Visible and buttons.HomeButton.Activated:Count() == 0 and root.DescendantAdded:Count() == 0, "Stop is idempotent and cleans every active route")
+print("PASS:", checks, "primary travel controls checks")

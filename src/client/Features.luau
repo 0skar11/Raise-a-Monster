@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local UI = require(script.Parent.UI)
+local TravelControls = require(script.Parent.TravelControls)
 
 local COLORS = UI.Colors
 local player = Players.LocalPlayer
@@ -230,17 +231,9 @@ end
 -- تليبورت وأزرار جانبية -----------------------------------------------------------------------
 
 local function buildButtons()
-	local home = ui.HomeButton
-	home.Activated:Connect(function()
-		remotes.Teleport:FireServer("Home")
-	end)
-	local shop = ui.TeleportShopButton
-	shop.Activated:Connect(function()
-		remotes.Teleport:FireServer("Shop")
-	end)
-	ui.TeleportArenaButton.Activated:Connect(function()
-		remotes.Teleport:FireServer("Arena")
-	end)
+	TravelControls.Start(ui.Gui.Parent, {
+		HomeButton = ui.HomeButton, TeleportShopButton = ui.TeleportShopButton, TeleportArenaButton = ui.TeleportArenaButton,
+	}, function(destination) remotes.Teleport:FireServer(destination) end)
 
 	rewardsButton = ui.NavigationButtons.Rewards
 
