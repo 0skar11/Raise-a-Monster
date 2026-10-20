@@ -135,6 +135,65 @@ check(oldImages[1].Visible and oldImages[2].Visible and oldImages[3].Visible, "R
 remove(cashRoot, oldImages[3]); add(imageRoots[3], oldImages[3]); flush()
 for _, imageRoot in imageRoots do remove(root, imageRoot) end; remove(root, cashRoot); flush()
 check(oldImages[1].Visible and oldImages[2].Visible and oldImages[3].Visible and oldImages[1].Signals.Image:Count() == 0, "Removed retained roots restore images and release their subscriptions")
+-- Actual Studio paths and asset IDs: layout reported negative Y during startup.
+local exactRoot = node("ScreenGui", "ToShop")
+local exactButtons, exactImages = {}, {}
+local retainedAssets = { ShopButton = "111500305245467", RollButton_2 = "138727217312430", RollButton_3 = "122186044632966" }
+for name, asset in retainedAssets do
+	local props = { AbsolutePosition = roblox.Vector2.new(300, -80), AbsoluteSize = roblox.Vector2.new(130, 44) }
+	exactButtons[name] = node("TextButton", name, props)
+	exactImages[name] = node("ImageLabel", "RollButtonBackground", {
+		Image = "rbxassetid://" .. asset, AbsolutePosition = roblox.Vector2.new(300, -80), AbsoluteSize = roblox.Vector2.new(130, 44),
+	})
+	add(exactButtons[name], exactImages[name])
+	local caption = node("TextLabel", "sssssssssss", { Text = "SHOP", AbsolutePosition = roblox.Vector2.new(300, -80) })
+	add(exactButtons[name], caption); add(exactRoot, exactButtons[name])
+end
+add(root, exactRoot); flush()
+for name in retainedAssets do
+	check(not exactButtons[name].Visible and exactImages[name].Visible, "Verified Studio artwork hides its full input branch even at negative Y: " .. name)
+end
+local exactDiagnosticCount = 0
+for _, message in diagnostics do if message:find("Matched legacy travel artwork", 1, true) then exactDiagnosticCount += 1 end end
+check(exactDiagnosticCount == 3, "Each verified path and asset is logged once")
+exactButtons.ShopButton.Visible = true; flush()
+check(not exactButtons.ShopButton.Visible, "An old updater cannot reactivate a verified legacy input branch")
+exactImages.ShopButton.Image = "rbxassetid://999999"; flush()
+check(exactButtons.ShopButton.Visible and not exactButtons.RollButton_2.Visible, "Replacing an asset restores only that legacy branch")
+exactImages.ShopButton.Image = "rbxassetid://111500305245467"; flush()
+check(not exactButtons.ShopButton.Visible, "Restoring the verified asset suppresses its branch again")
+exactImages.ShopButton.ImageTransparency = 1; flush()
+check(not exactButtons.ShopButton.Visible, "Transparent verified artwork still suppresses its legacy caption and input branch")
+exactImages.ShopButton.ImageTransparency = 0; flush()
+exactImages.ShopButton.Visible = false; flush()
+check(not exactButtons.ShopButton.Visible, "An invisible verified background cannot leave its legacy caption and input active")
+exactImages.ShopButton.Visible = true; flush()
+exactImages.ShopButton.Name = "UnrelatedArtwork"; flush()
+check(exactButtons.ShopButton.Visible, "Renaming the image outside the verified path restores the branch")
+exactImages.ShopButton.Name = "RollButtonBackground"; flush()
+check(not exactButtons.ShopButton.Visible, "Restoring the exact image path suppresses the legacy branch")
+exactButtons.ShopButton.Name = "UnrelatedButton"; flush()
+check(exactButtons.ShopButton.Visible, "Renaming the button outside the verified path restores it")
+exactButtons.ShopButton.Name = "ShopButton"; flush()
+check(not exactButtons.ShopButton.Visible, "Restoring the verified button path suppresses it again")
+local exactOtherRoot = node("ScreenGui", "CashCounter"); add(root, exactOtherRoot)
+remove(exactRoot, exactButtons.ShopButton); add(exactOtherRoot, exactButtons.ShopButton); flush()
+check(exactButtons.ShopButton.Visible and exactOtherRoot.Enabled, "Reparenting the same verified artwork to CashCounter restores the whole branch")
+remove(exactOtherRoot, exactButtons.ShopButton); add(exactRoot, exactButtons.ShopButton); flush()
+check(not exactButtons.ShopButton.Visible, "Reparenting back to the verified ToShop path suppresses it")
+local unrelatedExactImage = node("ImageLabel", "RollButtonBackground", { Image = "rbxassetid://111500305245467", AbsolutePosition = roblox.Vector2.new(300, -80) })
+local unrelatedExactBranch = node("ImageButton", "UnrelatedButton", { AbsolutePosition = roblox.Vector2.new(300, -80) })
+add(unrelatedExactBranch, unrelatedExactImage); add(exactRoot, unrelatedExactBranch); flush()
+check(unrelatedExactBranch.Visible and unrelatedExactImage.Visible, "A matching asset elsewhere in ToShop is preserved")
+exactRoot.Enabled = false; flush()
+check(exactButtons.ShopButton.Visible and exactButtons.RollButton_2.Visible and exactButtons.RollButton_3.Visible, "Disabling ToShop restores every previously visible exact branch")
+exactRoot.Enabled = true; flush()
+check(not exactButtons.ShopButton.Visible and not exactButtons.RollButton_2.Visible and not exactButtons.RollButton_3.Visible, "Re-enabling ToShop suppresses all verified branches without geometry")
+exactRoot.Name = "ToHome"; flush()
+check(exactButtons.ShopButton.Visible and exactButtons.RollButton_2.Visible, "Matching artwork in another legacy ScreenGui is not treated as the verified ToShop import")
+exactRoot.Name = "ToShop"; flush()
+remove(root, exactRoot); remove(root, exactOtherRoot); flush()
+check(exactButtons.ShopButton.Visible and exactImages.ShopButton.Signals.Image:Count() == 0 and exactButtons.ShopButton.Signals.Name:Count() == 0, "Removing the exact legacy root restores its controls and releases asset and path subscriptions")
 for _, button in buttons do button.AbsolutePosition = roblox.Vector2.new(300, 40); button.AbsoluteSize = roblox.Vector2.new(130, 44) end; flush()
 local side = node("TextLabel", "Shop", { Text = "SHOP", AbsolutePosition = roblox.Vector2.new(10, 400) }); add(legacy, side); flush()
 check(side.Visible, "Side navigation remains outside legacy top-travel cleanup")

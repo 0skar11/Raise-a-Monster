@@ -5,6 +5,13 @@ local TravelControls = {}
 local active: { [Instance]: () -> () } = {}
 local destinations = { HomeButton = "Home", TeleportShopButton = "Shop", TeleportArenaButton = "Arena" }
 local order = { "HomeButton", "TeleportShopButton", "TeleportArenaButton" }
+-- These are the verified imported controls in ToShop, whose initial layout can
+-- place their artwork above the viewport. Match their identity, not geometry.
+local legacyArtwork: { [string]: string } = {
+	ShopButton = "rbxassetid://111500305245467",
+	RollButton_2 = "rbxassetid://138727217312430",
+	RollButton_3 = "rbxassetid://122186044632966",
+}
 local semantic = { HOME = true, SHOP = true, ARENA = true, TOHOME = true, TOSHOP = true, TOARENA = true,
 	HOMEBUTTON = true, TELEPORTSHOPBUTTON = true, TELEPORTARENABUTTON = true }
 local function travelName(value: string): boolean
@@ -49,7 +56,7 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 	end
 	local function watchGeometry(instance: Instance)
 		if geometryWatched[instance] then return end
-		geometryWatched[instance] = { instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(schedule), instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(schedule), instance:GetPropertyChangedSignal("Visible"):Connect(schedule) }
+		geometryWatched[instance] = { instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(schedule), instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(schedule), instance:GetPropertyChangedSignal("Visible"):Connect(schedule), instance:GetPropertyChangedSignal("Name"):Connect(schedule) }
 	end
 	local function originallyVisible(instance: Instance): boolean
 		local current: Instance? = instance
@@ -134,7 +141,21 @@ function TravelControls.Start(playerGui: Instance, fallback: { [string]: TextBut
 						end
 						if not watched[instance] then watched[instance] = { instance:GetPropertyChangedSignal("Image"):Connect(schedule), instance:GetPropertyChangedSignal("ImageTransparency"):Connect(schedule) } end
 						local image = instance :: ImageLabel
-						if image.Image ~= "" and image.ImageTransparency < 1 and originallyVisible(image) then table.insert(images, image) end
+						local branch = image.Parent
+						if gui.Name == "ToShop" and image.Name == "RollButtonBackground" and branch
+							and branch.Parent == gui and branch:IsA("GuiObject") and legacyArtwork[branch.Name] == image.Image then
+							if originallyVisible(branch) then
+								-- Hide the complete verified button so its transparent input
+								-- surface cannot remain over the primary travel controls.
+								suppress[branch :: GuiObject] = true
+								if reportedImages[image] ~= image.Image then
+									reportedImages[image] = image.Image
+									print("[TravelControls] Matched legacy travel artwork: " .. imageDescription(image))
+								end
+							end
+						elseif image.Image ~= "" and image.ImageTransparency < 1 and originallyVisible(image) then
+							table.insert(images, image)
+						end
 					end
 					if instance:IsA("TextLabel") or instance:IsA("TextButton") then
 						if not watched[instance] then watched[instance] = { instance:GetPropertyChangedSignal("Text"):Connect(schedule), instance:GetPropertyChangedSignal("Name"):Connect(schedule) } end
