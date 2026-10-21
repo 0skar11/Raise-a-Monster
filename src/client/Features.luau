@@ -304,28 +304,40 @@ local function buildShopExtras()
 	local function card(parent: Instance, name: string, description: string, price: number, icon: string, onBuy: () -> (), currency: string): (Frame, TextButton)
 		local frame = Instance.new("Frame")
 		frame.Name = name .. "Card"
-		frame.Size = UDim2.fromOffset(196, 314)
+		frame.Size = UDim2.fromOffset(216, 260)
 		frame.BackgroundColor3 = COLORS.Panel
 		frame.Parent = parent
 		UI.Corner(frame, 12)
 		UI.Stroke(frame, COLORS.Yellow, 2)
-		local title = UI.Label(frame, name, UDim2.new(1, -12, 0, 36), UDim2.fromOffset(6, 150), 20)
+		local title = UI.Label(frame, name, UDim2.new(1, -20, 0, 36), UDim2.fromOffset(10, 92), 18)
+		title.Name = "Title"
 		title.TextColor3 = COLORS.Text
+		local preview = Instance.new("Frame")
+		preview.Name = "Preview"
+		preview.BackgroundTransparency = 1
+		preview.Size = UDim2.new(1, -20, 0, 84)
+		preview.Position = UDim2.fromOffset(10, 4)
+		preview.Parent = frame
 		if icon:sub(1, 7) == "Weapon:" then
-			UI.WeaponPreview(frame, icon:sub(8))
+			UI.WeaponPreview(preview, icon:sub(8))
 		elseif icon:sub(1, 5) == "Gear:" then
-			UI.GearPreview(frame, icon:sub(6))
+			UI.GearPreview(preview, icon:sub(6))
 		else
-			UI.Icon(frame, icon, UDim2.fromOffset(128, 128), UDim2.new(0.5, -64, 0, 12))
+			UI.Icon(preview, icon, UDim2.fromOffset(80, 80), UDim2.new(0.5, -40, 0.5, -40))
 		end
-		local desc = UI.Label(frame, description, UDim2.new(1, -16, 0, 36), UDim2.fromOffset(8, 188), 14)
+		for _, child in preview:GetChildren() do
+			if child:IsA("ViewportFrame") then child.Position = UDim2.fromScale(0, 0); child.Size = UDim2.fromScale(1, 1) end
+		end
+		local desc = UI.Label(frame, description, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 130), 14)
+		desc.Name = "Description"
 		desc.TextColor3 = COLORS.SubText
 		local costText = if currency == "Coins " then MonsterMath.FormatNumber(price) .. " Coins" else currency .. MonsterMath.FormatNumber(price)
-		local cost = UI.Label(frame, costText, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 228), 20)
+		local cost = UI.Label(frame, costText, UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 176), 18)
 		cost.Name = "Price"
 		cost.TextColor3 = COLORS.Yellow
-		local buy = UI.Button(frame, "Buy", COLORS.Green, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 260))
-		buy.TextSize = 20
+		local buy = UI.Button(frame, "Buy", COLORS.Green, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 206))
+		buy.Name = "BuyButton"
+		buy.TextSize = 18
 		buy.Activated:Connect(onBuy)
 		return frame, buy
 	end
@@ -336,38 +348,54 @@ local function buildShopExtras()
 	end
 	local function layout()
 		-- The panel cancels the HUD scale. Cards keep their native text/touch size.
-		local width = if ui.GearFrame.Size.X.Offset > 0 then ui.GearFrame.Size.X.Offset else 860
-		local height = if ui.GearFrame.Size.Y.Offset > 0 then ui.GearFrame.Size.Y.Offset else 530
-		local compact = width < 700 or height < 440
-		tabScroll.Position = UDim2.fromOffset(if compact then 12 else 20, if compact then 58 else 30)
-		tabScroll.Size = UDim2.new(1, if compact then -24 else -40, 0, if compact then 48 else 56)
-		local tabWidth = if compact then 132 else math.floor((width - 72) / 5)
+		local width = if ui.GearFrame.Size.X.Offset > 0 then ui.GearFrame.Size.X.Offset else 740
+		local height = if ui.GearFrame.Size.Y.Offset > 0 then ui.GearFrame.Size.Y.Offset else 470
+		local padding = if width < 500 then 12 else 16
+		tabScroll.Position = UDim2.fromOffset(padding, 58)
+		tabScroll.Size = UDim2.new(1, -padding * 2, 0, 48)
+		local tabWidth = math.max(116, math.floor((width - padding * 2 - 32) / 5))
 		for index, category in { "Weapons", "Accessories", "Coin Packs", "Owned", "Perks" } do
 			local tab = tabs[category]
 			if tab then
-				tab.Size = UDim2.fromOffset(tabWidth, if compact then 44 else 52)
+				tab.Size = UDim2.fromOffset(tabWidth, 44)
 				tab.Position = UDim2.fromOffset((index - 1) * (tabWidth + 8), 0)
 				tab.Text = string.upper(category)
 			end
 		end
 		tabScroll.CanvasSize = UDim2.fromOffset(5 * (tabWidth + 8) - 8, 0)
-		scroll.Position = UDim2.fromOffset(if compact then 12 else 20, if compact then 122 else 102)
-		scroll.Size = UDim2.new(1, if compact then -24 else -40, 1, if compact then -134 else -118)
-		local availableWidth = width - (if compact then 24 else 40) - 10
-		local columns = math.clamp(math.floor((availableWidth + 10) / 194), 1, 3)
-		local cardWidth = math.floor((availableWidth - (columns - 1) * 10) / columns)
+		scroll.Position = UDim2.fromOffset(padding, 114)
+		scroll.Size = UDim2.new(1, -padding * 2, 1, -128)
+		local availableWidth = width - padding * 2 - 12
+		local horizontal = height < 340 and availableWidth >= 400
+		local columns = if horizontal then 1 else math.clamp(math.floor((availableWidth + 12) / 206), 1, 3)
+		local cardWidth = math.floor((availableWidth - (columns - 1) * 12) / columns)
+		local cardHeight = if horizontal then 164 else 260
 		local count = 0
 		for _, entry in cards do
 			local visible = entry.Category == selected or (selected == "Owned" and (entry.Category == "Weapons" or entry.Category == "Accessories") and entry.Owned())
 			entry.Frame.Visible = visible
 			if visible then
-				entry.Frame.Size = UDim2.fromOffset(cardWidth, 314)
-				entry.Frame.Position = UDim2.fromOffset((count % columns) * (cardWidth + 10), math.floor(count / columns) * 326 + 4)
+				local frame = entry.Frame
+				frame.Size = UDim2.fromOffset(cardWidth, cardHeight)
+				frame.Position = UDim2.fromOffset((count % columns) * (cardWidth + 12), math.floor(count / columns) * (cardHeight + 12) + 4)
+				local preview = frame:FindFirstChild("Preview") :: Frame
+				preview.Position = UDim2.fromOffset(10, if horizontal then 22 else 4)
+				preview.Size = if horizontal then UDim2.fromOffset(112, 112) else UDim2.new(1, -20, 0, 84)
+				local textX = if horizontal then 136 else 10
+				local function place(name: string, y: number, height: number)
+					local item = frame:FindFirstChild(name) :: GuiObject
+					item.Position = UDim2.fromOffset(textX, y)
+					item.Size = UDim2.new(1, -textX - 10, 0, height)
+				end
+				place("Title", if horizontal then 8 else 92, 36)
+				place("Description", if horizontal then 44 else 130, 44)
+				place("Price", if horizontal then 88 else 176, 22)
+				place("BuyButton", if horizontal then 112 else 206, 44)
 				count += 1
 			end
 		end
 		empty.Visible = count == 0
-		local bottom = math.max(84, math.ceil(count / columns) * 326 + 8)
+		local bottom = math.max(84, math.ceil(count / columns) * (cardHeight + 12) + 8)
 		if eggsButton then
 			eggsButton.Visible = selected == "Perks"
 			eggsButton.Position = UDim2.fromOffset(0, bottom)
@@ -385,7 +413,7 @@ local function buildShopExtras()
 	refreshShopCatalog = layout
 	local categories = { "Weapons", "Accessories", "Coin Packs", "Owned", "Perks" }
 	for index, category in categories do
-		local tab = UI.Button(tabScroll, string.upper(category), COLORS.Panel, UDim2.fromOffset(132, 52), UDim2.fromOffset((index - 1) * 140, 0))
+		local tab = UI.Button(tabScroll, string.upper(category), COLORS.Panel, UDim2.fromOffset(132, 44), UDim2.fromOffset((index - 1) * 140, 0))
 		tab.Name = category .. "Tab"
 		tab.TextSize = 16
 		tabs[category] = tab

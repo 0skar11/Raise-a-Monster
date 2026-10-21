@@ -50,6 +50,11 @@ export type UI = {
 local UI = {}
 UI.Colors = COLORS
 
+-- Shop dimensions are native pixels; the catalog reflows instead of shrinking text.
+function UI.ShopBounds(viewport: Vector2): Vector2
+	return Vector2.new(math.min(740, math.max(1, viewport.X - 24)), math.min(470, math.max(1, viewport.Y - 24)))
+end
+
 local function corner(parent: Instance, radius: number?)
 	local c = Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, radius or 12)
@@ -332,12 +337,14 @@ function UI.Create(playerGui: PlayerGui): UI
 	shopScroll.CanvasSize = UDim2.fromOffset(0, 0)
 	shopScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	shopScroll.Parent = shopFrame
-	local gearFrame, gearTitle = panel(gui, "GearShop", UDim2.fromOffset(860, 530), "SHOP", COLORS.Text)
-	gearTitle.Visible = false
+	local gearFrame, gearTitle = panel(gui, "GearShop", UDim2.fromOffset(740, 470), "SHOP", COLORS.Text)
+	gearTitle.TextSize = 24
+	gearTitle.Position = UDim2.fromOffset(18, 10)
+	gearTitle.Size = UDim2.new(1, -82, 0, 36)
 	local gearCorner = gearFrame:FindFirstChildOfClass("UICorner")
-	if gearCorner then gearCorner.CornerRadius = UDim.new(0, 28) end
+	if gearCorner then gearCorner.CornerRadius = UDim.new(0, 20) end
 	local gearClose = gearFrame:FindFirstChild("CloseButton") :: TextButton
-	gearClose.Position = UDim2.new(1, -48, 0, -14)
+	gearClose.Position = UDim2.new(1, -56, 0, 8)
 	gearClose.ZIndex = 4
 	-- The shop uses native pixels and reflows its catalog on small screens.
 	-- Other modal panels keep their existing scale and positioning.
@@ -350,27 +357,20 @@ function UI.Create(playerGui: PlayerGui): UI
 		pcall(function() topLeft, bottomRight = GuiService:GetGuiInset() end)
 		local viewport = camera.ViewportSize - topLeft - bottomRight
 		gearScale.Scale = 1 / uiScale.Scale
-		gearFrame.Size = UDim2.fromOffset(math.min(860, math.max(1, viewport.X - 16)), math.min(530, math.max(1, viewport.Y - 16)))
-		local compact = gearFrame.Size.X.Offset < 700 or gearFrame.Size.Y.Offset < 440
-		gearTitle.Visible = compact
-		gearTitle.TextSize = 24
-		gearClose.Position = if compact then UDim2.new(1, -52, 0, 6) else UDim2.new(1, -48, 0, -14)
-		if viewport.X >= 1100 then
-			gearFrame.AnchorPoint = Vector2.new(1, 0.5)
-			gearFrame.Position = UDim2.new(1, -16 / uiScale.Scale, 0.5, 0)
-		else
-			gearFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-			gearFrame.Position = UDim2.fromScale(0.5, 0.5)
-		end
+		local bounds = UI.ShopBounds(viewport)
+		gearFrame.Size = UDim2.fromOffset(bounds.X, bounds.Y)
+		gearFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+		gearFrame.Position = UDim2.fromScale(0.5, 0.5)
 	end
 	rescale()
 	table.insert(panels, gearFrame)
 	local gearScroll = shopScroll:Clone()
-	gearScroll.Position = UDim2.fromOffset(16, 122)
-	gearScroll.Size = UDim2.new(1, -224, 1, -138)
+	gearScroll.Position = UDim2.fromOffset(16, 114)
+	gearScroll.Size = UDim2.new(1, -32, 1, -128)
 	gearScroll.ScrollBarImageColor3 = COLORS.Yellow
 	gearScroll.BackgroundColor3 = Color3.fromRGB(22, 25, 65)
 	gearScroll.BackgroundTransparency = 0
+	gearScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 	corner(gearScroll, 16)
 	gearScroll.Parent = gearFrame
 	local eggButtons: { [string]: TextButton } = {}
