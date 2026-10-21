@@ -25,6 +25,7 @@ local getOpenMonster: () -> string?
 -- عناصر بتتحدث مع كل StateUpdate
 local statusLabel: TextLabel
 local rewardsButton: TextButton
+local launcherActions: { [string]: () -> () } = {}
 local dailyInfo: TextLabel
 local dailyClaim: TextButton
 local spinGo: TextButton
@@ -487,9 +488,9 @@ local function buildRewards()
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.82
 	scale.Parent = frame
-	rewardsButton.Activated:Connect(function()
+	launcherActions.Rewards = function()
 		UI.Toggle(ui, frame)
-	end)
+	end
 
 	local dailyTitle = UI.Label(frame, "🎁 Daily Reward", UDim2.fromOffset(360, 30), UDim2.fromOffset(16, 60), 24)
 	dailyTitle.TextColor3 = COLORS.Yellow
@@ -737,16 +738,15 @@ end
 -- الـ Trading -----------------------------------------------------------------------------------
 
 local function buildTrade()
-	local tradeButton = ui.NavigationButtons.Trade
 	local picker = newPanel("TradePicker", UDim2.fromOffset(380, 400), "🤝 Trade with...", COLORS.Green)
 	local playerList = makeList(picker, UDim2.new(1, -32, 1, -76), UDim2.fromOffset(16, 60))
-	tradeButton.Activated:Connect(function()
+	launcherActions.Trade = function()
 		fillPlayers(playerList, function(other)
 			remotes.TradeRequest:FireServer(other.UserId)
 			picker.Visible = false
 		end)
 		UI.Toggle(ui, picker)
-	end)
+	end
 
 	-- شباك الـ Trade نفسه
 	local window = newPanel("Trade", UDim2.fromOffset(640, 470), "🤝 Trade", COLORS.Green)
@@ -1031,6 +1031,7 @@ function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stat
 	remotes = allRemotes
 	getState = stateGetter
 	getOpenMonster = openMonsterGetter
+	launcherActions = { Shop = function() UI.Open(ui, ui.GearFrame) end }
 
 	buildBanner()
 	buildPopup()
@@ -1041,6 +1042,10 @@ function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stat
 	buildMiniGames()
 	buildTrade()
 	buildArena()
+	local AuthoredLaunchers = require(script.Parent.AuthoredLaunchers)
+	AuthoredLaunchers.Start(ui.Gui.Parent, {
+		Shop = ui.ShopButton, Rewards = rewardsButton, Trade = ui.NavigationButtons.Trade,
+	}, launcherActions)
 
 	remotes.Announce.OnClientEvent:Connect(function(text: string, color: Color3?)
 		announce(text, color)

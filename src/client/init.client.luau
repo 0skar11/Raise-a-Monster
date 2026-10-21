@@ -191,10 +191,6 @@ remotes.OpenMonster.OnClientEvent:Connect(function(monsterId: string)
 	refresh()
 end)
 
-ui.ShopButton.Activated:Connect(function()
-	UI.Toggle(ui, ui.ShopFrame)
-end)
-
 for eggType, eggButton in ui.EggButtons do
 	eggButton.Activated:Connect(function()
 		remotes.BuyEgg:FireServer(eggType)
