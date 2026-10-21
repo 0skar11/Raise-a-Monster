@@ -239,6 +239,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	walletTravel.Parent = hud
 	local coinsFrame = Instance.new("Frame")
 	coinsFrame.Name = "Wallet"
+	coinsFrame.Visible = false
 	coinsFrame.Position = UDim2.fromOffset(0, 0)
 	coinsFrame.Size = UDim2.fromOffset(200, 46)
 	coinsFrame.BackgroundColor3 = COLORS.Panel
