@@ -140,7 +140,7 @@ local function buyPass(player: Player, name: unknown)
 	if lastPrompt[player] and now - lastPrompt[player] < Config.Monetization.PromptCooldown then return end
 	lastPrompt[player] = now
 	if pass.Id == 0 then
-		if RunService:IsStudio() then
+		if RunService:IsStudio() and name ~= "AutoMinigame" then
 			grantPass(player, name)
 			MonsterService.Notify(player, "🧪 Studio test: you got " .. pass.Name .. " for free.", "success")
 		else
