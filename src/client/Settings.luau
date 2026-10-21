@@ -161,7 +161,7 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 	local background = GuiTheme.Colors.Panel
 	local function round(object: GuiObject, radius: number)
 		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, radius)
+		corner.CornerRadius = UDim.new(0, math.min(4, radius))
 		corner.Parent = object
 	end
 	local function text(parent: Instance, value: string, position: UDim2, size: UDim2, fontSize: number): TextLabel
@@ -204,10 +204,7 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 	toggle.Name = "SettingsToggle"
 	toggle:SetAttribute("AccessibleName", "Settings")
 	toggle.TextSize = 25
-	toggle.BackgroundTransparency = 1
-	local toggleBorder = toggle:FindFirstChildOfClass("UIStroke")
-	if toggleBorder then toggleBorder.Transparency = 1 end
-	GuiTheme.Icon(toggle, "Settings", UDim2.fromOffset(40, 40), UDim2.fromOffset(2, 2))
+	GuiTheme.DecoratePill(toggle, "Settings")
 	local panel = Instance.new("Frame")
 	panel.Name = "SettingsPanel"
 	panel.Size = UDim2.fromOffset(296, 314)
@@ -215,12 +212,13 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 	panel.Active = true
 	panel.Visible = false
 	panel.Parent = gui
+	panel:SetAttribute("PixelAccent", GuiTheme.Colors.Blue)
 	round(panel, 12)
-	GuiTheme.Gloss(panel)
 	local panelBorder = Instance.new("UIStroke")
 	panelBorder.Color = GuiTheme.Colors.Yellow
 	panelBorder.Thickness = 2
 	panelBorder.Parent = panel
+	GuiTheme.Gloss(panel)
 	text(panel, "Settings", UDim2.fromOffset(16, 12), UDim2.fromOffset(200, 32), 20)
 	local close = button(panel, "X", UDim2.new(1, -52, 0, 6), UDim2.fromOffset(44, 44))
 	local content = Instance.new("ScrollingFrame")

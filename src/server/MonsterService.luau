@@ -621,14 +621,29 @@ end
 -- Catch: السيرفر يعدّ المحاولات المقبولة ويحدد النقاط؛ نتيجة الكلاينت لا تمنح XP.
 -- Run: بتجري مع وحشك، والسيرفر بيقيس المسافة اللي مشيتها بنفسه.
 
-type ActiveGame = { MonsterId: string, Game: string, StartedAt: number, Distance: number, Catches: number, LastCatchAt: number }
+type ActiveGame = { MonsterId: string, Game: string, StartedAt: number, Distance: number, Catches: number, LastCatchAt: number,
+	Automatic: boolean?, Monster: MonsterMath.MonsterData?, Slot: number?, Character: Model? }
 local activeGames: { [Player]: ActiveGame } = {}
+local autoGameCursor: { [Player]: string } = {}
+local nextAutoGame: { [Player]: { [string]: string } } = {}
+
+local function validAutoGame(player: Player, game: ActiveGame): boolean
+	if not MonsterService.HasPass(player, "AutoMinigame") then return false end
+	local profile = DataService.Get(player)
+	local monster = profile and profile.Data.Monsters[game.MonsterId]
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return monster ~= nil and monster == game.Monster and MonsterService.IsPlaced(player, monster)
+		and monster.Slot == game.Slot and not MonsterService.IsUnavailable(player, game.MonsterId)
+		and character ~= nil and character == game.Character and humanoid ~= nil and humanoid.Health > 0
+end
 
 local function finishGame(player: Player, game: ActiveGame, xp: number)
 	if activeGames[player] ~= game then
 		return
 	end
 	activeGames[player] = nil
+	if game.Automatic and not validAutoGame(player, game) then return end
 	local profile = DataService.Get(player)
 	local monster = profile and profile.Data.Monsters[game.MonsterId]
 	if monster then
@@ -636,9 +651,55 @@ local function finishGame(player: Player, game: ActiveGame, xp: number)
 		addXp(player, monster, xp)
 		PlotService.UpdateMonster(player, monster, false)
 	end
-	remotes.MiniGameState:FireClient(player, { Game = game.Game, Done = true, Xp = xp })
-	MonsterService.Notify(player, string.format("🎮 Great game! +%d XP", xp), "success")
+	if not game.Automatic then
+		remotes.MiniGameState:FireClient(player, { Game = game.Game, Done = true, Xp = xp })
+		MonsterService.Notify(player, string.format("🎮 Great game! +%d XP", xp), "success")
+	end
 	MonsterService.PushState(player)
+end
+
+-- One normal-duration round at a time, entirely on the server. No historical
+-- rounds are replayed after a stall, and manual games share this session/cooldown.
+local function autoPlayPlayer(player: Player, now: number)
+	local current = activeGames[player]
+	if current then
+		if not current.Automatic then return end
+		if not validAutoGame(player, current) then activeGames[player] = nil; return end
+		local settings = if current.Game == "Catch" then Config.MiniGames.Catch else Config.MiniGames.Run
+		if now - current.StartedAt >= settings.Duration then
+			local xp = if current.Game == "Catch"
+				then math.min(Config.MiniGames.Catch.MaxCatches, math.floor(settings.Duration / Config.MiniGames.Catch.MinCatchInterval)) * Config.MiniGames.Catch.XpPerCatch
+				else Config.MiniGames.Run.MaxXp
+			finishGame(player, current, xp)
+		end
+		return
+	end
+	if not MonsterService.HasPass(player, "AutoMinigame") then return end
+	local profile = DataService.Get(player)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not profile or not character or not humanoid or humanoid.Health <= 0 then return end
+	local candidates: { MonsterMath.MonsterData } = {}
+	for _, monster in profile.Data.Monsters do
+		if MonsterService.IsPlaced(player, monster) and not MonsterService.IsUnavailable(player, monster.Id) then table.insert(candidates, monster) end
+	end
+	table.sort(candidates, function(a, b) return a.Slot < b.Slot or (a.Slot == b.Slot and a.Id < b.Id) end)
+	local start = 1
+	for index, monster in candidates do if monster.Id == autoGameCursor[player] then start = index % #candidates + 1; break end end
+	for offset = 0, #candidates - 1 do
+		local monster = candidates[(start + offset - 1) % #candidates + 1]
+		local previous = lastPlay[player] and lastPlay[player][monster.Id]
+		if previous and now - previous < Config.MiniGames.Cooldown then continue end
+		lastPlay[player] = lastPlay[player] or {}
+		lastPlay[player][monster.Id] = now
+		autoGameCursor[player] = monster.Id
+		nextAutoGame[player] = nextAutoGame[player] or {}
+		local gameName = nextAutoGame[player][monster.Id] or "Catch"
+		nextAutoGame[player][monster.Id] = if gameName == "Catch" then "Run" else "Catch"
+		activeGames[player] = { MonsterId = monster.Id, Game = gameName, StartedAt = now, Distance = 0,
+			Catches = 0, LastCatchAt = now, Automatic = true, Monster = monster, Slot = monster.Slot, Character = character }
+		return
+	end
 end
 
 local function startMiniGame(player: Player, monsterId: unknown, gameName: unknown)
@@ -707,7 +768,7 @@ end
 
 local function recordCatch(player: Player)
 	local game = activeGames[player]
-	if not game or game.Game ~= "Catch" then
+	if not game or game.Automatic or game.Game ~= "Catch" then
 		return
 	end
 	local settings = Config.MiniGames.Catch
@@ -725,7 +786,7 @@ end
 
 local function finishCatch(player: Player)
 	local game = activeGames[player]
-	if not game or game.Game ~= "Catch" then
+	if not game or game.Automatic or game.Game ~= "Catch" then
 		return
 	end
 	local settings = Config.MiniGames.Catch
@@ -965,6 +1026,8 @@ end
 local function tickPlayer(player: Player, dt: number)
 	local profile = DataService.Get(player)
 	if not profile or not PlotService.GetPlot(player) then
+		local game = activeGames[player]
+		if game and game.Automatic then activeGames[player] = nil end
 		return
 	end
 	local data = profile.Data
@@ -983,6 +1046,7 @@ local function tickPlayer(player: Player, dt: number)
 	end
 
 	autoFeedPlayer(player, os.clock())
+	autoPlayPlayer(player, os.clock())
 
 	local now = os.time()
 	for _, egg in data.Eggs do
@@ -1034,6 +1098,8 @@ function MonsterService.CleanupPlayer(player: Player)
 	FollowerService.CleanupPlayer(player)
 	lastPlay[player] = nil
 	activeGames[player] = nil
+	autoGameCursor[player] = nil
+	nextAutoGame[player] = nil
 	lastAction[player] = nil
 	lastCollect[player] = nil
 	lastGearEquip[player] = nil

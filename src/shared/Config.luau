@@ -636,6 +636,7 @@ Config.Security = {
 -- Gamepasses و Developer Products -----------------------------------------------------
 -- حط الـ Id بتاع كل واحد بعد ما تعمله من Creator Dashboard (بعد الـ Publish).
 -- لو الـ Id = 0: في Studio الزرار بيدّيهولك مجاناً عشان التجربة، وفي اللعبة الحقيقية بيقول "Coming soon".
+-- Auto Minigame requires a configured pass in Studio too.
 export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number, Hidden: boolean? }
 Config.Gamepasses = {
 	CoinBoost = { Id = 0, Name = "Coin Booster", Description = "Legacy income boost", Price = 99, Order = 0, Hidden = true },
@@ -644,6 +645,7 @@ Config.Gamepasses = {
 	AutoCollect = { Id = 2038162860, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
 	ExtraSlots = { Id = 2036429020, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
 	AutoFeeder = { Id = 2037406772, Name = "Auto-Feeder", Description = "Feeds hungry monsters using your coins and grants normal feeding XP", Price = 99, Order = 5 },
+	AutoMinigame = { Id = 2044616622, Name = "Auto Minigame", Description = "Automatically plays with your placed monsters and earns normal game XP", Price = 99, Order = 6 },
 	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
 	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
 	ForestSword = { Id = 0, Name = "Forest Sword", Description = "A nature-forged sword", Price = 149, Order = 11 },

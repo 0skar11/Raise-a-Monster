@@ -56,8 +56,8 @@ function UI.ShopBounds(viewport: Vector2): Vector2
 end
 
 local function corner(parent: Instance, radius: number?)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, radius or 12)
+	local c = parent:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, if radius and radius >= 30 then radius else 4)
 	c.Parent = parent
 end
 
@@ -115,6 +115,7 @@ local function panel(parent: Instance, name: string, size: UDim2, title: string,
 	f.Active = true
 	f.Visible = false
 	f.Parent = parent
+	f:SetAttribute("PixelAccent", titleColor)
 	-- Keep the Roblox hotbar from covering modal shop cards.
 	f:GetPropertyChangedSignal("Visible"):Connect(function()
 		local modalOpen = false
@@ -134,7 +135,7 @@ local function panel(parent: Instance, name: string, size: UDim2, title: string,
 	local close = button(f, "X", COLORS.Panel, UDim2.fromOffset(44, 44), UDim2.new(1, -52, 0, 6))
 	close.Name = "CloseButton"
 	local closeCorner = close:FindFirstChildOfClass("UICorner")
-	if closeCorner then closeCorner.CornerRadius = UDim.new(1, 0) end
+	if closeCorner then closeCorner.CornerRadius = UDim.new(0, 4) end
 	close.Activated:Connect(function()
 		f.Visible = false
 	end)
@@ -343,7 +344,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	gearTitle.Position = UDim2.fromOffset(18, 10)
 	gearTitle.Size = UDim2.new(1, -82, 0, 36)
 	local gearCorner = gearFrame:FindFirstChildOfClass("UICorner")
-	if gearCorner then gearCorner.CornerRadius = UDim.new(0, 20) end
+	if gearCorner then gearCorner.CornerRadius = UDim.new(0, 4) end
 	local gearClose = gearFrame:FindFirstChild("CloseButton") :: TextButton
 	gearClose.Position = UDim2.new(1, -56, 0, 8)
 	gearClose.ZIndex = 4

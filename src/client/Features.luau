@@ -450,7 +450,7 @@ local function buildShopExtras()
 	end
 	table.sort(passes, function(a, b) return a.Pass.Price < b.Pass.Price end)
 	for _, entry in passes do
-		local buy = catalog("Perks", entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, "Rebirth", function() buyPass(entry.Name) end, function() return ((getState() or {}).Passes or {})[entry.Name] == true end, "R$ ")
+		local buy = catalog("Perks", entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, if entry.Name == "AutoMinigame" then "Play" else "Rebirth", function() buyPass(entry.Name) end, function() return ((getState() or {}).Passes or {})[entry.Name] == true end, "R$ ")
 		passButtons[entry.Name] = buy
 		refreshOffer(buy, entry.Pass.Id, false)
 	end
