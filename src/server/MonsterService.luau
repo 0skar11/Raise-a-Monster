@@ -394,7 +394,7 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	end
 	local egg = Config.Eggs[eggData.EggType]
 	local species = if egg then rollWeighted(egg.Weights) else "Blobby"
-	-- بيضة الحظ محصورة في جدولها؛ الأنواع التانية ممكن تطلع Secret.
+	-- Lucky uses its historical pool plus the configured 5x separate Secret roll.
 	local secretChance = Config.SecretChance * (if eggData.EggType == "Lucky" then Config.LuckyEggSecretMultiplier else 1)
 	if (not egg or egg.AllowSecret ~= false) and math.random() < secretChance then
 		species = Config.SecretSpecies[math.random(1, #Config.SecretSpecies)]
@@ -565,6 +565,80 @@ local function getOwnMonster(player: Player, monsterId: unknown): MonsterMath.Mo
 		return nil
 	end
 	return monster
+end
+
+function MonsterService.GetAdultLevel(): number
+	for _, stage in Config.Stages do
+		if stage.Name == "Adult" then return stage.MinLevel end
+	end
+	error("Adult stage is not configured")
+end
+
+-- Both placed monsters and the persistent bench belong to the inventory.
+-- Assigning this server-only token also protects against replacing a record at the same ID.
+function MonsterService.SnapshotAdultTargets(player: Player, selectedId: unknown, all: boolean, newToken: () -> string): { { Id: string, Identity: string } }
+	local profile = DataService.Get(player)
+	local targets = {}
+	if not profile then return targets end
+	if not all and (type(selectedId) ~= "string" or #selectedId > 128) then return targets end
+	local adult = MonsterService.GetAdultLevel()
+	for id, monster in profile.Data.Monsters do
+		if (all or id == selectedId) and type(monster.Level) == "number" and monster.Level >= 1
+			and monster.Level < adult and not MonsterService.IsUnavailable(player, id) then
+			local record = monster :: any
+			if type(record.AdultPurchaseIdentity) ~= "string" then record.AdultPurchaseIdentity = newToken() end
+			table.insert(targets, { Id = id, Identity = record.AdultPurchaseIdentity })
+		end
+	end
+	table.sort(targets, function(a, b) return a.Id < b.Id end)
+	return targets
+end
+
+-- No yield occurs while the saved snapshot is validated and levels are changed.
+-- Removed, transferred, traded, carried or replaced records never redirect a purchase.
+function MonsterService.HasEligibleAdultTargets(player: Player, targets: { { Id: string, Identity: string } }): boolean
+	local profile = DataService.Get(player)
+	if not profile then return false end
+	local adult = MonsterService.GetAdultLevel()
+	for _, target in targets do
+		local monster = profile.Data.Monsters[target.Id]
+		if monster and (monster :: any).AdultPurchaseIdentity == target.Identity
+			and type(monster.Level) == "number" and monster.Level >= 1 and monster.Level < adult
+			and not MonsterService.IsUnavailable(player, target.Id) then return true end
+	end
+	return false
+end
+
+function MonsterService.ApplyAdultTargets(player: Player, targets: { { Id: string, Identity: string } }): { MonsterMath.MonsterData }?
+	local profile = DataService.Get(player)
+	local changed = {}
+	if not profile then return nil end
+	local adult = MonsterService.GetAdultLevel()
+	-- A temporary lock must defer the whole paid snapshot, including ALL.
+	-- Validate every remaining juvenile before changing any level or receipt marker.
+	for _, target in targets do
+		local monster = profile.Data.Monsters[target.Id]
+		if monster and (monster :: any).AdultPurchaseIdentity == target.Identity
+			and type(monster.Level) == "number" and monster.Level >= 1 and monster.Level < adult
+			and MonsterService.IsUnavailable(player, target.Id) then return nil end
+	end
+	for _, target in targets do
+		local monster = profile.Data.Monsters[target.Id]
+		if monster and (monster :: any).AdultPurchaseIdentity == target.Identity
+			and type(monster.Level) == "number" and monster.Level >= 1 and monster.Level < adult
+			and not MonsterService.IsUnavailable(player, target.Id) then
+			monster.Level = adult
+			monster.Xp = 0
+			table.insert(changed, monster)
+		end
+	end
+	return changed
+end
+
+function MonsterService.RefreshAdultTargets(player: Player, changed: { MonsterMath.MonsterData })
+	for _, monster in changed do
+		if MonsterService.IsPlaced(player, monster) then PlotService.UpdateMonster(player, monster, true) end
+	end
 end
 
 -- كل أكلة بتراجع الملكية وتخصم تمنها على السيرفر قبل أي XP أو تحديث للمجسم.

@@ -29,11 +29,17 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 	local decor: { [BasePart]: Decor } = {}
 	local soundConnections: { [Sound]: { RBXScriptConnection } } = {}
 	local routedSounds: { [Sound]: boolean } = {}
+	local musicOriginalGroups: { [Sound]: { Group: SoundGroup? } } = {}
 	local groupParents: { [SoundGroup]: Instance } = {}
 	local master = Instance.new("SoundGroup")
 	master.Name = "RaiseAMonsterLocalMaster"
 	master.Volume = 1
 	master.Parent = SoundService
+	local musicGroup = Instance.new("SoundGroup")
+	musicGroup.Name = "RaiseAMonsterLocalMusic"
+	musicGroup.Volume = 1
+	musicGroup.Parent = master
+	local musicOn = true
 
 	local function connect(signal: RBXScriptSignal, callback: (...any) -> ())
 		table.insert(connections, signal:Connect(callback))
@@ -56,6 +62,19 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		local function route()
 			if not alive then return end
 			local group = sound.SoundGroup
+			local backgroundMusic = sound:IsDescendantOf(SoundService)
+				and (sound:GetAttribute("RaiseAMonsterMusic") == true or sound.Name == "BackgroundMusic" or sound.Name == "MapMusic")
+			if backgroundMusic then
+				if not musicOriginalGroups[sound] then musicOriginalGroups[sound] = { Group = group } end
+				if group ~= musicGroup then sound.SoundGroup = musicGroup end
+				return
+			end
+			if musicOriginalGroups[sound] then
+				local original = musicOriginalGroups[sound]
+				musicOriginalGroups[sound] = nil
+				sound.SoundGroup = original.Group
+				group = original.Group
+			end
 			if group then
 				routeGroup(group)
 			else
@@ -65,10 +84,12 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		end
 		soundConnections[sound] = {}
 		table.insert(soundConnections[sound], sound:GetPropertyChangedSignal("SoundGroup"):Connect(route))
+		table.insert(soundConnections[sound], sound:GetPropertyChangedSignal("Name"):Connect(route))
 		table.insert(soundConnections[sound], sound.Destroying:Connect(function()
 			for _, connection in soundConnections[sound] or {} do connection:Disconnect() end
 			soundConnections[sound] = nil
 			routedSounds[sound] = nil
+			musicOriginalGroups[sound] = nil
 		end))
 		route()
 	end
@@ -200,11 +221,78 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		GuiTheme.ButtonFeedback(item, border)
 		return item
 	end
-	local toggle = button(gui, "", UDim2.fromOffset(184, 8), UDim2.fromOffset(44, 44))
-	toggle.Name = "SettingsToggle"
-	toggle:SetAttribute("AccessibleName", "Settings")
-	toggle.TextSize = 25
-	GuiTheme.DecoratePill(toggle, "Settings")
+	local topbarColor = Color3.fromRGB(21, 22, 24)
+	local function topbarButton(name: string, label: string): TextButton
+		local item = Instance.new("TextButton")
+		item.Name = name
+		item.Size = UDim2.fromOffset(44, 44)
+		item.BackgroundColor3 = topbarColor
+		item.BorderSizePixel = 0
+		item.Text = ""
+		item.AutoButtonColor = true
+		item.Active = true
+		item.Selectable = true
+		item:SetAttribute("AccessibleName", label)
+		item.Parent = gui
+		local circle = Instance.new("UICorner")
+		circle.CornerRadius = UDim.new(1, 0)
+		circle.Parent = item
+		return item
+	end
+	local toggle = topbarButton("SettingsToggle", "Settings")
+	local gear = Instance.new("ImageLabel")
+	gear.Name = "SettingsIcon"
+	gear.BackgroundTransparency = 1
+	gear.Size = UDim2.fromOffset(24, 24)
+	gear.Position = UDim2.fromOffset(10, 10)
+	gear.Image = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png"
+	gear.ImageColor3 = Color3.new(1, 1, 1)
+	gear.Active = false
+	gear.Selectable = false
+	gear.Parent = toggle
+	local musicToggle = topbarButton("MusicToggle", "Mute music")
+	local note = Instance.new("Frame")
+	note.Name = "MusicIcon"
+	note.BackgroundTransparency = 1
+	note.Size = UDim2.fromOffset(24, 24)
+	note.Position = UDim2.fromOffset(10, 10)
+	note.Parent = musicToggle
+	local function notePart(name: string, x: number, y: number, width: number, height: number, color: Color3, circular: boolean?): Frame
+		local part = Instance.new("Frame")
+		part.Name = name
+		part.Position = UDim2.fromOffset(x, y)
+		part.Size = UDim2.fromOffset(width, height)
+		part.BackgroundColor3 = color
+		part.BorderSizePixel = 0
+		part.Active = false
+		part.Selectable = false
+		part.Parent = note
+		if circular then
+			local curve = Instance.new("UICorner")
+			curve.CornerRadius = UDim.new(1, 0)
+			curve.Parent = part
+		end
+		return part
+	end
+	local iconWhite = Color3.new(1, 1, 1)
+	notePart("LeftHead", 0, 16, 8, 6, iconWhite, true).Rotation = -20
+	notePart("RightHead", 13, 13, 8, 6, iconWhite, true).Rotation = -20
+	notePart("LeftStem", 5, 3, 3, 17, iconWhite)
+	notePart("RightStem", 18, 0, 3, 17, iconWhite)
+	notePart("Beam", 5, 2, 16, 3, iconWhite).Rotation = -13
+	local slashCutout = notePart("MutedCutout", 9, -4, 6, 32, topbarColor)
+	slashCutout.Rotation = -45
+	local slash = notePart("MutedSlash", 11, -4, 2, 32, iconWhite)
+	slash.Rotation = -45
+	local function refreshMusic()
+		musicGroup.Volume = if musicOn then 1 else 0
+		slashCutout.Visible = not musicOn
+		slash.Visible = not musicOn
+		musicToggle:SetAttribute("AccessibleName", if musicOn then "Mute music" else "Unmute music")
+		musicToggle:SetAttribute("MusicMuted", not musicOn)
+	end
+	musicToggle.Activated:Connect(function() musicOn = not musicOn; refreshMusic() end)
+	refreshMusic()
 	local panel = Instance.new("Frame")
 	panel.Name = "SettingsPanel"
 	panel.Size = UDim2.fromOffset(296, 314)
@@ -298,13 +386,20 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		if not camera then return end
 		local viewport = camera.ViewportSize
 		local ok, topbar = pcall(function() return GuiService.TopbarInset end)
-		local left = if ok and topbar.Min.X > 0 then topbar.Min.X + 6 else 184
-		local top = if ok then topbar.Min.Y + 6 else 8
-		toggle.Position = UDim2.fromOffset(math.clamp(left, 8, math.max(8, viewport.X - 52)), top)
-		local panelTop = if ok then math.max(topbar.Max.Y + 8, 58) else 58
+		local left = if ok and topbar.Min.X > 0 then topbar.Min.X + 8 else 184
+		local top = if ok then topbar.Min.Y + math.max(0, math.floor((topbar.Height - 44) / 2)) else 8
+		local right = if ok and topbar.Max.X > left then math.min(topbar.Max.X - 8, viewport.X - 8) else viewport.X - 8
+		if right - left < 96 then
+			-- On narrow screens, use our own row below the reserved Roblox controls.
+			left = 8
+			top = if ok then math.max(58, topbar.Max.Y + 8) else 60
+		end
+		musicToggle.Position = UDim2.fromOffset(left, top)
+		toggle.Position = UDim2.fromOffset(left + 52, top)
+		local panelTop = math.max(top + 52, if ok then topbar.Max.Y + 8 else 58)
 		local width = math.min(296, math.max(1, viewport.X - 16))
 		panel.Size = UDim2.fromOffset(width, math.min(314, math.max(64, viewport.Y - panelTop - 12)))
-		panel.Position = UDim2.fromOffset(math.clamp(left, 8, math.max(8, viewport.X - width - 8)), panelTop)
+		panel.Position = UDim2.fromOffset(math.clamp(left + 52, 8, math.max(8, viewport.X - width - 8)), panelTop)
 	end
 	connect(GuiService:GetPropertyChangedSignal("TopbarInset"), layout)
 	local viewportConnection: RBXScriptConnection? = nil
@@ -324,10 +419,12 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		for _, connection in connections do connection:Disconnect() end
 		if viewportConnection then viewportConnection:Disconnect() end
 		for _, list in soundConnections do for _, connection in list do connection:Disconnect() end end
+		for sound, original in musicOriginalGroups do if sound.Parent and sound.SoundGroup == musicGroup then sound.SoundGroup = original.Group end end
 		for sound in routedSounds do if sound.Parent and sound.SoundGroup == master then sound.SoundGroup = nil end end
 		for group, parent in groupParents do if group.Parent == master and parent.Parent then group.Parent = parent end end
 		-- نحافظ على أي مجموعة صوت لسه جوه المجموعة المحلية وقت الإزالة.
-		for _, child in master:GetChildren() do if child:IsA("SoundGroup") then child.Parent = SoundService end end
+		for _, child in master:GetChildren() do if child:IsA("SoundGroup") and child ~= musicGroup then child.Parent = SoundService end end
+		musicGroup:Destroy()
 		master:Destroy()
 		for part, record in decor do
 			if part.Parent then part.LocalTransparencyModifier = record.Original end

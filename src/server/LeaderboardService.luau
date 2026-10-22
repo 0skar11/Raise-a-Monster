@@ -1,5 +1,5 @@
 --!strict
--- لوحات في الساحة: الأغنى، أكتر حرامي، وأكتر وحوش Legendary.
+-- لوحات في الساحة: الأغنى وأكتر وحوش Legendary.
 -- بتستخدم OrderedDataStore عشان تبقى لكل اللاعبين (بعد الـ Publish)،
 -- ولو مش متاحة (زي في Studio قبل الـ Publish) بتعرض اللاعبين اللي في السيرفر بس.
 
@@ -44,18 +44,7 @@ local boards: { Board } = {
 		end,
 		Store = nil,
 		Rows = {},
-		Position = Vector3.new(44, 0, 55),
-	},
-	{
-		Key = "Thief",
-		Title = "🦹 Top Thief",
-		Color = Color3.fromRGB(255, 100, 100),
-		Value = function(data)
-			return data.Stats.Steals
-		end,
-		Store = nil,
-		Rows = {},
-		Position = Vector3.new(44, 0, 80),
+		Position = Vector3.new(97.5, 0, 34),
 	},
 	{
 		Key = "Legendary",
@@ -64,7 +53,7 @@ local boards: { Board } = {
 		Value = countLegendary,
 		Store = nil,
 		Rows = {},
-		Position = Vector3.new(44, 0, 105),
+		Position = Vector3.new(97.5, 0, 82),
 	},
 }
 
