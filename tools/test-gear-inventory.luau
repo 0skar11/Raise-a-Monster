@@ -91,6 +91,7 @@ local ownsLegacyPass = false
 local studio = false
 local market = {
     PromptGamePassPurchaseFinished = signal(),
+    PromptProductPurchaseFinished = signal(),
     UserOwnsGamePassAsync = function(_, _, id) return ownsLegacyPass and id == 999 end,
 }
 local players = { GetPlayers = function() return {} end, GetPlayerByUserId = function(_, id) return if id == 1 then player else nil end }

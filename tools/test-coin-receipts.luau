@@ -19,7 +19,7 @@ local data = {
 	AddCoins = function(_, amount) profile.Data.Coins += amount end,
 }
 local signal = {Connect = function() end}
-local market = {PromptGamePassPurchaseFinished = signal}
+local market = {PromptGamePassPurchaseFinished = signal, PromptProductPurchaseFinished = signal}
 local modules = {Config = config, DataService = data, PlotService = {}, MonsterService = {Notify = function() end, PushState = function() end}, CharacterService = {}, CombatService = {}}
 local services = {MarketplaceService = market, Players = {GetPlayerByUserId = function(_, id) return if id == 1 then player else nil end}, ReplicatedStorage = {Shared = {Config = 'Config'}}, RunService = {}}
 local parent = {}

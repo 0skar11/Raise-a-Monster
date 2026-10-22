@@ -65,6 +65,7 @@ local function harness(studio, passId, ownsPass)
 		end,
 		AddCoins = function(p, amount) if p == player then profile.Data.Coins += amount end end,
 		Save = function() return true end,
+		QueueSave = function() end,
 	}
 	local plot = {LockedUntil = 0, LockCooldownUntil = 0}
 	local plotService = {
@@ -77,9 +78,13 @@ local function harness(studio, passId, ownsPass)
 		SetCollectorEnabled = function(_, enabled) plot.CollectorEnabled = enabled end,
 	}
 	local follower = {Init = function() end, CleanupPlayer = function() end}
+	local weaponGrants = {}
 	local modules = {Config = config, MonsterMath = mathModule, DataService = data,
-		PlotService = plotService, CharacterService = {}, FollowerService = follower, CombatService = {}}
-	local market = {PromptGamePassPurchaseFinished = signal(), Prompts = {}}
+		PlotService = plotService, CharacterService = {}, FollowerService = follower,
+		CombatService = {GiveWeapons = function(_, passes, weapons, selected)
+			table.insert(weaponGrants, {Passes = table.clone(passes), Weapons = table.clone(weapons), Selected = selected})
+		end}}
+	local market = {PromptGamePassPurchaseFinished = signal(), PromptProductPurchaseFinished = signal(), Prompts = {}}
 	market.UserOwnsGamePassAsync = function(_, _, id)
 		assert(id ~= 0, 'An invalid pass ID reached Marketplace ownership verification')
 		return ownsPass == true and id == config.Gamepasses.AutoFeeder.Id
@@ -116,7 +121,8 @@ local function harness(studio, passId, ownsPass)
 	monetization.Init(remotes)
 	monetization.SetupPlayer(player)
 	local result = {Config = config, Math = mathModule, MonsterService = monsterService, Monetization = monetization,
-		Player = player, Stranger = stranger, Profile = profile, ForeignProfile = foreignProfile, Market = market, Plot = plot}
+		Player = player, Stranger = stranger, Profile = profile, ForeignProfile = foreignProfile, Market = market, Plot = plot,
+		WeaponGrants = weaponGrants, Remotes = remotes}
 	result.Advance = function(time)
 		assert(time >= clock, 'Clock cannot run backwards')
 		clock = time

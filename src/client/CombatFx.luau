@@ -302,6 +302,7 @@ end
 local function startMusic(ui: any, button: (any, string, Color3, UDim2, UDim2) -> TextButton)
 	local music = Instance.new("Sound")
 	music.Name = "BackgroundMusic"
+	music:SetAttribute("RaiseAMonsterMusic", true)
 	music.SoundId = Config.Music.SoundId
 	music.Looped = true
 	music.Volume = Config.Music.Volume

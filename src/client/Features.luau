@@ -257,6 +257,30 @@ end
 -- المتجر: الإكسسوارات والأسلحة بعملات اللعبة، ثم الـ Gamepasses والـ Boosts -----------------
 
 local refreshShopCatalog: () -> () = function() end
+local refreshAdultChooser: () -> () = function() end
+local refreshAdultSummary: () -> () = function() end
+local openAdultChooser: (() -> ())? = nil
+
+local function adultCandidates(): { any }
+	local adultLevel: number? = nil
+	for _, stage in Config.Stages do
+		if stage.Name == "Adult" then adultLevel = stage.MinLevel; break end
+	end
+	local state = getState()
+	local candidates = {}
+	if not state or not adultLevel then return candidates end
+	for _, monster in state.Monsters or {} do
+		if type(monster.Id) == "string" and monster.Id ~= "" and type(monster.Level) == "number"
+			and monster.Level < adultLevel and monster.Available == true and not monster.Carried and not monster.InTrade then
+			table.insert(candidates, monster)
+		end
+	end
+	table.sort(candidates, function(a, b)
+		local aProduction, bProduction = a.Production or 0, b.Production or 0
+		return if aProduction == bProduction then a.Id < b.Id else aProduction > bProduction
+	end)
+	return candidates
+end
 
 local function offerAvailable(id: number): boolean
 	return id ~= 0 or RunService:IsStudio()
@@ -277,10 +301,83 @@ end
 
 local function buyProduct(name: string)
 	local product = Config.Products[name]
-	if product and offerAvailable(product.Id) then remotes.BuyProduct:FireServer(name) end
+	if not product or not offerAvailable(product.Id) then return end
+	if name == "SkipToAdultOne" then
+		if openAdultChooser then openAdultChooser() end
+		return
+	elseif name == "SkipToAdultAll" and #adultCandidates() == 0 then
+		UI.Toast(ui, "No available monsters below Adult in your collection.", "warning")
+		return
+	end
+	remotes.BuyProduct:FireServer(name)
+end
+
+local function buildAdultChooser()
+	local frame = newPanel("SkipToAdultChooser", UDim2.fromOffset(500, 400), "SKIP TO ADULT", COLORS.Pink)
+	local title = frame:FindFirstChildWhichIsA("TextLabel")
+	if title then title.TextSize = 24 end
+	local scale = Instance.new("UIScale")
+	scale.Name = "NativeAdultChooserScale"
+	scale.Parent = frame
+	local shopScale = ui.GearFrame:FindFirstChild("NativeShopScale") :: UIScale?
+	local function fit()
+		frame.Size = UDim2.fromOffset(math.min(500, ui.GearFrame.Size.X.Offset), math.min(400, ui.GearFrame.Size.Y.Offset))
+		if shopScale then scale.Scale = shopScale.Scale end
+	end
+	ui.GearFrame:GetPropertyChangedSignal("Size"):Connect(fit)
+	if shopScale then shopScale:GetPropertyChangedSignal("Scale"):Connect(fit) end
+	fit()
+	local price = Config.Products.SkipToAdultOne and Config.Products.SkipToAdultOne.Price or 29
+	local info = UI.Label(frame, "Choose 1 current monster for R$ " .. tostring(price) .. ". Future monsters excluded.", UDim2.new(1, -32, 0, 44), UDim2.fromOffset(16, 54), 16)
+	info.Name = "Scope"
+	local list = makeList(frame, UDim2.new(1, -32, 1, -120), UDim2.fromOffset(16, 104))
+	list.Name = "Monsters"
+	local rowsSignature = ""
+	refreshAdultChooser = function()
+		if not frame.Visible then return end
+		local candidates = adultCandidates()
+		local parts = {}
+		for _, monster in candidates do
+			table.insert(parts, monster.Id .. ":" .. monsterText(monster))
+		end
+		local signature = table.concat(parts, "|")
+		if signature == rowsSignature then return end
+		rowsSignature = signature
+		clearList(list)
+		for index, monster in candidates do
+			local entry = UI.Button(list, monsterText(monster), COLORS.Panel, UDim2.new(1, 0, 0, 44), UDim2.new())
+			entry.Name = monster.Id
+			entry.LayoutOrder = index
+			entry.TextSize = 17
+			entry.Activated:Connect(function()
+				local product = Config.Products.SkipToAdultOne
+				if not product or not offerAvailable(product.Id) then return end
+				-- Recheck fresh state; the server validates again before prompting.
+				for _, candidate in adultCandidates() do
+					if candidate.Id == monster.Id then
+						remotes.BuyProduct:FireServer("SkipToAdultOne", candidate.Id)
+						UI.Open(ui, ui.GearFrame)
+						return
+					end
+				end
+				refreshAdultChooser()
+			end)
+		end
+		if #candidates == 0 then
+			local empty = UI.Label(list, "No available monsters below Adult in your collection.", UDim2.new(1, 0, 0, 60), UDim2.new(), 16)
+			empty.Name = "Empty"
+			empty.TextColor3 = COLORS.SubText
+		end
+	end
+	openAdultChooser = function()
+		rowsSignature = "refresh"
+		UI.Open(ui, frame)
+		refreshAdultChooser()
+	end
 end
 
 local function buildShopExtras()
+	buildAdultChooser()
 	local scroll = ui.GearScroll
 	local selected = "Weapons"
 	local cards: { { Frame: Frame, Category: string, Price: number, Owned: () -> boolean } } = {}
@@ -463,7 +560,15 @@ local function buildShopExtras()
 		local buy = catalog(if product.Coins then "Coin Packs" else "Perks", product.Name, product.Description, product.Price, if product.Coins then "Coins" else "Potion", function() buyProduct(entry.Name) end, nil, "R$ ")
 		productButtons[entry.Name] = buy
 		refreshOffer(buy, product.Id, false)
+		if entry.Name == "SkipToAdultAll" then
+			local description = buy.Parent:FindFirstChild("Description") :: TextLabel
+			refreshAdultSummary = function()
+				local count = #adultCandidates()
+				description.Text = tostring(count) .. " current " .. (if count == 1 then "monster" else "monsters") .. " below Adult. Future monsters excluded."
+			end
+		end
 	end
+	refreshAdultSummary()
 	local feeder = Config.Gamepasses.AutoFeeder
 	local buy = catalog("Perks", feeder.Name, feeder.Description, feeder.Price, "Pets", function() buyPass("AutoFeeder") end, function() return ((getState() or {}).Passes or {}).AutoFeeder == true end, "R$ ")
 	passButtons.AutoFeeder = buy
@@ -954,6 +1059,8 @@ function Features.Refresh()
 	end
 
 	refreshShopCatalog()
+	refreshAdultChooser()
+	refreshAdultSummary()
 
 	-- الحالة تحت الفلوس: Speed Boost والحاجة اللي شايلها
 	local parts = {}

@@ -14,6 +14,8 @@ check(h.MonsterService.GetCoinMultiplier(h.Player) == 1, "Unowned VIP does not b
 check(h.MonsterService.GetUnlockedSlots(h.Player) == h.Config.BaseSlots, "Unowned slot pass does not expand base")
 check(h.Plot.CollectorEnabled ~= false, "Unowned pass retains the collector")
 h.Profile.Data.PendingCoins = 12.75
+h.Profile.Data.Weapons = { Bat = true, IronSword = true }
+h.Profile.Data.EquippedWeapon = "IronSword"
 h.Advance(1)
 check(h.Profile.Data.PendingCoins == 12.75 and h.Profile.Data.Coins == 1000, "Unowned auto collect leaves income pending")
 for name, id in fixtureIds do
@@ -25,6 +27,12 @@ for name, id in fixtureIds do
 end
 check(h.Plot.CollectorEnabled == false, "Confirmed AutoCollect purchase removes collector immediately")
 check(h.MonsterService.GetCoinMultiplier(h.Player) == h.Config.VIPCoinMultiplier, "Verified VIP applies the configured income multiplier")
+check(h.Monetization.HasPass(h.Player, "VIPSword") and h.Monetization.GetOwnedPasses(h.Player).VIPSword, "Confirmed VIP does not include sword entitlement")
+check(#h.WeaponGrants == 1 and h.WeaponGrants[1].Passes.VIPSword and h.WeaponGrants[1].Selected == "IronSword", "VIP purchase did not immediately refresh sword access or changed the equipped coin weapon")
+h.Remotes.EquipWeapon.OnServerEvent:Fire(h.Player, "VIPSword")
+check(h.Profile.Data.EquippedWeapon == "VIPSword" and h.WeaponGrants[#h.WeaponGrants].Passes.VIPSword, "VIP owner cannot equip the included sword")
+local exposed = h.Monetization.GetOwnedPasses(h.Player); exposed.VIP = false; exposed.VIPSword = false
+check(h.Monetization.HasPass(h.Player, "VIPSword"), "Changing an exposed state table changed server entitlement")
 check(h.MonsterService.GetUnlockedSlots(h.Player) == h.Config.BaseSlots + h.Config.ExtraSlotsAmount, "Verified ExtraSlots expands base immediately")
 h.Advance(2)
 check(h.Profile.Data.PendingCoins == 0.75 and h.Profile.Data.Coins == 1012, "Verified AutoCollect moves whole pending coins into wallet")
@@ -67,4 +75,23 @@ h.Market.PromptGamePassPurchase = function() error("prompt unavailable") end
 check(pcall(h.Buy), "Marketplace prompt failure is handled without crashing the remote")
 h.Market.PromptGamePassPurchaseFinished:Fire(h.Player, 0, true)
 check(not h.Monetization.HasPass(h.Player, "VIP"), "Invalid pass zero cannot grant Studio-only perks through a confirmation")
+-- A clean login verifies VIP remotely; stored/client entitlement never grants it.
+h.Monetization.CleanupPlayer(h.Player)
+h.Config.Gamepasses.VIP.Id = fixtureIds.VIP
+h.Market.UserOwnsGamePassAsync = function(_, _, id) return id == fixtureIds.VIP end
+h.Monetization.SetupPlayer(h.Player)
+check(h.Monetization.HasPass(h.Player, "VIPSword") and h.WeaponGrants[#h.WeaponGrants].Passes.VIPSword, "Loading an existing VIP owner omitted the bundled sword")
+h.Monetization.CleanupPlayer(h.Player)
+h.Market.UserOwnsGamePassAsync = function() return false end
+h.Profile.Data.Gamepasses = { VIP = true, VIPSword = true }
+h.Profile.Data.EquippedWeapon = "Bat"
+h.Monetization.SetupPlayer(h.Player)
+h.Advance(10)
+h.Remotes.EquipWeapon.OnServerEvent:Fire(h.Player, "VIPSword")
+check(not h.Monetization.HasPass(h.Player, "VIPSword") and h.Profile.Data.EquippedWeapon == "Bat", "Unverified/non-VIP player equipped the VIP sword")
+h.Config.Gamepasses.VIPSword.Id = 99991
+h.Market.UserOwnsGamePassAsync = function(_, _, id) return id == 99991 end
+h.Monetization.CleanupPlayer(h.Player); h.Monetization.SetupPlayer(h.Player)
+check(h.Monetization.HasPass(h.Player, "VIPSword") and not h.Monetization.HasPass(h.Player, "VIP"), "Legacy sword ownership was lost or incorrectly granted VIP")
+check(h.Config.Gamepasses.VIPSword.Hidden and h.Config.Gamepasses.VIP.Price == 299, "Separate sword pass remains on sale or VIP price changed")
 print(string.format("PASS: %d gamepass checks (VIP income, auto collect, extra slots, confirmed/canceled purchase, no stacking, retry, prompt throttle, departed session race)", checks))
