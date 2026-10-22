@@ -232,6 +232,8 @@ local function buildShop()
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
+	spawn.CanCollide = false
+	spawn.Transparency = 1
 	spawn.Size = Vector3.new(10, 1, 10)
 	spawn.CFrame = CFrame.new(Config.Map.SpawnPosition)
 	spawn.Color = Color3.fromRGB(255, 255, 255)

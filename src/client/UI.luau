@@ -209,8 +209,8 @@ function UI.Create(playerGui: PlayerGui): UI
 	navigation.ZIndex = 0
 	navigation.Parent = hud
 	local navigationButtons: { [string]: TextButton } = {}
-	local navigationOrder = { "Shop", "Rewards", "Trade", "Arena", "Inventory" }
-	local navigationIcons = { "Shop", "Gift", "Friends", "Trophy", "Pets" }
+	local navigationOrder = { "Shop", "Rewards", "Trade", "Inventory" }
+	local navigationIcons = { "Shop", "Gift", "Friends", "Pets" }
 	for index, name in navigationOrder do
 		local item = button(navigation, name, COLORS.Panel, UDim2.fromOffset(280, 72), UDim2.fromOffset(4, (index - 1) * 84 + 6))
 		item.Name = name .. "Button"

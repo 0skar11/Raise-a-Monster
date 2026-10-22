@@ -10,6 +10,35 @@ target = root / (sys.argv[2] if len(sys.argv) > 2 else 'RaiseAMonster_fixed.rbxl
 actual = ET.parse(target).getroot()
 def name(item):
     return item.findtext('./Properties/string[@name="Name"]', item.attrib['class'])
+def remove_editor_artifacts(tree):
+    """Remove confirmed editor leftovers while retaining the spawn location."""
+    for service in tree.findall('Item'):
+        if service.attrib['class'] == 'Workspace':
+            for child in service.findall('Item'):
+                if child.attrib['class'] == 'Model' and name(child) == 'TemplateR6':
+                    service.remove(child)
+            worlds = [service] + [child for child in service.findall('Item') if name(child) == 'StudioWorld']
+            for world in worlds:
+                for model in world.findall('Item'):
+                    if name(model) != 'Map': continue
+                    for spawn in model.findall('Item'):
+                        if spawn.attrib['class'] != 'SpawnLocation' or name(spawn) != 'CenterSpawn': continue
+                        for item in [spawn] + [child for child in spawn.findall('Item') if child.attrib['class'] in ('Decal', 'Texture')]:
+                            props = item.find('Properties')
+                            values = [('float', 'Transparency', '1')]
+                            if item is spawn: values.append(('bool', 'CanCollide', 'false'))
+                            for kind, key, value in values:
+                                prop = props.find(f'*[@name="{key}"]')
+                                if prop is None: prop = ET.SubElement(props, kind, {'name': key})
+                                prop.text = value
+        elif service.attrib['class'] == 'StarterGui':
+            for child in service.findall('Item'):
+                if child.attrib['class'] == 'ScreenGui' and name(child) == 'TravelBar':
+                    service.remove(child)
+
+remove_editor_artifacts(stage)
+remove_editor_artifacts(actual)
+
 def scripts(tree):
     result = {}
     def walk(item, path):

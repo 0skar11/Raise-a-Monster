@@ -11,8 +11,7 @@
       }
     },
     "StarterGui": {
-      "$ignoreUnknownInstances": true,
-      "TravelBar": { "$path": "assets/TravelBar.rbxmx" }
+      "$ignoreUnknownInstances": true
     },
     "ReplicatedStorage": {
       "Shared": {

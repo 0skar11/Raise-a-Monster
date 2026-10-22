@@ -850,13 +850,15 @@ local function buildArena()
 		end)
 		challenge.BackgroundColor3 = if chosenPlayer and chosenMonster then COLORS.Green else COLORS.Gray
 	end
-	arenaButton.Activated:Connect(function()
-		chosenPlayer = nil
-		chosenMonster = nil
-		playersTitle.Text = "Opponent"
-		renderPicker()
-		UI.Toggle(ui, picker)
-	end)
+	if arenaButton then
+		arenaButton.Activated:Connect(function()
+			chosenPlayer = nil
+			chosenMonster = nil
+			playersTitle.Text = "Opponent"
+			renderPicker()
+			UI.Toggle(ui, picker)
+		end)
+	end
 	challenge.Activated:Connect(function()
 		if chosenPlayer and chosenMonster then
 			remotes.ArenaChallenge:FireServer(chosenPlayer.UserId, chosenMonster)

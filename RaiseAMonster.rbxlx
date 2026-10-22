@@ -963422,6 +963422,8 @@ local function buildShop()
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
+	spawn.CanCollide = false
+	spawn.Transparency = 1
 	spawn.Size = Vector3.new(10, 1, 10)
 	spawn.CFrame = CFrame.new(Config.Map.SpawnPosition)
 	spawn.Color = Color3.fromRGB(255, 255, 255)
@@ -967688,13 +967690,15 @@ local function buildArena()
 		end)
 		challenge.BackgroundColor3 = if chosenPlayer and chosenMonster then COLORS.Green else COLORS.Gray
 	end
-	arenaButton.Activated:Connect(function()
-		chosenPlayer = nil
-		chosenMonster = nil
-		playersTitle.Text = "Opponent"
-		renderPicker()
-		UI.Toggle(ui, picker)
-	end)
+	if arenaButton then
+		arenaButton.Activated:Connect(function()
+			chosenPlayer = nil
+			chosenMonster = nil
+			playersTitle.Text = "Opponent"
+			renderPicker()
+			UI.Toggle(ui, picker)
+		end)
+	end
 	challenge.Activated:Connect(function()
 		if chosenPlayer and chosenMonster then
 			remotes.ArenaChallenge:FireServer(chosenPlayer.UserId, chosenMonster)
@@ -969459,8 +969463,8 @@ function UI.Create(playerGui: PlayerGui): UI
 	navigation.ZIndex = 0
 	navigation.Parent = hud
 	local navigationButtons: { [string]: TextButton } = {}
-	local navigationOrder = { "Shop", "Rewards", "Trade", "Arena", "Inventory" }
-	local navigationIcons = { "Shop", "Gift", "Friends", "Trophy", "Pets" }
+	local navigationOrder = { "Shop", "Rewards", "Trade", "Inventory" }
+	local navigationIcons = { "Shop", "Gift", "Friends", "Pets" }
 	for index, name in navigationOrder do
 		local item = button(navigation, name, COLORS.Panel, UDim2.fromOffset(280, 72), UDim2.fromOffset(4, (index - 1) * 84 + 6))
 		item.Name = name .. "Button"
@@ -969732,15 +969736,30 @@ function UI.Create(playerGui: PlayerGui): UI
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = toasts
 
+	-- The pixel-style travel bar is authored in StarterGui (visible in Studio without Play).
+	-- When present it replaces the generated Home / To Shop / To Arena buttons.
+	local travelBar = playerGui:WaitForChild("TravelBar", 5)
+	local travelHome, travelShop, travelArena = homeButton, teleportShopButton, teleportArenaButton
+	if travelBar then
+		local barFrame = travelBar:FindFirstChild("Bar")
+		local home = barFrame and barFrame:FindFirstChild("HomeButton")
+		local shop = barFrame and barFrame:FindFirstChild("TeleportShopButton")
+		local arena = barFrame and barFrame:FindFirstChild("TeleportArenaButton")
+		if home and shop and arena then
+			travelHome, travelShop, travelArena = home, shop, arena
+			homeButton.Visible, teleportShopButton.Visible, teleportArenaButton.Visible = false, false, false
+		end
+	end
+
 	rescale()
 	return {
 		Gui = gui,
 		Hud = hud,
 		NavigationButtons = navigationButtons,
 		InventoryButton = navigationButtons.Inventory,
-		HomeButton = homeButton,
-		TeleportShopButton = teleportShopButton,
-		TeleportArenaButton = teleportArenaButton,
+		HomeButton = travelHome,
+		TeleportShopButton = travelShop,
+		TeleportArenaButton = travelArena,
 		CoinsLabel = coinsLabel,
 		PendingLabel = pendingLabel,
 		ShopButton = shopButton,
