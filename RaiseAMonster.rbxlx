@@ -959007,7 +959007,79 @@ local remotes = Remotes.Get()
 
 local targets: { [Target]: boolean } = {}
 local lastSwing: { [Player]: number } = {}
+local PLAYER_ATTACK_ANIMATION = "rbxassetid://130100478675595"
+type AttackState = {
+	Tool: Tool,
+	Animator: Animator?,
+	Track: AnimationTrack?,
+	Grip: CFrame,
+	Generation: number,
+	Connections: { RBXScriptConnection },
+}
+local attacks: { [Player]: AttackState } = {}
 local tags: { [Player]: Tag } = {}
+
+local function clearAttack(player: Player)
+	local state = attacks[player]
+	if not state then return end
+	attacks[player] = nil
+	for _, connection in state.Connections do connection:Disconnect() end
+	state.Tool.Grip = state.Grip
+	if state.Track then
+		state.Track:Stop(0)
+		state.Track:Destroy()
+	end
+end
+
+local function animateSwing(player: Player, tool: Tool, humanoid: Humanoid)
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	local state = attacks[player]
+	if state and (state.Tool ~= tool or state.Animator ~= animator) then
+		clearAttack(player)
+		state = nil
+	end
+	if not state then
+		local track: AnimationTrack? = nil
+		if animator then
+			local animation = Instance.new("Animation")
+			animation.AnimationId = PLAYER_ATTACK_ANIMATION
+			track = animator:LoadAnimation(animation)
+			animation:Destroy()
+			track.Priority = Enum.AnimationPriority.Action
+			track.Looped = false
+		end
+		state = { Tool = tool, Animator = animator, Track = track, Grip = tool.Grip, Generation = 0, Connections = {} }
+		attacks[player] = state
+		table.insert(state.Connections, tool.AncestryChanged:Connect(function()
+			if tool.Parent ~= player.Character then clearAttack(player) end
+		end))
+		table.insert(state.Connections, humanoid.Died:Connect(function() clearAttack(player) end))
+		table.insert(state.Connections, player.CharacterRemoving:Connect(function() clearAttack(player) end))
+	end
+
+	-- The authored attack owns the arms; a default Slash would blend into it.
+	for _, child in tool:GetChildren() do
+		if child.Name == "toolanim" and child:IsA("StringValue") then child:Destroy() end
+	end
+	local track = state.Track
+	if track then
+		-- Spam must not rewind an attack before it can finish.
+		if not track.IsPlaying then track:Play() end
+	else
+		local animation = Instance.new("StringValue")
+		animation.Name = "toolanim"
+		animation.Value = "Slash"
+		animation.Parent = tool
+		Debris:AddItem(animation, Config.Combat.AttackCooldown)
+	end
+
+	state.Generation += 1
+	local generation = state.Generation
+	tool.Grip = state.Grip * CFrame.Angles(math.rad(45), 0, 0)
+	task.delay(0.15, function()
+		if attacks[player] == state and state.Generation == generation then tool.Grip = state.Grip end
+	end)
+end
 
 function CombatService.Register(target: Target): Target
 	targets[target] = true
@@ -959072,19 +959144,7 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 		playSound(handle, Config.Combat.Sounds.Swing, 0.6)
 	end
 
-	-- أنيميشن الضربة (تحريك السيف للأمام والخلف برمجياً)
-	task.spawn(function()
-		local originalGrip = tool.Grip
-		tool.Grip = originalGrip * CFrame.Angles(math.rad(45), 0, 0)
-		task.wait(0.15)
-		tool.Grip = originalGrip
-	end)
-
-	-- أنيميشن الذراع (Slash)
-	local animation = Instance.new("StringValue")
-	animation.Name = "toolanim"
-	animation.Value = "Slash"
-	animation.Parent = tool
+	animateSwing(player, tool, humanoid)
 
 	-- الأول: أقرب وحش أم أو Boss في المدى
 	local best: Target? = nil
@@ -959245,6 +959305,7 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 end
 
 function CombatService.CleanupPlayer(player: Player)
+	clearAttack(player)
 	lastSwing[player] = nil
 	tags[player] = nil
 	for victim, tag in tags do
