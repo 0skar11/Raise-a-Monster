@@ -175,24 +175,9 @@ function AdminPanel.Start(playerGui: PlayerGui, remotes: { [string]: RemoteEvent
 			end)
 		end
 
-		-- small launcher so the panel can also be opened with the mouse / on touch
-		local launcher = Instance.new("TextButton")
-		launcher.Name = "AdminLauncher"
-		launcher.Text = "🛠"
-		launcher.Font = Enum.Font.GothamBold
-		launcher.TextSize = 18
-		launcher.TextColor3 = GOLD
-		launcher.BackgroundColor3 = PANEL
-		launcher.AnchorPoint = Vector2.new(1, 0)
-		launcher.Position = UDim2.new(1, -16, 0, 56)
-		launcher.Size = UDim2.fromOffset(36, 36)
-		launcher.Parent = gui
-		corner(launcher, 10)
-
 		local function toggle()
 			panel.Visible = not panel.Visible
 		end
-		launcher.Activated:Connect(toggle)
 		close.Activated:Connect(function() panel.Visible = false end)
 		UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
 			if processed then

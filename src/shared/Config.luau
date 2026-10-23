@@ -942,7 +942,12 @@ Config.Halloween = {
 	Pumpkins = {
 		Interval = 1800, -- Pumpkin Hunt every 30 minutes
 		Offset = 900, -- :15 and :45 so it never lands on the Mother Invasion
-		Count = 5,
+		CountMin = 5, -- each hunt hides a random number of pumpkins from CountMin to CountMax
+		CountMax = 20,
+		ZonesShare = 0.5, -- chance that a pumpkin is hidden in the monster zones instead of the plaza
+		ZoneArea = { MinX = Config.Map.ZonesStartX, MaxX = Config.Map.ZonesStartX + #Config.Zones * Config.Map.ZoneLength, HalfZ = Config.Map.ZoneHalfZ },
+		ZonePadding = 14, -- keep this far from the zone walls
+		NestClear = 26, -- and this far from any Mother nest
 		Lifetime = 120, -- pumpkins vanish after 2 minutes
 		CandyMin = 3,
 		CandyMax = 10,

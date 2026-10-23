@@ -1305,17 +1305,28 @@ end
 
 -- Pumpkin Hunt ----------------------------------------------------------------------------------------
 
-local function pickPumpkinSpots(count: number): { Vector3 }
-	local area = pumpkinSettings.Area
-	local spots: { Vector3 } = {}
-	local attempts = 0
-	while #spots < count and attempts < 600 do
-		attempts += 1
-		local relax = if attempts > 400 then 0.4 else 1
-		local candidate = Vector3.new(rng:NextNumber(area.MinX, area.MaxX), 0.2, rng:NextNumber(-area.HalfZ, area.HalfZ))
-		local ok = clearOf(candidate.X, candidate.Z, 0)
+-- Where a pumpkin can hide in the monster zones: anywhere between the walls, away from every Mother nest.
+local function pickZoneSpot(others: { Vector3 }, relax: number): Vector3?
+	local pad = pumpkinSettings.ZonePadding
+	local minX = pumpkinSettings.ZoneArea.MinX + pad
+	local maxX = pumpkinSettings.ZoneArea.MaxX - pad
+	local halfZ = pumpkinSettings.ZoneArea.HalfZ - pad
+	local nestCenters = ZoneService.GetNestCenters(true)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { pumpkinFolder :: Instance, invaderFolder :: Instance }
+	for _ = 1, 30 do
+		local x, z = rng:NextNumber(minX, maxX), rng:NextNumber(-halfZ, halfZ)
+		local candidate = Vector3.new(x, 0.2, z)
+		local ok = true
+		for _, center in nestCenters do
+			if flatDistance(candidate, center) < pumpkinSettings.NestClear then
+				ok = false
+				break
+			end
+		end
 		if ok then
-			for _, other in spots do
+			for _, other in others do
 				if flatDistance(candidate, other) < pumpkinSettings.MinSpacing * relax then
 					ok = false
 					break
@@ -1323,7 +1334,40 @@ local function pickPumpkinSpots(count: number): { Vector3 }
 			end
 		end
 		if ok then
-			table.insert(spots, candidate)
+			local hit = workspace:Raycast(Vector3.new(x, 120, z), Vector3.new(0, -240, 0), params)
+			return Vector3.new(x, if hit then hit.Position.Y else 0.2, z)
+		end
+	end
+	return nil
+end
+
+-- Each pumpkin hides either in the plaza or in the monster zones (ZonesShare of them go to the zones).
+local function pickPumpkinSpots(count: number): { Vector3 }
+	local area = pumpkinSettings.Area
+	local spots: { Vector3 } = {}
+	local attempts = 0
+	while #spots < count and attempts < 900 do
+		attempts += 1
+		local relax = if attempts > 600 then 0.4 else 1
+		if rng:NextNumber() < pumpkinSettings.ZonesShare then
+			local zoneSpot = pickZoneSpot(spots, relax)
+			if zoneSpot then
+				table.insert(spots, zoneSpot)
+			end
+		else
+			local candidate = Vector3.new(rng:NextNumber(area.MinX, area.MaxX), 0.2, rng:NextNumber(-area.HalfZ, area.HalfZ))
+			local ok = clearOf(candidate.X, candidate.Z, 0)
+			if ok then
+				for _, other in spots do
+					if flatDistance(candidate, other) < pumpkinSettings.MinSpacing * relax then
+						ok = false
+						break
+					end
+				end
+			end
+			if ok then
+				table.insert(spots, candidate)
+			end
 		end
 	end
 	return spots
@@ -1343,9 +1387,6 @@ local function endHunt(current: Hunt, message: string?)
 	end
 	if message then
 		announce(message, Color3.fromRGB(255, 170, 60))
-	end
-	for _, player in Players:GetPlayers() do
-		remotes.HalloweenHint:FireClient(player, nil)
 	end
 	pushAll()
 end
@@ -1494,10 +1535,11 @@ function HalloweenService.StartPumpkinHunt(): number
 	huntCounter += 1
 	local current: Hunt = { Id = huntCounter, Pumpkins = {}, Remaining = 0, EndsAt = os.clock() + pumpkinSettings.Lifetime, LastHintAt = 0 }
 	local goldenIndex: number? = nil
+	local count = rng:NextInteger(pumpkinSettings.CountMin, pumpkinSettings.CountMax)
 	if rng:NextNumber() < pumpkinSettings.GoldenChance then
-		goldenIndex = rng:NextInteger(1, pumpkinSettings.Count)
+		goldenIndex = rng:NextInteger(1, count)
 	end
-	for index, spot in pickPumpkinSpots(pumpkinSettings.Count) do
+	for index, spot in pickPumpkinSpots(count) do
 		local golden = goldenIndex == index
 		local part = makePumpkinModel(spot, golden)
 		local pumpkin: Pumpkin = {
@@ -1520,7 +1562,7 @@ function HalloweenService.StartPumpkinHunt(): number
 	end
 	hunt = current
 	setNight("Hunt", true)
-	announce(string.format("🎃 PUMPKIN HUNT! %d pumpkins are hiding in the plaza for %d minutes. Follow the hints!", current.Remaining, math.floor(pumpkinSettings.Lifetime / 60)), Color3.fromRGB(255, 150, 40))
+	announce(string.format("🎃 PUMPKIN HUNT! %d pumpkins are hiding in the plaza and the monster zones for %d minutes. Go find them!", current.Remaining, math.floor(pumpkinSettings.Lifetime / 60)), Color3.fromRGB(255, 150, 40))
 	pushAll()
 	task.delay(pumpkinSettings.Lifetime, function()
 		if hunt == current then
@@ -1528,25 +1570,6 @@ function HalloweenService.StartPumpkinHunt(): number
 		end
 	end)
 	return current.Remaining
-end
-
--- Soft hint: a coarse compass sector and distance band for the nearest pumpkin. Never a position.
-local function sendHints(current: Hunt)
-	local spots = {}
-	for _, pumpkin in current.Pumpkins do
-		if not pumpkin.Claimed and pumpkin.Part.Parent then
-			table.insert(spots, { X = pumpkin.Part.Position.X, Z = pumpkin.Part.Position.Z })
-		end
-	end
-	for _, player in Players:GetPlayers() do
-		local root = rootOf(player)
-		if root then
-			local sector, band = HalloweenLogic.Hint(root.Position.X, root.Position.Z, spots, pumpkinSettings.HintBands)
-			if sector and band then
-				remotes.HalloweenHint:FireClient(player, { Sector = sector, Band = band, Remaining = current.Remaining, EndsIn = math.max(0, math.ceil(current.EndsAt - os.clock())) })
-			end
-		end
-	end
 end
 
 -- shop ------------------------------------------------------------------------------------------------
@@ -1788,11 +1811,6 @@ local function schedulerStep()
 	if now >= nextPumpkinAt then
 		HalloweenService.StartPumpkinHunt()
 		nextPumpkinAt = HalloweenLogic.NextOccurrence(now, pumpkinSettings.Interval, pumpkinSettings.Offset)
-	end
-	local current = hunt
-	if current and os.clock() - current.LastHintAt >= pumpkinSettings.HintInterval then
-		current.LastHintAt = os.clock()
-		sendHints(current)
 	end
 end
 

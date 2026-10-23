@@ -1,5 +1,5 @@
 --!strict
--- Halloween event client: event timers, the Pumpkin Merchant shop panel and the pumpkin hint arrow.
+-- Halloween event client: event timers, the Pumpkin Merchant shop panel and the event board.
 -- The server owns every rule; this module only displays state and sends item ids.
 
 local Players = game:GetService("Players")
@@ -25,8 +25,6 @@ local UI = require(script.Parent.UI)
 
 local settings = Config.Halloween
 local COLORS = UI.Colors
-local ARROWS = { "⬆", "↗", "➡", "↘", "⬇", "↙", "⬅", "↖" }
-local BAND_TEXT = { "very close!", "getting warmer", "far away" }
 
 local HalloweenUI = {}
 
@@ -50,24 +48,6 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 	local player = Players.LocalPlayer
 	local state: any = nil
 	local stateAt = os.clock()
-	local hint: any = nil
-	local hintAt = 0
-
-	-- Pumpkin hint ----------------------------------------------------------------------------------
-	local hintLabel = Instance.new("TextLabel")
-	hintLabel.Name = "PumpkinHint"
-	hintLabel.AnchorPoint = Vector2.new(0.5, 0)
-	hintLabel.Position = UDim2.new(0.5, 0, 0, 60)
-	hintLabel.Size = UDim2.fromOffset(330, 40)
-	hintLabel.BackgroundColor3 = COLORS.Panel
-	hintLabel.BackgroundTransparency = 0.15
-	hintLabel.Font = Enum.Font.FredokaOne
-	hintLabel.TextSize = 20
-	hintLabel.TextColor3 = Color3.fromRGB(255, 190, 80)
-	hintLabel.Visible = false
-	hintLabel.Parent = ui.Gui
-	UI.Corner(hintLabel, 10)
-	UI.Stroke(hintLabel, Color3.fromRGB(255, 140, 40), 2)
 
 	-- Shop panel -------------------------------------------------------------------------------------
 	local PURPLE = Color3.fromRGB(176, 96, 255)
@@ -474,7 +454,6 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 	local function refreshPill()
 		if not state or not state.Enabled then
 			setBoard("--:--", "--:--", "")
-			hintLabel.Visible = false
 			return
 		end
 		local elapsed = os.clock() - stateAt
@@ -482,35 +461,6 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		local invasion = if (state.InvadersAlive or 0) > 0 then "👹 " .. state.InvadersAlive .. " Mothers!" else clock((state.NextInvasionIn or 0) - elapsed)
 		local hunt = if (state.HuntRemaining or 0) > 0 then "🎃 " .. state.HuntRemaining .. " left" else clock((state.NextPumpkinsIn or 0) - elapsed)
 		setBoard(invasion, hunt, if boost > 0 then "⚡ 2x cash " .. clock(boost) else "")
-	end
-
-	local function refreshHint()
-		local current = hint
-		if not current or not state or not state.Enabled or os.clock() - hintAt > (current.EndsIn or 0) + 2 then
-			hintLabel.Visible = false
-			return
-		end
-		local camera = workspace.CurrentCamera
-		if not camera then
-			hintLabel.Visible = false
-			return
-		end
-		-- sector 0 = world +X, counter-clockwise; show it relative to where the camera is looking
-		local dx, dz = HalloweenLogic.SectorDirection(current.Sector)
-		local look = camera.CFrame.LookVector
-		local right = camera.CFrame.RightVector
-		local forward = Vector2.new(look.X, look.Z)
-		local side = Vector2.new(right.X, right.Z)
-		if forward.Magnitude < 0.01 then
-			forward = Vector2.new(0, -1)
-			side = Vector2.new(1, 0)
-		end
-		forward, side = forward.Unit, side.Unit
-		local target = Vector2.new(dx, dz)
-		local angle = math.atan2(target:Dot(side), target:Dot(forward))
-		local index = math.floor(angle / (math.pi / 4) + 0.5) % 8
-		hintLabel.Text = string.format("%s Pumpkin %s · %d left", ARROWS[index + 1], BAND_TEXT[current.Band] or "", current.Remaining or 0)
-		hintLabel.Visible = true
 	end
 
 	local function onState(newState: any)
@@ -521,11 +471,6 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 	end
 
 	remotes.HalloweenState.OnClientEvent:Connect(onState)
-	remotes.HalloweenHint.OnClientEvent:Connect(function(newHint: any)
-		hint = if type(newHint) == "table" then newHint else nil
-		hintAt = os.clock()
-		refreshHint()
-	end)
 	remotes.HalloweenOpenShop.OnClientEvent:Connect(function()
 		UI.Open(ui, frame)
 		buildPortrait()
@@ -534,7 +479,7 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		remotes.HalloweenSync:FireServer()
 	end)
 
-	-- Timers tick locally; the hint arrow follows the camera; the shop closes when you walk away.
+	-- Timers tick locally; the shop closes when you walk away.
 	local accumulator = 0
 	RunService.Heartbeat:Connect(function(dt)
 		accumulator += dt
@@ -543,7 +488,6 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		end
 		accumulator = 0
 		refreshPill()
-		refreshHint()
 		if frame.Visible then
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")

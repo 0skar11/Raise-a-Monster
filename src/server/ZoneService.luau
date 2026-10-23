@@ -839,10 +839,10 @@ local function updateGateTimers()
 end
 
 -- Where each free zone Mother stands (used by the Halloween event so its Mothers appear in the same places).
-function ZoneService.GetNestCenters(): { Vector3 }
+function ZoneService.GetNestCenters(includeHeld: boolean?): { Vector3 }
 	local centers: { Vector3 } = {}
 	for _, nest in nests do
-		if not nest.EventHold then
+		if includeHeld or not nest.EventHold then
 			table.insert(centers, nest.Center)
 		end
 	end
