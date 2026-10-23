@@ -19,12 +19,13 @@ Everything lives behind `Config.Halloween` (src/shared/Config.luau). Nothing is 
 | Candy | Stored in `profile.Data.Halloween` (DataService; old saves get defaults, bad data is sanitised). |
 | Pumpkin Merchant | NPC at `Merchant.Position` with a ProximityPrompt that opens the shop panel. Purchases are `HalloweenBuy(itemId)` only; the server checks distance, cooldown, price, ownership and refunds if delivery fails. |
 | Items | Candy Boost (2x live cash, 10 min, stacks time up to 1 h), Pumpkin Hat, Ghost Trail, Candy Aura, Halloween 2026 title, Haunted Egg (real Rare/Mythic egg, 70/30), Ghost Slime, Skeleton Imp, Pumpkin King (most expensive, one per player). Prices/weights are in `Config.Halloween.Items`. |
-| Atmosphere | Night lighting, fog, Atmosphere, bloom/colour grade, stars, jack-o-lanterns, tombstones, dead trees and drifting embers around the plaza and zone gates. Original values are snapshotted and restored. |
+| Atmosphere | The spooky night (fog, Atmosphere, bloom/colour grade, stars) is **event-only**: it fades in (3 s, `Atmosphere.FadeSeconds`) when a Mother Invasion is announced (60 s warning) and stays until all Mothers are dead or gone; it also covers a Pumpkin Hunt until it ends. Overlapping events share one night; otherwise the normal day lighting is kept. The night is brighter than v1 (`Atmosphere.Brightness/Ambient/OutdoorAmbient/Fog*`). Original values are snapshotted and restored (instantly on Stop). Props (jack-o-lanterns, tombstones, dead trees, embers) are permanent decorations while the event is on. |
 
 ## Code map
 * `src/shared/HalloweenLogic.luau` pure rules (counts, rewards, hints, purchases, conversion), unit tested.
 * `src/server/HalloweenService.luau` scheduling, world objects, AI, remotes.
-* `src/client/HalloweenUI.luau` Candy pill, timers, hint arrow, shop panel.
+* `src/client/CandyCounter.luau` drives the Studio-authored `StarterGui.CandyCounter` (small copy of CashCounter above it; Candy from `HalloweenState`).
+* `src/client/HalloweenUI.luau` event timers, hint arrow, shop panel.
 * Hooks: `DataService` (Halloween block + sanitiser), `MonsterService.GetEventMultiplier` (live income only, never saved as the offline multiplier), `init.server` (init/join/leave/respawn), `Remotes` (six `Halloween*` events).
 
 ## Checks

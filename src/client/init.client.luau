@@ -23,6 +23,7 @@ local MonsterInventory = require(script.MonsterInventory)
 local Effects = require(script.Effects)
 local CashCounterFormatter = require(script.CashCounterFormatter)
 local HalloweenUI = require(script.HalloweenUI)
+local CandyCounter = require(script.CandyCounter)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -41,6 +42,7 @@ end, function()
 end)
 
 Settings.Init(ui)
+task.spawn(CandyCounter.Init, player:WaitForChild("PlayerGui"), remotes) -- own thread so a missing GUI can't stall startup
 HalloweenUI.Init(ui, remotes)
 
 -- تحديث الواجهة ---------------------------------------------------------------------

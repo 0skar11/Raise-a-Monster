@@ -1,5 +1,5 @@
 --!strict
--- Halloween event client: Candy counter + timers, the Pumpkin Merchant shop panel and the pumpkin hint arrow.
+-- Halloween event client: event timers, the Pumpkin Merchant shop panel and the pumpkin hint arrow.
 -- The server owns every rule; this module only displays state and sends item ids.
 
 local Players = game:GetService("Players")
@@ -40,30 +40,26 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 	local hint: any = nil
 	local hintAt = 0
 
-	-- Candy pill + timers (top right, below the Roblox menu) ---------------------------------------
+	-- Event timers (top centre; the Candy amount lives in the authored CandyCounter GUI, see CandyCounter.luau) ---------------------------------------
 	local pill = Instance.new("Frame")
 	pill.Name = "HalloweenCandy"
 	pill.AnchorPoint = Vector2.new(0.5, 0)
 	pill.Position = UDim2.new(0.5, 0, 0, 58)
-	pill.Size = UDim2.fromOffset(300, 56)
+	pill.Size = UDim2.fromOffset(300, 28)
 	pill.BackgroundColor3 = COLORS.Panel
 	pill.Visible = false
 	pill.Parent = ui.Gui
 	UI.Corner(pill, 10)
 	UI.Stroke(pill, Color3.fromRGB(255, 140, 40), 2)
-	local candyLabel = UI.Label(pill, "🍬 0", UDim2.new(1, -12, 0, 28), UDim2.fromOffset(8, 2), 24)
-	candyLabel.TextXAlignment = Enum.TextXAlignment.Left
-	candyLabel.TextColor3 = Color3.fromRGB(255, 170, 60)
-	local timerLabel = UI.Label(pill, "", UDim2.new(1, -12, 0, 28), UDim2.fromOffset(8, 30), 13)
-	timerLabel.TextXAlignment = Enum.TextXAlignment.Left
+	local timerLabel = UI.Label(pill, "", UDim2.new(1, -12, 0, 24), UDim2.fromOffset(8, 2), 14)
+	timerLabel.TextXAlignment = Enum.TextXAlignment.Center
 	timerLabel.TextColor3 = COLORS.SubText
-	timerLabel.TextYAlignment = Enum.TextYAlignment.Top
 
 	-- Pumpkin hint ----------------------------------------------------------------------------------
 	local hintLabel = Instance.new("TextLabel")
 	hintLabel.Name = "PumpkinHint"
 	hintLabel.AnchorPoint = Vector2.new(0.5, 0)
-	hintLabel.Position = UDim2.new(0.5, 0, 0, 120)
+	hintLabel.Position = UDim2.new(0.5, 0, 0, 92)
 	hintLabel.Size = UDim2.fromOffset(330, 40)
 	hintLabel.BackgroundColor3 = COLORS.Panel
 	hintLabel.BackgroundTransparency = 0.15
@@ -177,7 +173,6 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		end
 		pill.Visible = true
 		local elapsed = os.clock() - stateAt
-		candyLabel.Text = "🍬 " .. tostring(state.Candy)
 		local parts = {}
 		local boost = (state.BoostLeft or 0) - elapsed
 		if boost > 0 then

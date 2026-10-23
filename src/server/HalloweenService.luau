@@ -13,6 +13,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local HalloweenLogic = require(ReplicatedStorage.Shared.HalloweenLogic)
@@ -362,73 +363,116 @@ end
 local LIGHTING_PROPS = { "ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "FogColor", "FogStart", "FogEnd" }
 local ATMOSPHERE_PROPS = { "Density", "Offset", "Color", "Decay", "Haze" }
 
-local function applyAtmosphere()
-	if snapshot then
-		return
+-- The spooky night is event-only: it is held by "reasons" (Invasion = from the warning until every Mother is
+-- gone, Hunt = while a Pumpkin Hunt runs). Any reason held -> night; none -> the original day lighting.
+-- The original values are snapshotted once and stay snapshotted until the fade back to day has finished,
+-- so overlapping events can never restore mid-event and a re-trigger during the fade-out just fades back in.
+local nightHolds: { [string]: boolean } = {}
+local nightTweens: { Tween } = {}
+local nightToken = 0
+local nightTarget = false
+
+local function cancelNightTweens()
+	for _, tween in nightTweens do
+		tween:Cancel()
 	end
-	local a = settings.Atmosphere
+	table.clear(nightTweens)
+end
+
+local function fade(instance: Instance, goal: { [string]: any }, seconds: number)
+	local tween = TweenService:Create(instance, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), goal)
+	table.insert(nightTweens, tween)
+	tween:Play()
+end
+
+local function captureAtmosphere(): AtmosphereSnapshot
+	local existing = snapshot
+	if existing then
+		return existing
+	end
 	local saved: AtmosphereSnapshot = { Lighting = {}, Created = {} }
 	for _, prop in LIGHTING_PROPS do
 		saved.Lighting[prop] = (Lighting :: any)[prop]
 	end
 	snapshot = saved
-	Lighting.ClockTime = a.ClockTime
-	Lighting.Brightness = a.Brightness
-	Lighting.Ambient = a.Ambient
-	Lighting.OutdoorAmbient = a.OutdoorAmbient
-	Lighting.FogColor = a.FogColor
-	Lighting.FogStart = a.FogStart
-	Lighting.FogEnd = a.FogEnd
-
 	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
 	if atmosphere then
 		local props = {}
 		for _, prop in ATMOSPHERE_PROPS do props[prop] = (atmosphere :: any)[prop] end
 		saved.Atmosphere, saved.AtmosphereProps = atmosphere, props
 	else
+		-- starts invisible (density 0) so the fade-in has something to fade from
 		atmosphere = Instance.new("Atmosphere")
 		atmosphere.Name = "HalloweenAtmosphere"
+		atmosphere.Density = 0
+		atmosphere.Haze = 0
 		atmosphere.Parent = Lighting
 		table.insert(saved.Created, atmosphere)
 	end
-	local atmo = atmosphere :: Atmosphere
-	atmo.Density = a.AtmosphereDensity
-	atmo.Offset = a.AtmosphereOffset
-	atmo.Color = a.AtmosphereColor
-	atmo.Decay = a.AtmosphereDecay
-	atmo.Haze = a.Haze
-
 	local sky = Lighting:FindFirstChildOfClass("Sky")
 	if sky then
 		saved.Sky, saved.SkyProps = sky, { StarCount = sky.StarCount, CelestialBodiesShown = sky.CelestialBodiesShown }
 	else
 		sky = Instance.new("Sky")
 		sky.Name = "HalloweenSky"
+		sky.StarCount = 0
 		sky.Parent = Lighting
 		table.insert(saved.Created, sky)
 	end
-	local skyInstance = sky :: Sky
-	skyInstance.StarCount = a.StarCount
-	skyInstance.CelestialBodiesShown = true
-
 	local color = Instance.new("ColorCorrectionEffect")
 	color.Name = "HalloweenColor"
-	color.TintColor = a.TintColor
-	color.Saturation = a.Saturation
-	color.Contrast = a.Contrast
 	color.Parent = Lighting
 	table.insert(saved.Created, color)
 	local bloom = Instance.new("BloomEffect")
 	bloom.Name = "HalloweenBloom"
-	bloom.Intensity = a.BloomIntensity
-	bloom.Threshold = a.BloomThreshold
+	bloom.Intensity = 0
+	bloom.Threshold = settings.Atmosphere.BloomThreshold
 	bloom.Size = 24
 	bloom.Parent = Lighting
 	table.insert(saved.Created, bloom)
+	return saved
 end
 
+local function destroyAtmosphereFx(saved: AtmosphereSnapshot)
+	for _, created in saved.Created do
+		created:Destroy()
+	end
+end
+
+local function fadeToNight()
+	local a = settings.Atmosphere
+	local saved = captureAtmosphere()
+	cancelNightTweens()
+	local seconds = a.FadeSeconds
+	fade(Lighting, {
+		ClockTime = a.ClockTime, Brightness = a.Brightness, Ambient = a.Ambient, OutdoorAmbient = a.OutdoorAmbient,
+		FogColor = a.FogColor, FogStart = a.FogStart, FogEnd = a.FogEnd,
+	}, seconds)
+	local atmosphere = saved.Atmosphere or Lighting:FindFirstChild("HalloweenAtmosphere")
+	if atmosphere and atmosphere:IsA("Atmosphere") then
+		fade(atmosphere, { Density = a.AtmosphereDensity, Offset = a.AtmosphereOffset, Color = a.AtmosphereColor, Decay = a.AtmosphereDecay, Haze = a.Haze }, seconds)
+	end
+	local sky = saved.Sky or Lighting:FindFirstChild("HalloweenSky")
+	if sky and sky:IsA("Sky") then
+		sky.CelestialBodiesShown = true
+		fade(sky, { StarCount = a.StarCount }, seconds)
+	end
+	local color = Lighting:FindFirstChild("HalloweenColor")
+	if color and color:IsA("ColorCorrectionEffect") then
+		fade(color, { TintColor = a.TintColor, Saturation = a.Saturation, Contrast = a.Contrast }, seconds)
+	end
+	local bloom = Lighting:FindFirstChild("HalloweenBloom")
+	if bloom and bloom:IsA("BloomEffect") then
+		fade(bloom, { Intensity = a.BloomIntensity }, seconds)
+	end
+end
+
+-- Instant, complete restore (Stop / shutdown).
 local function restoreAtmosphere()
 	local saved = snapshot
+	nightToken += 1
+	nightTarget = false
+	cancelNightTweens()
 	if not saved then
 		return
 	end
@@ -446,9 +490,73 @@ local function restoreAtmosphere()
 			(saved.Sky :: any)[prop] = value
 		end
 	end
-	for _, created in saved.Created do
-		created:Destroy()
+	destroyAtmosphereFx(saved)
+end
+
+local function fadeToDay()
+	local saved = snapshot
+	if not saved then
+		return
 	end
+	cancelNightTweens()
+	local seconds = settings.Atmosphere.FadeSeconds
+	nightToken += 1
+	local token = nightToken
+	local goal: { [string]: any } = {}
+	for prop, value in saved.Lighting do goal[prop] = value end
+	fade(Lighting, goal, seconds)
+	local atmosphere = saved.Atmosphere or Lighting:FindFirstChild("HalloweenAtmosphere")
+	if atmosphere and atmosphere.Parent and atmosphere:IsA("Atmosphere") then
+		fade(atmosphere, saved.AtmosphereProps or { Density = 0, Haze = 0 }, seconds)
+	end
+	local sky = saved.Sky or Lighting:FindFirstChild("HalloweenSky")
+	if sky and sky.Parent and sky:IsA("Sky") then
+		fade(sky, { StarCount = if saved.SkyProps then saved.SkyProps.StarCount else 0 }, seconds)
+	end
+	local color = Lighting:FindFirstChild("HalloweenColor")
+	if color and color:IsA("ColorCorrectionEffect") then
+		fade(color, { TintColor = Color3.new(1, 1, 1), Saturation = 0, Contrast = 0 }, seconds)
+	end
+	local bloom = Lighting:FindFirstChild("HalloweenBloom")
+	if bloom and bloom:IsA("BloomEffect") then
+		fade(bloom, { Intensity = 0 }, seconds)
+	end
+	task.delay(seconds + 0.1, function()
+		-- a newer fade (or a hard restore) owns the lighting now
+		if nightToken ~= token or snapshot ~= saved then
+			return
+		end
+		restoreAtmosphere()
+	end)
+end
+
+local function refreshNight()
+	local wanted = false
+	if active then
+		for _, held in nightHolds do
+			if held then wanted = true break end
+		end
+	end
+	if wanted == nightTarget then
+		return
+	end
+	nightTarget = wanted
+	nightToken += 1
+	if wanted then
+		fadeToNight()
+	else
+		fadeToDay()
+	end
+end
+
+local function setNight(reason: string, on: boolean)
+	nightHolds[reason] = on or nil
+	refreshNight()
+end
+
+-- exposed for tests / debugging
+function HalloweenService.IsNight(): boolean
+	return nightTarget
 end
 
 -- props -----------------------------------------------------------------------------------------------
@@ -712,6 +820,7 @@ local function settleInvader(invader: Invader, killerName: string)
 	end
 	if #invaders == 0 then
 		announce("🎃 The Mother Invasion has been repelled! Great teamwork!", Color3.fromRGB(120, 255, 140))
+		setNight("Invasion", false)
 		pushAll()
 	end
 end
@@ -881,6 +990,7 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 			spawned += 1
 		end
 	end
+	setNight("Invasion", spawned > 0)
 	if spawned > 0 then
 		announce(string.format("👹 MOTHER INVASION! %d Mother monsters are attacking the plaza! Defeat them for Candy!", spawned), Color3.fromRGB(255, 110, 40))
 		pushAll()
@@ -893,6 +1003,7 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 				left += 1
 				removeInvader(invader)
 			end
+			setNight("Invasion", false)
 			if left > 0 then
 				announce("The Mothers retreated into the fog... see you next hour!", Color3.fromRGB(200, 200, 200))
 				pushAll()
@@ -1037,6 +1148,7 @@ local function endHunt(current: Hunt, message: string?)
 		return
 	end
 	hunt = nil
+	setNight("Hunt", false)
 	for _, pumpkin in current.Pumpkins do
 		pumpkin.Claimed = true
 		if pumpkin.Part.Parent then
@@ -1143,6 +1255,7 @@ function HalloweenService.StartPumpkinHunt(): number
 		return 0
 	end
 	hunt = current
+	setNight("Hunt", true)
 	announce(string.format("🎃 PUMPKIN HUNT! %d pumpkins are hiding in the plaza for %d minutes. Follow the hints!", current.Remaining, math.floor(pumpkinSettings.Lifetime / 60)), Color3.fromRGB(255, 150, 40))
 	pushAll()
 	task.delay(pumpkinSettings.Lifetime, function()
@@ -1318,7 +1431,6 @@ function HalloweenService.Start()
 	rootFolder = folder("HalloweenEvent", workspace)
 	invaderFolder = folder("Invaders", rootFolder :: Folder)
 	pumpkinFolder = folder("Pumpkins", rootFolder :: Folder)
-	applyAtmosphere()
 	buildProps()
 	buildMerchant()
 	local now = os.time()
@@ -1345,6 +1457,7 @@ function HalloweenService.Stop()
 		endHunt(hunt :: Hunt, nil)
 	end
 	hunt = nil
+	table.clear(nightHolds)
 	restoreAtmosphere()
 	if rootFolder then
 		rootFolder:Destroy()
@@ -1399,6 +1512,7 @@ local function schedulerStep()
 		announcedInvasionAt = 0
 	elseif nextInvasionAt - now <= invasionSettings.AnnounceBefore and announcedInvasionAt ~= nextInvasionAt then
 		announcedInvasionAt = nextInvasionAt
+		setNight("Invasion", true) -- night falls with the 60 s warning
 		announce(string.format("⚠️ Mother Invasion in %d seconds! Grab your weapons and get ready to defend the plaza!", math.max(1, nextInvasionAt - now)), Color3.fromRGB(255, 90, 60))
 	end
 	if now >= nextPumpkinAt then

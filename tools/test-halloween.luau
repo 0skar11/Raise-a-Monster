@@ -267,4 +267,26 @@ check(not service:find("OnServerEvent:Connect%(function%(player, ?[%w_]+, ?[%w_]
 -- the client never sends an amount, price or position
 check(not ui:find("FireServer%([^)]*[Cc]ost") and not ui:find("FireServer%([^)]*Candy"), "Client sends only item ids")
 
+-- event-only night: held by reasons (Invasion / Hunt), union semantics, smooth fade, hard restore on Stop
+local startBody = service:match("function HalloweenService%.Start%(%).-\nend\n") or ""
+check(startBody ~= "" and not startBody:find("applyAtmosphere", 1, true) and not startBody:find("fadeToNight", 1, true), "Starting the event does not turn the night on by itself")
+check(service:find('setNight("Invasion", true) -- night falls with the 60 s warning', 1, true), "Night falls with the Mother Invasion warning")
+check(service:find('setNight("Invasion", spawned > 0)', 1, true) and service:find('setNight("Invasion", false)', 1, true), "Invasion night is released when the Mothers are gone (repelled, retreated, or none spawned)")
+check(service:find('setNight("Hunt", true)', 1, true) and service:find('setNight("Hunt", false)', 1, true), "Pumpkin Hunt night lasts exactly as long as the hunt")
+check(service:find("for _, held in nightHolds do", 1, true) and service:find("if wanted == nightTarget then", 1, true), "Overlapping events share one night (any hold keeps it; no restore mid-event)")
+check(service:find("nightToken ~= token or snapshot ~= saved", 1, true), "A fade back to day that is overtaken by a new event never destroys the lighting snapshot")
+check(service:find("TweenService:Create(instance, TweenInfo.new(seconds", 1, true) and Config.Halloween.Atmosphere.FadeSeconds > 0, "Night fades in and out with a configurable tween")
+local stopBody = service:match("function HalloweenService%.Stop%(%).-\nend\n") or ""
+check(stopBody:find("table.clear(nightHolds)", 1, true) and stopBody:find("restoreAtmosphere()", 1, true), "Stop clears the holds and restores the day lighting immediately")
+do
+	local a = Config.Halloween.Atmosphere
+	check(a.Brightness >= 1.5 and a.Ambient.R + a.Ambient.G + a.Ambient.B >= 1.1 and a.FogEnd >= 1500 and a.AtmosphereDensity <= 0.35, "Event night is brighter than the first version (configurable)")
+	check(a.ClockTime < 4 and a.Brightness <= 3 and a.Ambient.B > a.Ambient.G, "...but is still clearly a purple night")
+end
+-- one Candy display: the authored CandyCounter GUI driven by CandyCounter.luau
+local candyClient = read("src/client/CandyCounter.luau")
+check(candyClient:find('WaitForChild("CandyCounter"', 1, true) and not candyClient:find('Instance.new("ScreenGui")', 1, true), "CandyCounter finds the authored GUI and never creates it")
+check(candyClient:find("HalloweenState.OnClientEvent", 1, true) and candyClient:find("CompactMoney.Format", 1, true) and candyClient:find("state.Enabled == true", 1, true), "CandyCounter shows state.Candy compactly and hides when the event is off")
+check(read("src/client/init.client.luau"):find("task.spawn(CandyCounter.Init,", 1, true), "Client starts the Candy counter on its own thread")
+check(not ui:find("candyLabel", 1, true), "The old Candy pill number is gone from HalloweenUI")
 print(string.format("PASS: %d Halloween checks (config, rules, rewards, shop, persistence/migration, wiring)", checks))
