@@ -29,6 +29,16 @@ function RewardService.SpinReadyIn(player: Player): number
 	return math.max(0, profile.Data.LastSpin + Config.Spin.Cooldown - os.time())
 end
 
+function RewardService.NextDailyDay(player: Player): number
+	local profile = DataService.Get(player)
+	if not profile then return 1 end
+	local daily = profile.Data.Daily
+	if daily.LastClaim > 0 and os.time() - daily.LastClaim <= Config.Daily.StreakReset then
+		return math.min(daily.Streak + 1, Config.Daily.MaxStreak)
+	end
+	return 1
+end
+
 -- البيضة بتروح القاعدة، ولو مفيش مكان بتتحول فلوس
 local function giveEgg(player: Player, eggType: string)
 	if not MonsterService.AddEgg(player, eggType) then

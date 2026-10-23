@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local UI = require(script.Parent.UI)
+local RewardsArcade = require(script.Parent.RewardsArcade)
 
 local COLORS = UI.Colors
 local player = Players.LocalPlayer
@@ -25,9 +26,7 @@ local getOpenMonster: () -> string?
 local statusLabel: TextLabel
 local rewardsButton: TextButton
 local launcherActions: { [string]: () -> () } = {}
-local dailyInfo: TextLabel
-local dailyClaim: TextButton
-local spinGo: TextButton
+local rewardsController: any
 local passButtons: { [string]: TextButton } = {}
 local productButtons: { [string]: TextButton } = {}
 local speedAccessoryButtons: { [string]: TextButton } = {}
@@ -464,65 +463,16 @@ end
 -- الهدية اليومية وعجلة الحظ في شباك واحد: اليومية على الشمال والعجلة على اليمين ----------------
 
 local function buildRewards()
-	local frame = newPanel("Rewards", UDim2.fromOffset(820, 470), "🎁 Rewards", COLORS.Yellow)
-	local scale = Instance.new("UIScale")
-	scale.Scale = 0.82
-	scale.Parent = frame
-	launcherActions.Rewards = function()
-		UI.Toggle(ui, frame)
-	end
-
-	local dailyTitle = UI.Label(frame, "🎁 Daily Reward", UDim2.fromOffset(360, 30), UDim2.fromOffset(16, 60), 24)
-	dailyTitle.TextColor3 = COLORS.Yellow
-	dailyInfo = UI.Label(frame, "", UDim2.fromOffset(360, 110), UDim2.fromOffset(16, 110), 20)
-	dailyClaim = UI.Button(frame, "Claim", COLORS.Green, UDim2.fromOffset(360, 50), UDim2.fromOffset(16, 404))
-	dailyClaim.Activated:Connect(function()
-		remotes.ClaimDaily:FireServer()
-	end)
-
-	local divider = Instance.new("Frame")
-	divider.Size = UDim2.fromOffset(2, 390)
-	divider.Position = UDim2.fromOffset(392, 60)
-	divider.BackgroundColor3 = COLORS.PanelLight
-	divider.BorderSizePixel = 0
-	divider.Parent = frame
-
-	local spinTitle = UI.Label(frame, "🎡 Spin Wheel", UDim2.fromOffset(400, 30), UDim2.fromOffset(410, 60), 24)
-	spinTitle.TextColor3 = COLORS.Orange
-	local wheel = Instance.new("Frame")
-	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
-	wheel.Position = UDim2.fromOffset(610, 250)
-	wheel.Size = UDim2.fromOffset(300, 300)
-	wheel.BackgroundColor3 = COLORS.PanelLight
-	wheel.Parent = frame
-	UI.Corner(wheel, 150)
-	UI.Stroke(wheel, COLORS.Orange, 4)
-	local prizes = Config.Spin.Prizes
-	local step = 360 / #prizes
-	for i, prize in prizes do
-		local angle = math.rad((i - 1) * step)
-		local chip = UI.Label(wheel, prize.Name, UDim2.fromOffset(104, 40), UDim2.new(0.5, math.sin(angle) * 100 - 52, 0.5, -math.cos(angle) * 100 - 20), 16)
-		chip.BackgroundTransparency = 0
-		chip.BackgroundColor3 = prize.Color
-		chip.TextColor3 = Color3.fromRGB(25, 25, 30)
-		chip.Rotation = (i - 1) * step
-		UI.Corner(chip, 10)
-	end
-	local pointer = UI.Label(frame, "▼", UDim2.fromOffset(40, 40), UDim2.fromOffset(590, 82), 34)
-	pointer.TextColor3 = COLORS.Red
-	pointer.ZIndex = 3
-	spinGo = UI.Button(frame, "SPIN!", COLORS.Green, UDim2.fromOffset(392, 50), UDim2.fromOffset(412, 404))
-	spinGo.Activated:Connect(function()
-		remotes.Spin:FireServer()
-	end)
-
+	local frame = newPanel("Rewards", UDim2.fromOffset(960, 720), "Rewards", COLORS.Yellow)
+	launcherActions.Rewards = function() UI.Toggle(ui, frame) end
+	rewardsController = RewardsArcade.Mount(frame, {
+		GetState = getState,
+		ClaimDaily = function() remotes.ClaimDaily:FireServer() end,
+		Spin = function() remotes.Spin:FireServer() end,
+	})
 	remotes.SpinResult.OnClientEvent:Connect(function(index: number)
 		UI.Open(ui, frame)
-		local current = wheel.Rotation % 360
-		wheel.Rotation = current
-		-- الجايزة رقم index لازم توقف تحت السهم اللي فوق
-		local target = 360 * 5 - (index - 1) * step
-		TweenService:Create(wheel, TweenInfo.new(4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Rotation = target }):Play()
+		rewardsController:ShowSpinResult(index)
 	end)
 end
 
@@ -953,24 +903,9 @@ function Features.Refresh()
 	end
 	statusLabel.Text = table.concat(parts, "   ")
 
-	-- الهدية اليومية
+	if rewardsController then rewardsController:Refresh(state) end
 	local dailyIn = state.DailyReadyIn or 0
-	local streak = state.DailyStreak or 0
-	local nextDay = math.min(streak + 1, Config.Daily.MaxStreak)
-	dailyInfo.Text = string.format(
-		"Day %d / %d\nNext reward: 💰 %s%s",
-		nextDay,
-		Config.Daily.MaxStreak,
-		MonsterMath.FormatNumber(Config.Daily.CoinsPerDay * nextDay),
-		if nextDay == Config.Daily.MaxStreak then " + " .. Config.Eggs[Config.Daily.Day7Egg].DisplayName else ""
-	)
-	dailyClaim.Text = if dailyIn > 0 then "Ready in " .. formatTime(dailyIn) else "Claim!"
-	dailyClaim.BackgroundColor3 = if dailyIn > 0 then COLORS.Gray else COLORS.Green
-
-	-- عجلة الحظ
 	local spinIn = state.SpinReadyIn or 0
-	spinGo.Text = if spinIn > 0 then "Free spin in " .. formatTime(spinIn) else "SPIN!"
-	spinGo.BackgroundColor3 = if spinIn > 0 then COLORS.Gray else COLORS.Green
 	rewardsButton.Text = if dailyIn > 0 and spinIn > 0 then "Rewards" else "Rewards!"
 
 	-- الـ Gamepasses

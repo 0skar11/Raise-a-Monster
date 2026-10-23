@@ -179,6 +179,7 @@ function UI.Create(playerGui: PlayerGui): UI
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 5
 	gui.Parent = playerGui
 
 	local uiScale = Instance.new("UIScale")

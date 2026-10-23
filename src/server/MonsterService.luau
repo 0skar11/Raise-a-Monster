@@ -111,6 +111,9 @@ function MonsterService.CountMonsters(player: Player): number
 	return count
 end
 
+-- Rendering is supplied by startup; progress and claims do not depend on it.
+MonsterService.SyncPortraits = function(_player: Player, _monsters: any) end
+
 -- بيبعت للاعب نسخة من بياناته + أرقام محسوبة عشان الواجهة.
 function MonsterService.PushState(player: Player)
 	local profile = DataService.Get(player)
@@ -120,6 +123,7 @@ function MonsterService.PushState(player: Player)
 	end
 	local data = profile.Data
 	local now = os.clock()
+	MonsterService.SyncPortraits(player, data.Monsters)
 
 	local followingIds = FollowerService.GetIds(player)
 	local monsters = {}
