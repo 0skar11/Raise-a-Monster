@@ -495,7 +495,7 @@ Config.Zones = {
 		Decoration = "Crystals",
 		Species = { "Void_1", "Void_2", "Void_3", "Void_4", "Void_5", "Void_6", "Void_7", "Void_8", "Void_9", "Void_10" },
 		MotherHealth = 1000000,
-		MotherDamage = 45,
+		MotherDamage = 90, -- ~2 hits kill even a fully geared player (100 HP + up to 350 from accessories)
 	},
 } :: { Zone }
 
@@ -678,15 +678,17 @@ Config.Products = {
 Config.VIPCoinMultiplier = 2
 Config.CoinBoostMultiplier = 1.5
 Config.ExtraSlotsAmount = 2
-Config.VIPSword = { DamageMultiplier = 4.3, ExtraReach = 3 }
+Config.VIPSword = { DamageMultiplier = 90, ExtraReach = 3 }
 Config.WeaponStats = {
-	IronBat = { Template = "IronBat", DamageMultiplier = 1.7, ExtraReach = 0.5 },
-	VIPSword = { Template = "VoidBat", DamageMultiplier = 4.3, ExtraReach = 3 },
-	IronSword = { Template = "IronSword", DamageMultiplier = 2.2, ExtraReach = 1 },
-	ForestSword = { Template = "ForestSword", DamageMultiplier = 2.6, ExtraReach = 1.5 },
-	DesertSword = { Template = "DesertSword", DamageMultiplier = 3.05, ExtraReach = 2 },
-	IceSword = { Template = "IceSword", DamageMultiplier = 3.6, ExtraReach = 2.5 },
-	LavaSword = { Template = "LavaSword", DamageMultiplier = 5.05, ExtraReach = 4 },
+	-- Each weapon is a big step up: x2, x4, x8, x18, x40, x90, x180 (the starter bat is x1). The best sword can
+	-- solo a Void Mother (1M-4M HP) but only with careful dodging - she kills a player in about two hits.
+	IronBat = { Template = "IronBat", DamageMultiplier = 2, ExtraReach = 0.5 },
+	IronSword = { Template = "IronSword", DamageMultiplier = 4, ExtraReach = 1 },
+	ForestSword = { Template = "ForestSword", DamageMultiplier = 8, ExtraReach = 1.5 },
+	DesertSword = { Template = "DesertSword", DamageMultiplier = 18, ExtraReach = 2 },
+	IceSword = { Template = "IceSword", DamageMultiplier = 40, ExtraReach = 2.5 },
+	VIPSword = { Template = "VoidBat", DamageMultiplier = 90, ExtraReach = 3 },
+	LavaSword = { Template = "LavaSword", DamageMultiplier = 180, ExtraReach = 4 },
 } :: { [string]: { Template: string, DamageMultiplier: number, ExtraReach: number } }
 -- معدات القتال تُشترى بعملات اللعبة من المتجر، مش بـ Robux.
 -- Early upgrades are affordable; later tiers follow the five-zone economy.

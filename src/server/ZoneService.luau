@@ -650,13 +650,12 @@ local function spawnNest(nest: Nest)
 	gui.Name = "Info"
 	gui.AlwaysOnTop = false
 	label.Size = UDim2.fromScale(1, 0.6)
-	local element = Config.MotherAttacks.Elements[nest.Zone.Name]
 	label.Text = string.format(
 		'<font color="%s">%s</font> · MOTHER\n<font color="%s">%s</font> · ⚔️ %d dmg',
 		rarityHex(species),
 		name,
-		Build.ColorToHex(if element then element.Color else nest.Zone.AccentColor),
-		(nest.Style :: Config.MotherStyle).Name,
+		rarityHex(species),
+		Config.Species[species].Rarity,
 		motherDamage(nest)
 	)
 
