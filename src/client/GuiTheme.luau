@@ -167,6 +167,110 @@ function GuiTheme.Gloss(parent: GuiObject)
 	gradient.Parent = parent
 end
 
+local function decoration(parent: GuiObject, name: string, color: Color3, size: UDim2, position: UDim2): Frame
+	local frame = Instance.new("Frame")
+	frame.Name = name
+	frame.BackgroundColor3 = color
+	frame.BorderSizePixel = 0
+	frame.Size, frame.Position = size, position
+	frame.ZIndex = parent.ZIndex
+	frame.Active, frame.Selectable = false, false
+	frame.Parent = parent
+	return frame
+end
+
+-- Extra dressing for modal panels: an accent title band, pixel corner brackets, a bottom accent line
+-- and a light sheen that sweeps the band each time the panel opens. Everything is decoration (never
+-- active) and lives in one "Ornament" folder-like frame so it can't affect layout or input.
+function GuiTheme.Dress(panel: Frame, accent: Color3)
+	if panel:FindFirstChild("Ornament") then return end
+	local colors = GuiTheme.Colors
+	local ornament = decoration(panel, "Ornament", Color3.new(1, 1, 1), UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0))
+	ornament.BackgroundTransparency = 1
+	ornament.ClipsDescendants = false
+
+	-- Bright, glossy title band (reference: the Store header): light accent at the top fading to a deeper
+	-- accent at the bottom, with a pale highlight stripe across the upper third.
+	local band = decoration(ornament, "TitleBand", accent, UDim2.new(1, -8, 0, 54), UDim2.fromOffset(4, 4))
+	band.ClipsDescendants = true
+	local bandGradient = Instance.new("UIGradient")
+	bandGradient.Rotation = 90
+	bandGradient.Color = ColorSequence.new(accent:Lerp(Color3.new(1, 1, 1), 0.35), accent:Lerp(colors.Panel, 0.35))
+	bandGradient.Parent = band
+	local highlight = decoration(band, "Highlight", Color3.new(1, 1, 1), UDim2.new(1, -8, 0, 8), UDim2.fromOffset(4, 4))
+	highlight.BackgroundTransparency = 0.78
+	local highlightCorner = Instance.new("UICorner"); highlightCorner.CornerRadius = UDim.new(0, 4); highlightCorner.Parent = highlight
+	local bandCorner = Instance.new("UICorner"); bandCorner.CornerRadius = UDim.new(0, 2); bandCorner.Parent = band
+	local bandLine = decoration(ornament, "TitleLine", accent, UDim2.new(1, -8, 0, 3), UDim2.fromOffset(4, 58))
+	local bandShadow = decoration(ornament, "TitleLineShadow", Color3.fromRGB(12, 16, 31), UDim2.new(1, -8, 0, 2), UDim2.fromOffset(4, 61))
+
+	local brackets: { Frame } = {}
+	local function bracket(anchorX: number, anchorY: number)
+		local sx, sy = if anchorX == 0 then 1 else -1, if anchorY == 0 then 1 else -1
+		local ox, oy = if anchorX == 0 then 7 else -7, if anchorY == 0 then 67 else -7
+		local horizontal = decoration(ornament, "BracketH", accent, UDim2.fromOffset(16, 3), UDim2.new(anchorX, ox + (if sx < 0 then -16 else 0), anchorY, oy + (if sy < 0 then -3 else 0)))
+		local vertical = decoration(ornament, "BracketV", accent, UDim2.fromOffset(3, 16), UDim2.new(anchorX, ox + (if sx < 0 then -3 else 0), anchorY, oy + (if sy < 0 then -16 else 0)))
+		table.insert(brackets, horizontal)
+		table.insert(brackets, vertical)
+	end
+	bracket(0, 1)
+	bracket(1, 1)
+	-- the top brackets sit under the band, so only the bottom pair is drawn plus studs under the band
+	for _, x in { 12, -16 } do
+		local stud = decoration(ornament, "Stud", accent:Lerp(Color3.new(1, 1, 1), 0.35), UDim2.fromOffset(4, 4), UDim2.new(if x > 0 then 0 else 1, x, 0, 66))
+		table.insert(brackets, stud)
+	end
+
+	local sheen = decoration(band, "Sheen", Color3.new(1, 1, 1), UDim2.new(0, 36, 2, 0), UDim2.new(-0.2, 0, -0.5, 0))
+	sheen.BackgroundTransparency = 0.82
+	sheen.Rotation = 18
+	sheen.Visible = false
+
+	local parts: { GuiObject } = { band, highlight, bandLine, bandShadow, sheen }
+	for _, part in brackets do table.insert(parts, part) end
+	local function syncZ()
+		ornament.ZIndex = panel.ZIndex
+		for _, part in parts do part.ZIndex = panel.ZIndex end
+	end
+	syncZ()
+	local zConnection = panel:GetPropertyChangedSignal("ZIndex"):Connect(syncZ)
+	local sheenTween: Tween? = nil
+	local visibleConnection = panel:GetPropertyChangedSignal("Visible"):Connect(function()
+		if not panel.Visible then return end
+		if sheenTween then sheenTween:Cancel() end
+		sheen.Position = UDim2.new(-0.2, 0, -0.5, 0)
+		sheen.Visible = true
+		sheenTween = TweenService:Create(sheen, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(1.1, 0, -0.5, 0) })
+		sheenTween.Completed:Once(function() sheen.Visible = false end)
+		sheenTween:Play()
+	end)
+	panel.Destroying:Connect(function()
+		zConnection:Disconnect()
+		visibleConnection:Disconnect()
+		if sheenTween then sheenTween:Cancel() end
+	end)
+end
+
+-- Item card dressing: accent strip on the left, a soft inner glow stroke and a hover lift.
+function GuiTheme.Card(card: GuiObject, accent: Color3)
+	if card:FindFirstChild("CardAccent") then return end
+	local strip = decoration(card, "CardAccent", accent, UDim2.new(0, 4, 1, -8), UDim2.fromOffset(4, 4))
+	strip.ZIndex = card.ZIndex
+	local glow = Instance.new("UIStroke")
+	glow.Name = "CardGlow"
+	glow.Color = accent
+	glow.Thickness = 1
+	glow.Transparency = 0.55
+	glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	glow.Parent = card
+	card.MouseEnter:Connect(function()
+		TweenService:Create(glow, TweenInfo.new(0.12), { Transparency = 0, Thickness = 2 }):Play()
+	end)
+	card.MouseLeave:Connect(function()
+		TweenService:Create(glow, TweenInfo.new(0.16), { Transparency = 0.55, Thickness = 1 }):Play()
+	end)
+end
+
 function GuiTheme.ButtonFeedback(button: TextButton, border: UIStroke)
 	button.Active = true
 	button.Selectable = true

@@ -959007,7 +959007,79 @@ local remotes = Remotes.Get()
 
 local targets: { [Target]: boolean } = {}
 local lastSwing: { [Player]: number } = {}
+local PLAYER_ATTACK_ANIMATION = "rbxassetid://130100478675595"
+type AttackState = {
+	Tool: Tool,
+	Animator: Animator?,
+	Track: AnimationTrack?,
+	Grip: CFrame,
+	Generation: number,
+	Connections: { RBXScriptConnection },
+}
+local attacks: { [Player]: AttackState } = {}
 local tags: { [Player]: Tag } = {}
+
+local function clearAttack(player: Player)
+	local state = attacks[player]
+	if not state then return end
+	attacks[player] = nil
+	for _, connection in state.Connections do connection:Disconnect() end
+	state.Tool.Grip = state.Grip
+	if state.Track then
+		state.Track:Stop(0)
+		state.Track:Destroy()
+	end
+end
+
+local function animateSwing(player: Player, tool: Tool, humanoid: Humanoid)
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	local state = attacks[player]
+	if state and (state.Tool ~= tool or state.Animator ~= animator) then
+		clearAttack(player)
+		state = nil
+	end
+	if not state then
+		local track: AnimationTrack? = nil
+		if animator then
+			local animation = Instance.new("Animation")
+			animation.AnimationId = PLAYER_ATTACK_ANIMATION
+			track = animator:LoadAnimation(animation)
+			animation:Destroy()
+			track.Priority = Enum.AnimationPriority.Action
+			track.Looped = false
+		end
+		state = { Tool = tool, Animator = animator, Track = track, Grip = tool.Grip, Generation = 0, Connections = {} }
+		attacks[player] = state
+		table.insert(state.Connections, tool.AncestryChanged:Connect(function()
+			if tool.Parent ~= player.Character then clearAttack(player) end
+		end))
+		table.insert(state.Connections, humanoid.Died:Connect(function() clearAttack(player) end))
+		table.insert(state.Connections, player.CharacterRemoving:Connect(function() clearAttack(player) end))
+	end
+
+	-- The authored attack owns the arms; a default Slash would blend into it.
+	for _, child in tool:GetChildren() do
+		if child.Name == "toolanim" and child:IsA("StringValue") then child:Destroy() end
+	end
+	local track = state.Track
+	if track then
+		-- Spam must not rewind an attack before it can finish.
+		if not track.IsPlaying then track:Play() end
+	else
+		local animation = Instance.new("StringValue")
+		animation.Name = "toolanim"
+		animation.Value = "Slash"
+		animation.Parent = tool
+		Debris:AddItem(animation, Config.Combat.AttackCooldown)
+	end
+
+	state.Generation += 1
+	local generation = state.Generation
+	tool.Grip = state.Grip * CFrame.Angles(math.rad(45), 0, 0)
+	task.delay(0.15, function()
+		if attacks[player] == state and state.Generation == generation then tool.Grip = state.Grip end
+	end)
+end
 
 function CombatService.Register(target: Target): Target
 	targets[target] = true
@@ -959072,19 +959144,7 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 		playSound(handle, Config.Combat.Sounds.Swing, 0.6)
 	end
 
-	-- أنيميشن الضربة (تحريك السيف للأمام والخلف برمجياً)
-	task.spawn(function()
-		local originalGrip = tool.Grip
-		tool.Grip = originalGrip * CFrame.Angles(math.rad(45), 0, 0)
-		task.wait(0.15)
-		tool.Grip = originalGrip
-	end)
-
-	-- أنيميشن الذراع (Slash)
-	local animation = Instance.new("StringValue")
-	animation.Name = "toolanim"
-	animation.Value = "Slash"
-	animation.Parent = tool
+	animateSwing(player, tool, humanoid)
 
 	-- الأول: أقرب وحش أم أو Boss في المدى
 	local best: Target? = nil
@@ -959245,6 +959305,7 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 end
 
 function CombatService.CleanupPlayer(player: Player)
+	clearAttack(player)
 	lastSwing[player] = nil
 	tags[player] = nil
 	for victim, tag in tags do
@@ -963361,6 +963422,8 @@ local function buildShop()
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
+	spawn.CanCollide = false
+	spawn.Transparency = 1
 	spawn.Size = Vector3.new(10, 1, 10)
 	spawn.CFrame = CFrame.new(Config.Map.SpawnPosition)
 	spawn.Color = Color3.fromRGB(255, 255, 255)
@@ -967627,13 +967690,15 @@ local function buildArena()
 		end)
 		challenge.BackgroundColor3 = if chosenPlayer and chosenMonster then COLORS.Green else COLORS.Gray
 	end
-	arenaButton.Activated:Connect(function()
-		chosenPlayer = nil
-		chosenMonster = nil
-		playersTitle.Text = "Opponent"
-		renderPicker()
-		UI.Toggle(ui, picker)
-	end)
+	if arenaButton then
+		arenaButton.Activated:Connect(function()
+			chosenPlayer = nil
+			chosenMonster = nil
+			playersTitle.Text = "Opponent"
+			renderPicker()
+			UI.Toggle(ui, picker)
+		end)
+	end
 	challenge.Activated:Connect(function()
 		if chosenPlayer and chosenMonster then
 			remotes.ArenaChallenge:FireServer(chosenPlayer.UserId, chosenMonster)
@@ -969398,8 +969463,8 @@ function UI.Create(playerGui: PlayerGui): UI
 	navigation.ZIndex = 0
 	navigation.Parent = hud
 	local navigationButtons: { [string]: TextButton } = {}
-	local navigationOrder = { "Shop", "Rewards", "Trade", "Arena", "Inventory" }
-	local navigationIcons = { "Shop", "Gift", "Friends", "Trophy", "Pets" }
+	local navigationOrder = { "Shop", "Rewards", "Trade", "Inventory" }
+	local navigationIcons = { "Shop", "Gift", "Friends", "Pets" }
 	for index, name in navigationOrder do
 		local item = button(navigation, name, COLORS.Panel, UDim2.fromOffset(280, 72), UDim2.fromOffset(4, (index - 1) * 84 + 6))
 		item.Name = name .. "Button"
@@ -969671,15 +969736,30 @@ function UI.Create(playerGui: PlayerGui): UI
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = toasts
 
+	-- The pixel-style travel bar is authored in StarterGui (visible in Studio without Play).
+	-- When present it replaces the generated Home / To Shop / To Arena buttons.
+	local travelBar = playerGui:WaitForChild("TravelBar", 5)
+	local travelHome, travelShop, travelArena = homeButton, teleportShopButton, teleportArenaButton
+	if travelBar then
+		local barFrame = travelBar:FindFirstChild("Bar")
+		local home = barFrame and barFrame:FindFirstChild("HomeButton")
+		local shop = barFrame and barFrame:FindFirstChild("TeleportShopButton")
+		local arena = barFrame and barFrame:FindFirstChild("TeleportArenaButton")
+		if home and shop and arena then
+			travelHome, travelShop, travelArena = home, shop, arena
+			homeButton.Visible, teleportShopButton.Visible, teleportArenaButton.Visible = false, false, false
+		end
+	end
+
 	rescale()
 	return {
 		Gui = gui,
 		Hud = hud,
 		NavigationButtons = navigationButtons,
 		InventoryButton = navigationButtons.Inventory,
-		HomeButton = homeButton,
-		TeleportShopButton = teleportShopButton,
-		TeleportArenaButton = teleportArenaButton,
+		HomeButton = travelHome,
+		TeleportShopButton = travelShop,
+		TeleportArenaButton = travelArena,
 		CoinsLabel = coinsLabel,
 		PendingLabel = pendingLabel,
 		ShopButton = shopButton,

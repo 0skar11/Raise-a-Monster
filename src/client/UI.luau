@@ -127,12 +127,25 @@ local function panel(parent: Instance, name: string, size: UDim2, title: string,
 	corner(f, 16)
 	stroke(f, COLORS.Yellow, 3)
 	GuiTheme.Gloss(f)
+	-- Optional dressing (stubbed GuiTheme modules in the layout tests don't provide it).
+	local dress = (GuiTheme :: any).Dress
+	if dress then
+		-- White-ish titles (plain "SHOP" etc.) get the blue family accent so the band stays vivid.
+		local _, saturation = titleColor:ToHSV()
+		dress(f, if saturation < 0.3 then COLORS.Blue else titleColor)
+	end
 
 	local titleLabel = label(f, title, UDim2.new(1, -60, 0, 44), UDim2.fromOffset(16, 6), 30)
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	titleLabel.TextColor3 = titleColor
+	if dress then
+		-- White, heavily outlined title on the bright band.
+		titleLabel.TextColor3 = Color3.new(1, 1, 1)
+		titleLabel.TextStrokeColor3 = Color3.fromRGB(12, 16, 31)
+		titleLabel.TextStrokeTransparency = 0
+	end
 
-	local close = button(f, "X", COLORS.Panel, UDim2.fromOffset(44, 44), UDim2.new(1, -52, 0, 6))
+	local close = button(f, "X", if dress then COLORS.Red else COLORS.Panel, UDim2.fromOffset(44, 44), UDim2.new(1, -52, 0, 6))
 	close.Name = "CloseButton"
 	local closeCorner = close:FindFirstChildOfClass("UICorner")
 	if closeCorner then closeCorner.CornerRadius = UDim.new(0, 4) end
@@ -215,8 +228,8 @@ function UI.Create(playerGui: PlayerGui): UI
 	navigation.ZIndex = 0
 	navigation.Parent = hud
 	local navigationButtons: { [string]: TextButton } = {}
-	local navigationOrder = { "Shop", "Rewards", "Trade", "Arena", "Inventory" }
-	local navigationIcons = { "Shop", "Gift", "Friends", "Trophy", "Pets" }
+	local navigationOrder = { "Shop", "Rewards", "Trade", "Inventory" }
+	local navigationIcons = { "Shop", "Gift", "Friends", "Pets" }
 	for index, name in navigationOrder do
 		local item = button(navigation, name, COLORS.Panel, UDim2.fromOffset(280, 72), UDim2.fromOffset(4, (index - 1) * 84 + 6))
 		item.Name = name .. "Button"
@@ -526,6 +539,7 @@ UI.Stroke = stroke
 UI.Label = label
 UI.Button = button
 UI.Panel = panel
+UI.Card = (GuiTheme :: any).Card -- optional dressing (nil when a test stubs GuiTheme)
 UI.Bar = bar
 UI.DecorateButton = GuiTheme.DecorateButton
 UI.Icon = GuiTheme.Icon

@@ -29,7 +29,7 @@ local replicated = r.Instance.new("ReplicatedStorage")
 local weapons = r.deserializeModel(fs.readFile("assets/WeaponModels.rbxmx"):gsub("^<%?xml.-%?>%s*", ""))[1]; weapons.Parent = replicated
 local workspace = r.Instance.new("Workspace")
 local currentOwner, visitor
-local services = { ReplicatedStorage = replicated, StarterPlayer = r.Instance.new("StarterPlayer"), CollectionService = {}, Players = { GetPlayerFromCharacter = function(_, model) if currentOwner and model == currentOwner.Character then return currentOwner end; return visitor end } }
+local services = { ReplicatedStorage = replicated, StarterPlayer = r.Instance.new("StarterPlayer"), CollectionService = { GetTagged = function() return {} end, GetInstanceAddedSignal = function() return { Connect = function() return { Disconnect = function() end } end } end }, Players = { GetPlayerFromCharacter = function(_, model) if currentOwner and model == currentOwner.Character then return currentOwner end; return visitor end } }
 local modules = { MonsterModels = {} }
 local shared = { Config = "Config", MonsterMath = "MonsterMath" }; replicated.Name = "ReplicatedStorage"
 local sharedFolder = r.Instance.new("Folder"); sharedFolder.Name = "Shared"; sharedFolder.Parent = replicated

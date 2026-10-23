@@ -10,7 +10,14 @@ local MonsterModels = require(script.Parent.MonsterModels)
 local PlotService = require(script.Parent.PlotService)
 
 type Monster = MonsterMath.MonsterData
-type Visual = { Model: Model, Species: string, GroundOffset: Vector3 }
+type Visual = { Model: Model, Species: string, GroundOffset: Vector3, Current: CFrame?, LastClock: number?, Moving: boolean? }
+-- Follow motion: followers glide toward their slot (each one a little slower than the one in front, so the
+-- group trails the player naturally) instead of snapping, and play the Walk animation only while really moving.
+local FOLLOW_SHARPNESS = 7 -- higher = tighter follow
+local FOLLOW_STAGGER = 0.7 -- each extra follower reacts this much slower
+local FOLLOW_MIN_SHARPNESS = 3
+local FOLLOW_TELEPORT_DISTANCE = 30 -- farther than this (respawn, zone travel) = snap, no gliding
+local WALK_ON_SPEED, WALK_OFF_SPEED = 1.6, 0.6 -- studs/second, with hysteresis so the animation doesn't flicker
 local FollowerService = {}
 local equipped: { [Player]: { string } } = {}
 local visuals: { [Player]: { [string]: Visual } } = {}
@@ -217,9 +224,22 @@ local function updateVisuals(player: Player, rayParams: RaycastParams)
 		position = Vector3.new(position.X, ground, position.Z)
 		local target = CFrame.lookAt(position, position + flatLook) * CFrame.new(visual.GroundOffset)
 		local model = visual.Model
-		local moved = (model:GetPivot().Position - target.Position).Magnitude
-		model:SetAttribute("AnimState", if moved > 0.2 then "Walk" else "Idle")
-		model:PivotTo(target)
+		local now = os.clock()
+		local previous = visual.Current
+		local current = target
+		local speed = 0
+		if previous and (previous.Position - target.Position).Magnitude <= FOLLOW_TELEPORT_DISTANCE then
+			local dt = math.clamp(now - (visual.LastClock or now), 0.001, 0.25)
+			local sharpness = math.max(FOLLOW_MIN_SHARPNESS, FOLLOW_SHARPNESS - (index - 1) * FOLLOW_STAGGER)
+			current = previous:Lerp(target, 1 - math.exp(-sharpness * dt))
+			speed = (current.Position - previous.Position).Magnitude / dt
+		end
+		visual.Current, visual.LastClock = current, now
+		local walking = visual.Moving == true
+		if speed > WALK_ON_SPEED then walking = true elseif speed < WALK_OFF_SPEED then walking = false end
+		visual.Moving = walking
+		model:SetAttribute("AnimState", if walking then "Walk" else "Idle")
+		model:PivotTo(current)
 	end
 end
 
@@ -272,7 +292,7 @@ function FollowerService.Init(carriedCheck: (Player, string) -> boolean, onChang
 			for _, player in players do if player.Character then table.insert(exclude, player.Character) end end
 			rayParams.FilterDescendantsInstances = exclude
 			for _, player in players do updateVisuals(player, rayParams) end
-			task.wait(0.1)
+			task.wait(0.05)
 		end
 	end)
 end

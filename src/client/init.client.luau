@@ -22,6 +22,10 @@ local Settings = require(script.Settings)
 local MonsterInventory = require(script.MonsterInventory)
 local Effects = require(script.Effects)
 local CashCounterFormatter = require(script.CashCounterFormatter)
+local HalloweenUI = require(script.HalloweenUI)
+local CandyCounter = require(script.CandyCounter)
+local HalloweenDecor = require(script.HalloweenDecor)
+local FollowerSmooth = require(script.FollowerSmooth)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -40,6 +44,10 @@ end, function()
 end)
 
 Settings.Init(ui)
+task.spawn(CandyCounter.Init, player:WaitForChild("PlayerGui"), remotes) -- own thread so a missing GUI can't stall startup
+HalloweenUI.Init(ui, remotes)
+task.spawn(HalloweenDecor.Init) -- idle bob/blink for the Studio-authored Halloween decorations (client-local, own thread)
+task.spawn(FollowerSmooth.Init) -- display-rate gliding for follower monsters (client-local, own thread)
 
 -- تحديث الواجهة ---------------------------------------------------------------------
 
@@ -166,7 +174,8 @@ inventory = MonsterInventory.Init(ui, remotes, function() return state end, func
 	UI.Open(ui, ui.MonsterFrame)
 	refreshMonsterPanel()
 end)
-ui.InventoryButton.Activated:Connect(function() inventory.Open() end)
+-- The authored golden-paw launcher (or the built-in button as a fallback) opens the inventory.
+Features.SetInventoryOpener(function() inventory.Open() end)
 
 -- الأحداث -------------------------------------------------------------------------------
 

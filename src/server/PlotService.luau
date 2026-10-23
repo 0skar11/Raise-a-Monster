@@ -119,6 +119,19 @@ PlotService.ShopPosition = SHOP_ORIGIN
 local SHOP_FRAME = CFrame.new(SHOP_ORIGIN) * CFrame.Angles(0, math.rad(Config.Shop.Yaw), 0)
 PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_FRAME:PointToWorldSpace(Config.Shop.TeleportOffset), SHOP_ORIGIN + Vector3.new(0, Config.Shop.TeleportOffset.Y, 0))
 
+-- The authored Blacksmith's "Open Shop" prompt (tag GearShopPrompt) opens the same shop as the old counter.
+local boundGearPrompts: { [Instance]: boolean } = {}
+local gearPromptSignal: RBXScriptConnection? = nil
+local function bindGearShopPrompt(prompt: Instance)
+	if boundGearPrompts[prompt] or not prompt:IsA("ProximityPrompt") then
+		return
+	end
+	boundGearPrompts[prompt] = true
+	prompt.Triggered:Connect(function(player)
+		PlotService.Callbacks.OpenShop(player)
+	end)
+end
+
 local function buildShop()
 	local shopModel = Instance.new("Model")
 	shopModel.Name = "EggShop"
@@ -229,9 +242,24 @@ local function buildShop()
 	end
 
 	shopModel:PivotTo(SHOP_FRAME * CFrame.new(SHOP_ORIGIN):Inverse() * shopModel:GetPivot())
+
+	-- A Studio-authored Gear Shop (Workspace.GearShopWorld: stall + Blacksmith NPC, tagged GearShopStand)
+	-- replaces this code-made stall. It is never rebuilt or moved by code, so the user's edits stick.
+	if CollectionService:GetTagged("GearShopStand")[1] then
+		shopModel:Destroy()
+	end
+	for _, prompt in CollectionService:GetTagged("GearShopPrompt") do
+		bindGearShopPrompt(prompt)
+	end
+	if not gearPromptSignal then
+		gearPromptSignal = CollectionService:GetInstanceAddedSignal("GearShopPrompt"):Connect(bindGearShopPrompt)
+	end
+
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
+	spawn.CanCollide = false
+	spawn.Transparency = 1
 	spawn.Size = Vector3.new(10, 1, 10)
 	spawn.CFrame = CFrame.new(Config.Map.SpawnPosition)
 	spawn.Color = Color3.fromRGB(255, 255, 255)

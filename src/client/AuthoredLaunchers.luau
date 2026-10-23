@@ -6,6 +6,7 @@ local definitions: { [string]: Descriptor } = {
 	Shop = { Gui = "ShopGui", Path = { "shop" } },
 	Rewards = { Gui = "ShopGui", Path = { "gifts" } },
 	Trade = { Gui = "ShopGui", Path = { "trade" } },
+	Inventory = { Gui = "inv", Path = { "Group 1" } },
 }
 local active: { [Instance]: () -> () } = {}
 

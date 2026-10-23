@@ -407,6 +407,7 @@ local function buildShopExtras()
 		frame.Parent = parent
 		UI.Corner(frame, 12)
 		UI.Stroke(frame, COLORS.Yellow, 2)
+		if UI.Card then UI.Card(frame, COLORS.Yellow) end
 		local title = UI.Label(frame, name, UDim2.new(1, -20, 0, 36), UDim2.fromOffset(10, 92), 18)
 		title.Name = "Title"
 		title.TextColor3 = COLORS.Text
@@ -976,13 +977,15 @@ local function buildArena()
 		end)
 		challenge.BackgroundColor3 = if chosenPlayer and chosenMonster then COLORS.Green else COLORS.Gray
 	end
-	arenaButton.Activated:Connect(function()
-		chosenPlayer = nil
-		chosenMonster = nil
-		playersTitle.Text = "Opponent"
-		renderPicker()
-		UI.Toggle(ui, picker)
-	end)
+	if arenaButton then
+		arenaButton.Activated:Connect(function()
+			chosenPlayer = nil
+			chosenMonster = nil
+			playersTitle.Text = "Opponent"
+			renderPicker()
+			UI.Toggle(ui, picker)
+		end)
+	end
 	challenge.Activated:Connect(function()
 		if chosenPlayer and chosenMonster then
 			remotes.ArenaChallenge:FireServer(chosenPlayer.UserId, chosenMonster)
@@ -1133,6 +1136,14 @@ function Features.Refresh()
 	end
 end
 
+-- The inventory lives in another module; once it exists, the launcher (authored golden paw, or the
+-- built-in button as a fallback) is bound to it.
+local startLaunchers: (() -> ())? = nil
+function Features.SetInventoryOpener(open: () -> ())
+	launcherActions.Inventory = open
+	if startLaunchers then startLaunchers() end
+end
+
 function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stateGetter: () -> any, openMonsterGetter: () -> string?)
 	ui = newUi
 	remotes = allRemotes
@@ -1149,10 +1160,14 @@ function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stat
 	buildMiniGames()
 	buildTrade()
 	buildArena()
-	local AuthoredLaunchers = require(script.Parent.AuthoredLaunchers)
-	AuthoredLaunchers.Start(ui.Gui.Parent, {
-		Shop = ui.ShopButton, Rewards = rewardsButton, Trade = ui.NavigationButtons.Trade,
-	}, launcherActions)
+	startLaunchers = function()
+		local AuthoredLaunchers = require(script.Parent.AuthoredLaunchers)
+		AuthoredLaunchers.Start(ui.Gui.Parent, {
+			Shop = ui.ShopButton, Rewards = rewardsButton, Trade = ui.NavigationButtons.Trade,
+			Inventory = ui.InventoryButton,
+		}, launcherActions)
+	end
+	startLaunchers()
 
 	remotes.Announce.OnClientEvent:Connect(function(text: string, color: Color3?)
 		announce(text, color)
