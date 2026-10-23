@@ -9,6 +9,18 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local HalloweenLogic = require(ReplicatedStorage.Shared.HalloweenLogic)
 local CompactMoney = require(ReplicatedStorage.Shared.CompactMoney)
+
+-- Plain digits up to 50k (25,000 reads better than 25K), compact above that.
+local function formatCandy(value: number): string
+	value = math.floor(value + 0.5)
+	if math.abs(value) >= 50000 then
+		return CompactMoney.Format(value)
+	end
+	local digits = tostring(math.abs(value))
+	local grouped = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	grouped = grouped:gsub("^,", "")
+	return (if value < 0 then "-" else "") .. grouped
+end
 local UI = require(script.Parent.UI)
 
 local settings = Config.Halloween
@@ -41,26 +53,11 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 	local hint: any = nil
 	local hintAt = 0
 
-	-- Event timers (top centre; the Candy amount lives in the authored CandyCounter GUI, see CandyCounter.luau) ---------------------------------------
-	local pill = Instance.new("Frame")
-	pill.Name = "HalloweenCandy"
-	pill.AnchorPoint = Vector2.new(0.5, 0)
-	pill.Position = UDim2.new(0.5, 0, 0, 58)
-	pill.Size = UDim2.fromOffset(300, 28)
-	pill.BackgroundColor3 = COLORS.Panel
-	pill.Visible = false
-	pill.Parent = ui.Gui
-	UI.Corner(pill, 10)
-	UI.Stroke(pill, Color3.fromRGB(255, 140, 40), 2)
-	local timerLabel = UI.Label(pill, "", UDim2.new(1, -12, 0, 24), UDim2.fromOffset(8, 2), 14)
-	timerLabel.TextXAlignment = Enum.TextXAlignment.Center
-	timerLabel.TextColor3 = COLORS.SubText
-
 	-- Pumpkin hint ----------------------------------------------------------------------------------
 	local hintLabel = Instance.new("TextLabel")
 	hintLabel.Name = "PumpkinHint"
 	hintLabel.AnchorPoint = Vector2.new(0.5, 0)
-	hintLabel.Position = UDim2.new(0.5, 0, 0, 92)
+	hintLabel.Position = UDim2.new(0.5, 0, 0, 60)
 	hintLabel.Size = UDim2.fromOffset(330, 40)
 	hintLabel.BackgroundColor3 = COLORS.Panel
 	hintLabel.BackgroundTransparency = 0.15
@@ -430,7 +427,7 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		if not state then
 			return
 		end
-		balance.Text = "🍬 " .. CompactMoney.Format(state.Candy)
+		balance.Text = "🍬 " .. formatCandy(state.Candy)
 		convertNote.Text = string.format("Leftover Candy turns into %d coins each when the event ends", state.ConvertRate or settings.CandyToCoinRate)
 		for id, card in cards do
 			local item = settings.Items[id]
@@ -451,7 +448,7 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 				card.Tag.BackgroundColor3 = Color3.fromRGB(255, 170, 40)
 			else
 				local affordable = state.Candy >= item.Cost
-				card.Button.Text = if affordable then "Buy  🍬 " .. CompactMoney.Format(item.Cost) else "Need  🍬 " .. CompactMoney.Format(item.Cost)
+				card.Button.Text = if affordable then "Buy  🍬 " .. formatCandy(item.Cost) else "Need  🍬 " .. formatCandy(item.Cost)
 				card.Button.BackgroundColor3 = if affordable then COLORS.Green else COLORS.Gray
 				card.Tag.Visible = item.Unique == true
 				card.Tag.Text = if item.Unique then "ONE PER PLAYER" else ""
@@ -460,30 +457,31 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		end
 	end
 
+	-- The event timers live on the Studio-authored entrance board (Workspace.HalloweenWorld.EntranceBoard):
+	-- every SurfaceGui tagged "HalloweenTimerBoard" has InvasionValue / HuntValue / BoostValue labels that this
+	-- function keeps current (the client computes the countdowns locally between server pushes).
+	local function setBoard(invasion: string, hunt: string, boost: string)
+		for _, board in game:GetService("CollectionService"):GetTagged("HalloweenTimerBoard") do
+			for name, value in { InvasionValue = invasion, HuntValue = hunt, BoostValue = boost } do
+				local label = board:FindFirstChild(name, true)
+				if label and label:IsA("TextLabel") then
+					label.Text = value
+				end
+			end
+		end
+	end
+
 	local function refreshPill()
 		if not state or not state.Enabled then
-			pill.Visible = false
+			setBoard("--:--", "--:--", "")
 			hintLabel.Visible = false
 			return
 		end
-		pill.Visible = true
 		local elapsed = os.clock() - stateAt
-		local parts = {}
 		local boost = (state.BoostLeft or 0) - elapsed
-		if boost > 0 then
-			table.insert(parts, "2x cash " .. clock(boost))
-		end
-		if (state.InvadersAlive or 0) > 0 then
-			table.insert(parts, "👹 " .. state.InvadersAlive .. " Mothers!")
-		else
-			table.insert(parts, "Invasion " .. clock((state.NextInvasionIn or 0) - elapsed))
-		end
-		if (state.HuntRemaining or 0) > 0 then
-			table.insert(parts, "🎃 " .. state.HuntRemaining .. " left")
-		else
-			table.insert(parts, "Hunt " .. clock((state.NextPumpkinsIn or 0) - elapsed))
-		end
-		timerLabel.Text = table.concat(parts, " · ")
+		local invasion = if (state.InvadersAlive or 0) > 0 then "👹 " .. state.InvadersAlive .. " Mothers!" else clock((state.NextInvasionIn or 0) - elapsed)
+		local hunt = if (state.HuntRemaining or 0) > 0 then "🎃 " .. state.HuntRemaining .. " left" else clock((state.NextPumpkinsIn or 0) - elapsed)
+		setBoard(invasion, hunt, if boost > 0 then "⚡ 2x cash " .. clock(boost) else "")
 	end
 
 	local function refreshHint()

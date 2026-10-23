@@ -5,6 +5,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
@@ -60,6 +61,7 @@ ZoneService.ZonesEndX = PlotService.ZonesStartX + #Config.Zones * ZONE_LENGTH
 local zonesFolder: Folder
 local nests: { Nest } = {}
 local gateLabels: { { Label: TextLabel, Title: string } } = {}
+local boardResetLabels: { TextLabel } = {}
 local nextResetAt = 0
 
 local function zoneStartX(index: number): number
@@ -222,7 +224,94 @@ local function decorate(index: number, zone: Config.Zone, folder: Folder, nestCe
 	end
 end
 
+-- A Studio-authored gate (Workspace.ZoneGates.ZoneGate_1, tag "ZoneGateBoard", attribute ZoneIndex) replaces the
+-- stone gate: it is never rebuilt or moved by code, the other zones get clones of it at the same offset from their
+-- zone start, and the walls are rebuilt in its style so the fence runs straight into its posts (one opening only).
+local WALL_COLOR = Color3.fromRGB(34, 22, 48)
+local WALL_TRIM = Color3.fromRGB(255, 130, 30)
+
+local function authoredGateTemplate(): Model?
+	for _, model in CollectionService:GetTagged("ZoneGateBoard") do
+		if model:IsA("Model") and not model:GetAttribute("GateClone") then
+			return model
+		end
+	end
+	return nil
+end
+
+-- outer z edges of the two posts and their x, so the walls can start exactly at the gate
+local function gatePostBounds(board: Model): (number?, number?, number?)
+	local left, right, x = nil, nil, nil
+	for _, child in board:GetChildren() do
+		if child:IsA("BasePart") and child.Name == "Post" then
+			local half = child.Size.Z / 2
+			x = child.Position.X
+			if not left or child.Position.Z - half < left then
+				left = child.Position.Z - half
+			end
+			if not right or child.Position.Z + half > right then
+				right = child.Position.Z + half
+			end
+		end
+	end
+	return left, right, x
+end
+
+local function buildGateWall(folder: Folder, x: number, fromZ: number, toZ: number)
+	local length = math.abs(toZ - fromZ)
+	local centerZ = (fromZ + toZ) / 2
+	makePart({ Name = "ZoneWall", Size = Vector3.new(2, 4, length), Position = Vector3.new(x, 2, centerZ), Color = WALL_COLOR, Material = Enum.Material.Slate, Parent = folder })
+	makePart({ Name = "ZoneWallTrim", Size = Vector3.new(2.3, 0.35, length), Position = Vector3.new(x, 4.17, centerZ), Color = WALL_TRIM, Material = Enum.Material.Neon, Parent = folder })
+	local posts = math.max(1, math.floor(length / 24))
+	for i = 0, posts do
+		local z = math.min(fromZ, toZ) + (length / posts) * i
+		makePart({ Name = "ZoneWallPost", Size = Vector3.new(3, 6.4, 3), Position = Vector3.new(x, 3.2, z), Color = WALL_COLOR, Material = Enum.Material.Slate, Parent = folder })
+		makePart({ Name = "ZoneWallPostCap", Size = Vector3.new(3.3, 0.4, 3.3), Position = Vector3.new(x, 6.6, z), Color = WALL_TRIM, Material = Enum.Material.Neon, Parent = folder })
+	end
+end
+
+local function adoptAuthoredGate(index: number, zone: Config.Zone, folder: Folder): boolean
+	local template = authoredGateTemplate()
+	if not template then
+		return false
+	end
+	local templateIndex = template:GetAttribute("ZoneIndex")
+	if type(templateIndex) ~= "number" then
+		templateIndex = 1
+	end
+	local board = template
+	if index ~= templateIndex then
+		board = template:Clone()
+		board:SetAttribute("GateClone", true)
+		board:SetAttribute("ZoneIndex", index)
+		CollectionService:RemoveTag(board, "ZoneGateBoard")
+		board.Name = "ZoneGate_" .. index
+		board:PivotTo(template:GetPivot() + Vector3.new((index - templateIndex) * ZONE_LENGTH, 0, 0))
+		board.Parent = folder
+	end
+	local title = string.format("ZONE %d · %s  %s %s", index, string.upper(zone.Name), stars(zone.Stars), string.upper(zone.Difficulty))
+	for _, gui in board:GetDescendants() do
+		if gui:IsA("TextLabel") then
+			if gui.Name == "ZoneTitle" then
+				gui.Text = title
+				gui.TextColor3 = zone.AccentColor
+			elseif gui.Name == "ResetValue" then
+				table.insert(boardResetLabels, gui)
+			end
+		end
+	end
+	local leftEdge, rightEdge, x = gatePostBounds(board)
+	if leftEdge and rightEdge and x then
+		buildGateWall(folder, x, -ZONE_HALF_Z, leftEdge)
+		buildGateWall(folder, x, rightEdge, ZONE_HALF_Z)
+	end
+	return true
+end
+
 local function buildGate(index: number, zone: Config.Zone, folder: Folder)
+	if adoptAuthoredGate(index, zone, folder) then
+		return
+	end
 	local x = zoneStartX(index)
 	local stoneColor = Color3.fromRGB(105, 105, 110)
 	local pillarZ = ROAD_WIDTH / 2 + 2
@@ -731,6 +820,10 @@ local function updateGateTimers()
 	local timer = string.format("🔄 New monsters in %d:%02d", left // 60, left % 60)
 	for _, gate in gateLabels do
 		gate.Label.Text = gate.Title .. "\n" .. timer
+	end
+	local clock = string.format("%d:%02d", left // 60, left % 60)
+	for _, label in boardResetLabels do
+		label.Text = clock
 	end
 end
 

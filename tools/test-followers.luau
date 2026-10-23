@@ -195,8 +195,10 @@ offlineCFrame.lookAt = function(position, target)
     local right = roblox.Vector3.new(0, 1, 0):Cross(back).Unit
     return roblox.CFrame.fromMatrix(position, right, back:Cross(right), back)
 end
+local fakeNow = 0 -- FollowerService glides on os.clock(); the test advances it by hand
 local function loadRealModule(name, path)
     local env = {
+        os = setmetatable({ clock = function() return fakeNow end }, { __index = os }),
         game = { GetService = function(_, service) return assert(visualServices[service], service) end },
         workspace = testWorkspace,
         script = { Parent = { Config = "Config", MonsterMath = "MonsterMath", DataService = "DataService", MonsterModels = "MonsterModels", PlotService = "PlotService", Build = "Build" } },
@@ -218,6 +220,7 @@ local visualFollowers = loadRealModule("FollowerService", "src/server/FollowerSe
 visualFollowers.Init(function() return false end, function() end)
 local updateLoop = scheduled[#scheduled]
 local function tickVisuals()
+    fakeNow += 0.05
     local ok, failure = coroutine.resume(updateLoop)
     assert(ok, failure)
 end
@@ -299,9 +302,21 @@ visualRoot.CFrame = roblox.CFrame.new(0, 4, -10)
 visualRoot.Position = visualRoot.CFrame.Position
 tickVisuals()
 visualCheck(giantModels[1]:GetAttribute("AnimState") == "Walk", "Moving follower walks")
+-- Followers glide toward their slot (exponential smoothing), so one tick moves them only part of the way.
+local glided = (giantModels[1]:GetPivot().Position - prior).Magnitude
+visualCheck(glided > 0.001 and glided < 9, "Real visual glides toward the player instead of snapping")
+local function settle() for _ = 1, 80 do tickVisuals() end end
+settle()
 visualCheck((giantModels[1]:GetPivot().Position - prior).Magnitude > 9, "Real visual tracks player movement")
-visualRoot.CFrame = roblox.CFrame.new(0, 4, -10) * roblox.CFrame.Angles(0, math.pi / 2, 0)
+visualCheck(giantModels[1]:GetAttribute("AnimState") == "Idle", "Follower returns to idle after arriving")
+-- far jumps (respawn / zone travel) snap next to the player instead of sliding across the map
+visualRoot.CFrame = roblox.CFrame.new(0, 4, -200)
+visualRoot.Position = visualRoot.CFrame.Position
 tickVisuals()
+visualCheck((giantModels[1]:GetPivot().Position - roblox.Vector3.new(0, 0, -200)).Magnitude < 40, "Far teleports snap the follower next to the player")
+visualRoot.CFrame = roblox.CFrame.new(0, 4, -10) * roblox.CFrame.Angles(0, math.pi / 2, 0)
+visualRoot.Position = visualRoot.CFrame.Position
+settle()
 for _, model in giantModels do
     local bounds, size = model:GetBoundingBox()
     local behind = (bounds.Position - visualRoot.Position):Dot(-visualRoot.CFrame.LookVector)

@@ -25,6 +25,7 @@ local CashCounterFormatter = require(script.CashCounterFormatter)
 local HalloweenUI = require(script.HalloweenUI)
 local CandyCounter = require(script.CandyCounter)
 local HalloweenDecor = require(script.HalloweenDecor)
+local FollowerSmooth = require(script.FollowerSmooth)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -46,6 +47,7 @@ Settings.Init(ui)
 task.spawn(CandyCounter.Init, player:WaitForChild("PlayerGui"), remotes) -- own thread so a missing GUI can't stall startup
 HalloweenUI.Init(ui, remotes)
 task.spawn(HalloweenDecor.Init) -- idle bob/blink for the Studio-authored Halloween decorations (client-local, own thread)
+task.spawn(FollowerSmooth.Init) -- display-rate gliding for follower monsters (client-local, own thread)
 
 -- تحديث الواجهة ---------------------------------------------------------------------
 

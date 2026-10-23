@@ -12,6 +12,18 @@ local TweenService = game:GetService("TweenService")
 
 local CompactMoney = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CompactMoney"))
 
+-- Plain digits up to 50k (25,000 reads better than 25K), compact above that.
+local function formatCandy(value: number): string
+	value = math.floor(value + 0.5)
+	if math.abs(value) >= 50000 then
+		return CompactMoney.Format(value)
+	end
+	local digits = tostring(math.abs(value))
+	local grouped = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	grouped = grouped:gsub("^,", "")
+	return (if value < 0 then "-" else "") .. grouped
+end
+
 local CandyCounter = {}
 
 local GAIN_COLOR = Color3.fromRGB(255, 245, 140)
@@ -259,7 +271,7 @@ function CandyCounter.Init(playerGui: Instance, remotes: { [string]: RemoteEvent
 	local target = 0
 	local last = 0
 	local first = true
-	label.Text = CompactMoney.Format(0)
+	label.Text = formatCandy(0)
 
 	local renderConn = RunService.RenderStepped:Connect(function(dt)
 		if displayed ~= target then
@@ -267,7 +279,7 @@ function CandyCounter.Init(playerGui: Instance, remotes: { [string]: RemoteEvent
 			if math.abs(target - displayed) < 0.5 then
 				displayed = target
 			end
-			label.Text = CompactMoney.Format(math.floor(displayed + 0.5))
+			label.Text = formatCandy(math.floor(displayed + 0.5))
 		end
 		-- idle: a slow pink glint pulsing across the candy
 		local glow = (math.sin(os.clock() * 2.5) + 1) / 2
@@ -286,7 +298,7 @@ function CandyCounter.Init(playerGui: Instance, remotes: { [string]: RemoteEvent
 			-- first sync after joining: show it, no celebration
 			first = false
 			displayed, target, last = value, value, value
-			label.Text = CompactMoney.Format(value)
+			label.Text = formatCandy(value)
 			return
 		end
 		local diff = value - last
@@ -296,11 +308,11 @@ function CandyCounter.Init(playerGui: Instance, remotes: { [string]: RemoteEvent
 			swell(1.15 + math.min(0.3, math.log10(diff + 1) * 0.07))
 			flash(GAIN_COLOR)
 			iconFlip()
-			floater("+" .. CompactMoney.Format(diff), BASE_COLOR)
+			floater("+" .. formatCandy(diff), BASE_COLOR)
 			candyBurst(diff >= 100 and 5 or 3)
 		elseif diff < 0 then
 			flash(LOSS_COLOR)
-			floater(CompactMoney.Format(diff), LOSS_COLOR)
+			floater(formatCandy(diff), LOSS_COLOR)
 		end
 	end
 
