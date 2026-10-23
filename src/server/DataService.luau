@@ -36,6 +36,10 @@ export type PlayerData = {
 	Daily: { LastClaim: number, Streak: number },
 	LastSpin: number,
 	ProcessedReceipts: { [string]: boolean },
+	PendingAdultPurchase: {
+		Token: string, ProductName: string, ProductId: number, Status: string,
+		Targets: { { Id: string, Identity: string } }, ReceiptId: string?,
+	}?,
 	SpeedBoostUntil: number,
 	Halloween: HalloweenData, -- event currency + purchases; safe to keep forever (see Config.Halloween)
 }
@@ -297,6 +301,11 @@ end
 
 function DataService.Get(player: Player): Profile?
 	return profiles[player]
+end
+
+-- Purchase snapshots use a persisted identity rather than a client-supplied ID alone.
+function DataService.NewPurchaseToken(): string
+	return HttpService:GenerateGUID(false)
 end
 
 local function saveProfile(player: Player, releaseLock: boolean): boolean

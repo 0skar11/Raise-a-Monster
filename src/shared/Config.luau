@@ -364,15 +364,14 @@ Config.Eggs = {
 		Order = 3,
 		Weights = { Ice_7 = 25, Ice_8 = 20, Volcano_7 = 18, Volcano_8 = 15, Ice_9 = 10, Volcano_9 = 7, Void_9 = 3, Ice_10 = 2 },
 	},
-	-- بيضة الحظ: Legendary أو Mythic بس، من Ice وVoid حصرياً.
+	-- Original Lucky Egg pool; the separate Secret roll keeps its 5x odds.
 	Lucky = {
 		DisplayName = "Lucky Egg",
 		Cost = 0,
 		HatchTime = 30,
 		Color = Color3.fromRGB(90, 230, 120),
 		Order = 4,
-		Weights = { Ice_9 = 40, Ice_10 = 10, Void_9 = 40, Void_10 = 10 },
-		AllowSecret = false,
+		Weights = { Desert_5 = 20, Ice_5 = 20, Volcano_5 = 18, Ice_7 = 15, Volcano_7 = 12, Desert_9 = 8, Ice_9 = 5, Volcano_10 = 2 },
 	},
 	-- بيضة الـ Big Boss: بتفقس وحش Secret مضمون
 	Secret = {
@@ -385,7 +384,7 @@ Config.Eggs = {
 	},
 } :: { [string]: Egg }
 
-Config.LuckyEggSecretMultiplier = 0 -- حماية للمنطق القديم كمان: Lucky مفيهاش Secret
+Config.LuckyEggSecretMultiplier = 5
 
 -- البيض اللي بيتباع في المتجر، بالترتيب. فاضي دلوقتي (البيضة المجانية في الأول شغالة عادي).
 -- عشان ترجّع البيض: { "Basic", "Rare", "Mythic" }
@@ -636,14 +635,16 @@ Config.Security = {
 -- Gamepasses و Developer Products -----------------------------------------------------
 -- حط الـ Id بتاع كل واحد بعد ما تعمله من Creator Dashboard (بعد الـ Publish).
 -- لو الـ Id = 0: في Studio الزرار بيدّيهولك مجاناً عشان التجربة، وفي اللعبة الحقيقية بيقول "Coming soon".
+-- Auto Minigame requires a configured pass in Studio too.
 export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number, Hidden: boolean? }
 Config.Gamepasses = {
 	CoinBoost = { Id = 0, Name = "Coin Booster", Description = "Legacy income boost", Price = 99, Order = 0, Hidden = true },
-	VIP = { Id = 2036579024, Name = "VIP", Description = "x2 coins from all your monsters", Price = 299, Order = 1 },
-	VIPSword = { Id = 0, Name = "VIP Sword", Description = "A strong sword for the monster zones", Price = 199, Order = 2 },
+	VIP = { Id = 2036579024, Name = "VIP", Description = "x2 coins from all your monsters and the VIP Sword", Price = 299, Order = 1 },
+	VIPSword = { Id = 0, Name = "VIP Sword", Description = "Included with VIP", Price = 199, Order = 2, Hidden = true },
 	AutoCollect = { Id = 2038162860, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
 	ExtraSlots = { Id = 2036429020, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
 	AutoFeeder = { Id = 2037406772, Name = "Auto-Feeder", Description = "Feeds hungry monsters using your coins and grants normal feeding XP", Price = 99, Order = 5 },
+	AutoMinigame = { Id = 2044616622, Name = "Auto Minigame", Description = "Automatically plays with your placed monsters and earns normal game XP", Price = 99, Order = 6 },
 	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
 	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
 	ForestSword = { Id = 0, Name = "Forest Sword", Description = "A nature-forged sword", Price = 149, Order = 11 },
@@ -660,6 +661,8 @@ Config.Products = {
 	InstantHatch = { Id = 0, Name = "Instant Hatch", Description = "All your eggs hatch right now", Price = 25, Order = 1 },
 	LuckyEgg = { Id = 0, Name = "Lucky Egg", Description = "A rare egg with better odds", Price = 49, Order = 2 },
 	SpeedBoost = { Id = 0, Name = "Speed Boost", Description = "Run faster for 10 minutes", Price = 29, Order = 3 },
+	SkipToAdultOne = { Id = 3721310526, Name = "Grow Monster - One", Description = "Grow one selected current monster to Adult once", Price = 29, Order = 7 },
+	SkipToAdultAll = { Id = 3721310988, Name = "Grow Monsters - All", Description = "Grow your current eligible inventory to Adult once; future monsters are excluded", Price = 100, Order = 8 },
 } :: { [string]: Product }
 
 Config.VIPCoinMultiplier = 2

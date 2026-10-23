@@ -16,7 +16,7 @@ local eggRenders = {}
 plotService.RenderEgg = function(_, id, _, slot) eggRenders[id] = slot end
 plotService.UpdateMonster = function(owner, monster) plotService.RenderMonster(owner, monster) end
 services.RunService = { IsStudio = function() return false end }
-services.MarketplaceService = { PromptGamePassPurchaseFinished = signal() }
+services.MarketplaceService = { PromptGamePassPurchaseFinished = signal(), PromptProductPurchaseFinished = signal() }
 modules.CombatService = { GiveWeapons = function() end }
 parent.CombatService = "CombatService"
 for _, pass in config.Gamepasses do pass.Id = 0 end

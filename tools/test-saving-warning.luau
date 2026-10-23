@@ -8,6 +8,8 @@ local renderSource = source:sub(start, finish - 1) .. "\nend\nFeatures.Refresh()
 local function render(state)
 	return luau.load(renderSource, { environment = {
 		Features = {}, getState = function() return state end, refreshShopCatalog = function() end,
+		-- This fixture isolates HUD status; adult chooser behavior has its own actual-UI test.
+		refreshAdultChooser = function() end, refreshAdultSummary = function() end,
 		statusLabel = { Text = "" }, formatTime = tostring,
 	}, injectGlobals = true })()
 end

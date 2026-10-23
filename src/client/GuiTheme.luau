@@ -1,5 +1,5 @@
 --!strict
--- Shared navy and gold surfaces, with the approved glossy icon atlas.
+-- Pixel-framed surfaces and code-native icons matching the authored cube tile.
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -41,14 +41,44 @@ local iconCrops: { [string]: Rect } = {
 	Settings = Rect.new(696, 309, 976, 589),
 }
 
+GuiTheme.IconColors = {
+	Shop = Color3.fromRGB(21, 177, 231), Gift = Color3.fromRGB(249, 143, 41),
+	Friends = Color3.fromRGB(73, 140, 244), Trophy = Color3.fromRGB(79, 201, 70),
+	Pets = Color3.fromRGB(168, 93, 231), Settings = Color3.fromRGB(62, 174, 179),
+	Play = Color3.fromRGB(85, 201, 119), Rebirth = Color3.fromRGB(220, 105, 228),
+	Coins = Color3.fromRGB(246, 186, 36), Cash = Color3.fromRGB(82, 211, 98),
+	Strength = Color3.fromRGB(235, 101, 77), Potion = Color3.fromRGB(203, 93, 231),
+}
+-- Twelve logical pixels per side. Runs merge vertically so the artwork remains
+-- crisp at native HUD sizes without creating a frame for every individual pixel.
+local glyphs = {
+	Shop = { "............", "...AAAAAA...", "..AAAAAAAA..", ".AALAALAALA.", ".AALAALAALA.", "..SSSSSSSS..", "..SWWSSWWS..", "..SWWSSWWS..", "..SWWSSWWS..", "..SSSSSSSS..", "............", "............" },
+	Gift = { "............", "...AA.AA....", "..ALLAALLA..", "...AAAAAA...", ".LLLWWWWLLL.", ".AAASWWAAAA.", "..AASWWAAA..", "..AASWWAAA..", "..AASWWAAA..", "..SSSWWSSS..", "............", "............" },
+	Friends = { "............", "..LLL..LLL..", "..AAA..AAA..", "..AAA..AAA..", "............", ".LLLLAALLLL.", ".AAAASSAAAA.", ".AAAASSAAAA.", ".AAAASSAAAA.", "..SSS..SSS..", "............", "............" },
+	Trophy = { "............", "..LLLLLLLL..", ".LAAAAAAAAL.", ".LAAAAAAAAL.", ".LLAAAAAALL.", "...AAAAAA...", "....AAAA....", ".....AA.....", ".....AA.....", "...LLLLLL...", "...SSSSSS...", "............" },
+	Pets = { "............", "..LL....LL..", "..AA.LL.AA..", ".....AA.....", "............", "....LLLL....", "...LAAAAL...", "..LAAAAAAL..", "..AAAAAAAS..", "...SSSSSS...", "............", "............" },
+	Settings = { "....LLLL....", "....AAAA....", "..AAAAAAAA..", "..AALLLLAA..", "LAAALSSLAASL", "LAAALSSLAASL", "LAAALSSLAASL", "LAAALSSLAASL", "..AALLLLAA..", "..AAAAAAAA..", "....SSSS....", "....SSSS...." },
+	Play = { "............", "............", "..LLLLLLLL..", ".LAAAAAAAAL.", ".AAAWAAAAAA.", ".AAWWWALALA.", ".AAAWAAAAAA.", ".AAAAAALALA.", ".AAAA..AAAA.", "..SS....SS..", "............", "............" },
+	Rebirth = { "............", "....LLLLLL..", "...LLAAAALL.", "..LL.....ALL", "..AA......AA", "..AA......AA", "AAAL......AA", ".AAL.....AA.", "..AALLLLLL..", "..AAAAAAA...", "............", "............" },
+	Coins = { "............", "...LLLLLL...", "..LAAAAAAL..", ".LAALWLAAAS.", ".AAALWLAAAS.", ".AAALWLAAAS.", ".AAALWLAAAS.", ".AAALWLAAAS.", "..AAAAAASS..", "...SSSSSS...", "............", "............" },
+	Cash = { "............", "............", ".LLLLLLLLLL.", ".LAAASSAAAL.", ".LAAWLLWAAL.", ".LAAWLLWAAL.", ".LAAASSAAAL.", ".SSSSSSSSSS.", "............", "............", "............", "............" },
+	Strength = { "............", "...LL.LL....", "...AA.AA.LL.", ".LLAA.AA.AA.", ".AAAA.AA.AA.", ".AAAAAAAAAA.", ".AAAAAAAAAA.", "..AAAAAAAA..", "...AAAAAA...", "...SSSSSS...", "............", "............" },
+	Potion = { "....LLLL....", "....AAAA....", ".....WW.....", ".....WW.....", "....WWWW....", "...WWLLWW...", "..WAAAAAAW..", "..AAAAAAAS..", "..AAAAAAAS..", "...AAAAAS...", "....SSSS....", "............" },
+}
+
+local function decoration(parent: GuiObject, name: string, color: Color3, size: UDim2, position: UDim2): Frame
+	local frame = Instance.new("Frame")
+	frame.Name = name
+	frame.BackgroundColor3 = color
+	frame.BorderSizePixel = 0
+	frame.Size, frame.Position = size, position
+	frame.ZIndex = parent.ZIndex
+	frame.Active, frame.Selectable = false, false
+	frame.Parent = parent
+	return frame
+end
+
 function GuiTheme.Icon(parent: GuiObject, name: string, size: UDim2, position: UDim2)
-	local cell = GuiTheme.IconRects[name] or Vector2.zero
-	local crop = iconCrops[name] or Rect.new(
-		cell.X * GuiTheme.Atlas.CellSize.X,
-		cell.Y * GuiTheme.Atlas.CellSize.Y,
-		(cell.X + 1) * GuiTheme.Atlas.CellSize.X,
-		(cell.Y + 1) * GuiTheme.Atlas.CellSize.Y
-	)
 	local icon = Instance.new("Frame")
 	icon.Name = name .. "Icon"
 	icon.BackgroundTransparency = 1
@@ -59,79 +89,80 @@ function GuiTheme.Icon(parent: GuiObject, name: string, size: UDim2, position: U
 	icon.Selectable = false
 	icon.Parent = parent
 
-	-- Normalized clipping survives Roblox resizing the delivered texture. Pixel
-	-- rectangles and the protected ContentImageSize property cannot do that.
-	-- CanvasGroup lets the gear's rounded clip include the atlas child.
-	local viewport = if name == "Settings" then Instance.new("CanvasGroup") else Instance.new("Frame")
-	viewport.Name = "AtlasViewport"
-	viewport.BackgroundTransparency = 1
-	viewport.AnchorPoint = Vector2.new(0.5, 0.5)
-	viewport.Position = UDim2.fromScale(0.5, 0.5)
-	viewport.Size = UDim2.fromScale(1, 1)
-	viewport.ClipsDescendants = true
-	viewport.Active = false
-	viewport.Selectable = false
-	viewport.Parent = icon
 	local aspect = Instance.new("UIAspectRatioConstraint")
-	aspect.AspectRatio = crop.Width / crop.Height
+	aspect.AspectRatio = 1
 	aspect.AspectType = Enum.AspectType.FitWithinMaxSize
 	aspect.DominantAxis = Enum.DominantAxis.Width
-	aspect.Parent = viewport
-	local image = Instance.new("ImageLabel")
-	image.Name = "AtlasImage"
-	image.BackgroundTransparency = 1
-	image.Size = UDim2.fromScale(GuiTheme.Atlas.Size.X / crop.Width, GuiTheme.Atlas.Size.Y / crop.Height)
-	image.Position = UDim2.fromScale(-crop.Min.X / crop.Width, -crop.Min.Y / crop.Height)
-	image.Image = GuiTheme.Atlas.Image
-	image.ScaleType = Enum.ScaleType.Stretch
-	image.Active = false
-	image.Selectable = false
-	image.Parent = viewport
-	if name == "Settings" then
-		local clip = Instance.new("UICorner")
-		clip.CornerRadius = UDim.new(1, 0)
-		clip.Parent = viewport
+	aspect.Parent = icon
+	local accent = GuiTheme.IconColors[name] or GuiTheme.Colors.Blue
+	local colors = { K = Color3.fromRGB(17, 20, 35), A = accent, L = accent:Lerp(Color3.new(1, 1, 1), 0.64), S = accent:Lerp(Color3.fromRGB(12, 19, 43), 0.4), W = Color3.fromRGB(255, 252, 235) }
+	local rows = glyphs[name] or glyphs.Play
+	local pixels: { { string } } = {}
+	for y = 1, 12 do
+		pixels[y] = {}
+		for x = 1, 12 do pixels[y][x] = rows[y]:sub(x, x) end
 	end
-
-	local fallback = Instance.new("TextLabel")
-	fallback.Name = "Fallback"
-	fallback.BackgroundTransparency = 1
-	fallback.Size = UDim2.fromScale(1, 1)
-	fallback.Font = Enum.Font.FredokaOne
-	fallback.TextScaled = true
-	fallback.TextColor3 = GuiTheme.Colors.Yellow
-	fallback.Text = fallbacks[table.find(iconNames, name) or 1]
-	fallback.Active = false
-	fallback.Selectable = false
-	fallback.Parent = icon
-	local function refresh()
-		-- The configured atlas was verified in Studio. Its cropped labels can
-		-- render while IsLoaded remains false; loading flags must not cover it.
-		fallback.Visible = image.Image == ""
-		viewport.Visible = true
-		viewport.ZIndex = icon.ZIndex
-		image.ZIndex = icon.ZIndex
-		fallback.ZIndex = icon.ZIndex + 1
+	for y = 1, 12 do
+		for x = 1, 12 do
+			if rows[y]:sub(x, x) ~= "." then
+				for dy = -1, 1 do for dx = -1, 1 do
+					local yy, xx = y + dy, x + dx
+					if yy >= 1 and yy <= 12 and xx >= 1 and xx <= 12 and pixels[yy][xx] == "." then pixels[yy][xx] = "K" end
+				end end
+			end
+		end
 	end
-	local connections = {
-		image:GetPropertyChangedSignal("Image"):Connect(refresh),
-		icon:GetPropertyChangedSignal("ZIndex"):Connect(refresh),
-	}
-	table.insert(connections, icon.Destroying:Connect(function()
-		for _, connection in connections do connection:Disconnect() end
-		table.clear(connections)
-	end))
-	refresh()
+	local runs: { [string]: Frame } = {}
+	local pieces: { Frame } = {}
+	for y = 1, 12 do
+		local current: { [string]: Frame } = {}
+		local x = 1
+		while x <= 12 do
+			local color = pixels[y][x]
+			local start = x
+			while x <= 12 and pixels[y][x] == color do x += 1 end
+			if color == "." then continue end
+			local key = color .. tostring(start) .. ":" .. tostring(x)
+			local piece = runs[key]
+			if piece then piece.Size = UDim2.fromScale((x - start) / 12, piece.Size.Y.Scale + 1 / 12)
+			else
+				piece = decoration(icon, "Pixel", colors[color], UDim2.fromScale((x - start) / 12, 1 / 12), UDim2.fromScale((start - 1) / 12, (y - 1) / 12))
+				table.insert(pieces, piece)
+			end
+			current[key] = piece
+		end
+		runs = current
+	end
+	local connection = icon:GetPropertyChangedSignal("ZIndex"):Connect(function() for _, piece in pieces do piece.ZIndex = icon.ZIndex end end)
+	icon.Destroying:Connect(function() connection:Disconnect() end)
 	return icon
 end
 
 function GuiTheme.Gloss(parent: GuiObject)
+	local corner = parent:FindFirstChildOfClass("UICorner")
+	if corner and corner.CornerRadius.Scale < 0.5 and corner.CornerRadius.Offset < 30 then corner.CornerRadius = UDim.new(0, 4) end
+	local border = parent:FindFirstChildOfClass("UIStroke")
+	if border then border.Color = Color3.fromRGB(12, 16, 31); border.Thickness = math.max(2, border.Thickness) end
+	if not parent:FindFirstChild("PixelInset") then
+		local inset = decoration(parent, "PixelInset", Color3.new(1, 1, 1), UDim2.new(1, -6, 1, -6), UDim2.fromOffset(3, 3))
+		inset.BackgroundTransparency = 1
+		local outline = Instance.new("UIStroke")
+		outline.Color = parent:GetAttribute("PixelAccent") or parent.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.65)
+		outline.Thickness = 1
+		outline.Transparency = 0.15
+		outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		outline.Parent = inset
+		local clip = Instance.new("UICorner"); clip.CornerRadius = UDim.new(0, 2); clip.Parent = inset
+		local connection = parent:GetPropertyChangedSignal("ZIndex"):Connect(function() inset.ZIndex = parent.ZIndex end)
+		inset.Destroying:Connect(function() connection:Disconnect() end)
+		parent.Destroying:Connect(function() connection:Disconnect() end)
+	end
 	local gradient = Instance.new("UIGradient")
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-		ColorSequenceKeypoint.new(0.48, Color3.fromRGB(231, 229, 255)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(157, 153, 205)),
+		ColorSequenceKeypoint.new(0.48, Color3.fromRGB(245, 246, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 186, 215)),
 	})
 	gradient.Parent = parent
 end
@@ -249,15 +280,15 @@ function GuiTheme.ButtonFeedback(button: TextButton, border: UIStroke)
 	local pressedInput: InputObject? = nil
 	local borderTween: Tween? = nil
 	local glossTween: Tween? = nil
-	local gloss = button:FindFirstChildOfClass("UIGradient")
 	local function refresh()
 		if borderTween then borderTween:Cancel() end
 		if glossTween then glossTween:Cancel() end
 		local pressed = pressedInput ~= nil
 		local highlighted = hovered or selected
+		local gloss = button:FindFirstChildOfClass("UIGradient")
 		local timing = TweenInfo.new(if pressed then 0.08 else 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		borderTween = TweenService:Create(border, timing, {
-			Color = if highlighted and not pressed then GuiTheme.Colors.Text else GuiTheme.Colors.Yellow,
+			Color = Color3.fromRGB(12, 16, 31),
 			Thickness = if pressed or selected then 3 else 2,
 		})
 		borderTween:Play()
@@ -322,19 +353,36 @@ function GuiTheme.DecorateButton(button: TextButton, name: string, tile: boolean
 	updateText()
 end
 
--- Broad, native pixel navigation pills match the approved Flow reference.
+-- Match the authored cube button: a colored burst, dark frame and pixel glyph.
 function GuiTheme.DecoratePill(button: TextButton, name: string)
 	button.TextTransparency = 1
 	button:SetAttribute("AccessibleName", name)
+	button:SetAttribute("PixelTile", true)
+	local accent = GuiTheme.IconColors[name] or GuiTheme.Colors.Blue
+	button.BackgroundColor3 = accent
+	button.BackgroundTransparency = 0
 	local corner = button:FindFirstChildOfClass("UICorner")
-	if corner then corner.CornerRadius = UDim.new(1, 0) end
-	local icon = GuiTheme.Icon(button, name, UDim2.fromOffset(40, 40), UDim2.fromScale(0.5, 0.5))
+	if corner then corner.CornerRadius = UDim.new(0, 4) end
+	local gradient = button:FindFirstChildOfClass("UIGradient")
+	if gradient then gradient:Destroy() end
+	local inset = button:FindFirstChild("PixelInset")
+	if inset and inset:IsA("GuiObject") then inset.Visible = false end
+	local border = button:FindFirstChildOfClass("UIStroke")
+	if border then border.Color = Color3.fromRGB(12, 16, 31); border.Transparency = 0; border.Thickness = 2 end
+	local burst = decoration(button, "PixelBurst", accent:Lerp(Color3.new(1, 1, 1), 0.8), UDim2.new(1, -6, 1, -6), UDim2.fromOffset(3, 3))
+	burst.ClipsDescendants = true
+	for index = 0, 11 do
+		local ray = decoration(burst, "Ray", accent:Lerp(Color3.new(1, 1, 1), 0.13), UDim2.fromScale(1.5, 0.13), UDim2.fromScale(0.5, 0.5))
+		ray.AnchorPoint = Vector2.new(0, 0.5)
+		ray.Rotation = index * 30 + 15
+	end
+	local icon = GuiTheme.Icon(button, name, UDim2.fromScale(0.72, 0.72), UDim2.fromScale(0.5, 0.5))
 	icon.AnchorPoint = Vector2.new(0.5, 0.5)
 	local function refresh()
-		local iconSize = math.max(32, math.floor(button.Size.Y.Offset * 0.72))
-		icon.Size = UDim2.fromOffset(iconSize, iconSize)
 		icon.Position = UDim2.fromScale(0.5, 0.5)
-		icon.ZIndex = button.ZIndex
+		burst.ZIndex = button.ZIndex
+		for _, ray in burst:GetChildren() do if ray:IsA("GuiObject") then ray.ZIndex = button.ZIndex end end
+		icon.ZIndex = button.ZIndex + 1
 	end
 	button:GetPropertyChangedSignal("Size"):Connect(refresh)
 	button:GetPropertyChangedSignal("ZIndex"):Connect(refresh)
