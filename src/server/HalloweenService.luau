@@ -1357,23 +1357,97 @@ local function claimPumpkin(player: Player, current: Hunt, pumpkin: Pumpkin)
 end
 
 local function makePumpkinModel(position: Vector3, golden: boolean): Part
-	local size = if golden then 3.6 else 3
-	-- a squat, glossy red-orange pumpkin with a small dark-green square stem (the approved look)
-	local color = if golden then Color3.fromRGB(255, 205, 50) else Color3.fromRGB(205, 62, 14)
-	local height = size * 0.9
-	local body = makePart({
+	local size = if golden then 3.8 else 3.2
+	-- a glossy jack-o'-lantern candy bowl: ribbed pumpkin, carved face, and a heap of lollipops and sweets on top
+	local orange = if golden then Color3.fromRGB(255, 205, 50) else Color3.fromRGB(255, 112, 24)
+	local height = size * 0.95
+	local focus = Vector3.new(Config.Map.PlazaMinX + 40, position.Y, 0)
+	local flat = Vector3.new(position.X, position.Y, position.Z)
+	local base = if (focus - flat).Magnitude > 1 then CFrame.lookAt(flat, focus) else CFrame.new(flat)
+	local function add(parent: Instance, props: { [string]: any }, offset: CFrame): Part
+		props.CFrame = base * offset
+		props.Anchored = true
+		props.CanCollide = false
+		props.CanQuery = false
+		props.CanTouch = false
+		props.Parent = parent
+		if props.Material == nil then props.Material = Enum.Material.SmoothPlastic end
+		local created = makePart(props)
+		created.Reflectance = props.Reflectance or 0.06
+		return created
+	end
+	local body = add(pumpkinFolder :: Instance, {
 		Name = if golden then "GoldenPumpkin" else "HuntPumpkin", Shape = Enum.PartType.Ball,
-		Size = Vector3.new(size * 1.4, height, size * 1.3), Position = position + Vector3.new(0, height / 2, 0),
-		Color = color, Material = if golden then Enum.Material.Neon else Enum.Material.SmoothPlastic,
-		CanCollide = false, CanQuery = true, CanTouch = false, Parent = pumpkinFolder,
-	})
-	body.Reflectance = if golden then 0 else 0.08
-	local stem = makePart({
-		Name = "Stem", Size = Vector3.new(size * 0.2, size * 0.2, size * 0.2),
-		CFrame = CFrame.new(position + Vector3.new(size * 0.05, height * 0.98, 0)) * CFrame.Angles(math.rad(8), math.rad(25), math.rad(-6)),
-		Color = Color3.fromRGB(28, 52, 24), Material = Enum.Material.SmoothPlastic, CanCollide = false, CanQuery = false, CanTouch = false, Parent = body,
-	})
-	stem.Anchored = true
+		Size = Vector3.new(size * 1.1, height, size * 1.05), Color = orange,
+	}, CFrame.new(0, height / 2, 0))
+	body.CanQuery = true
+	-- ribs: two overlapping lobes on each side of the centre
+	for _, side in { -1, 1 } do
+		add(body, { Name = "Rib", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 0.62, height * 0.96, size * 1.0), Color = orange }, CFrame.new(side * size * 0.38, height / 2, 0))
+		add(body, { Name = "RibOuter", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 0.42, height * 0.84, size * 0.82), Color = orange }, CFrame.new(side * size * 0.58, height / 2 - height * 0.02, 0))
+	end
+	-- carved face (looks toward the plaza)
+	local face = Color3.fromRGB(24, 14, 22)
+	local front = -size * 0.5
+	for _, side in { -1, 1 } do
+		add(body, { Name = "Eye", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 0.24, size * 0.3, size * 0.1), Color = face, Reflectance = 0.25 },
+			CFrame.new(side * size * 0.27, height * 0.58, front) * CFrame.Angles(0, 0, side * math.rad(18)))
+	end
+	add(body, { Name = "Nose", Size = Vector3.new(size * 0.14, size * 0.16, size * 0.08), Color = face }, CFrame.new(0, height * 0.42, front - 0.02) * CFrame.Angles(0, 0, math.rad(45)))
+	add(body, { Name = "Mouth", Size = Vector3.new(size * 0.62, size * 0.1, size * 0.08), Color = face }, CFrame.new(0, height * 0.24, front))
+	for _, side in { -1, 1 } do
+		add(body, { Name = "MouthCorner", Size = Vector3.new(size * 0.22, size * 0.09, size * 0.08), Color = face },
+			CFrame.new(side * size * 0.38, height * 0.3, front) * CFrame.Angles(0, 0, side * math.rad(35)))
+	end
+	-- dark-green stem
+	add(body, { Name = "Stem", Size = Vector3.new(size * 0.16, size * 0.22, size * 0.16), Color = Color3.fromRGB(28, 52, 24) },
+		CFrame.new(size * 0.05, height * 0.98, 0) * CFrame.Angles(math.rad(8), math.rad(25), math.rad(-6)))
+	-- lollipops: a flat swirl disc on a stick, fanned out of the top
+	local pastel = {
+		{ Color3.fromRGB(255, 220, 90), Color3.fromRGB(255, 150, 40) },
+		{ Color3.fromRGB(190, 150, 255), Color3.fromRGB(150, 225, 130) },
+		{ Color3.fromRGB(255, 150, 60), Color3.fromRGB(255, 245, 235) },
+	}
+	local lollipops = {
+		{ x = -0.30, tilt = 22, rise = 1.15 },
+		{ x = 0.06, tilt = -4, rise = 1.4 },
+		{ x = 0.36, tilt = -26, rise = 1.1 },
+	}
+	for index, pop in lollipops do
+		local pair = pastel[index]
+		local stickLength = size * pop.rise
+		local mount = CFrame.new(pop.x * size, height * 0.9, 0) * CFrame.Angles(0, 0, math.rad(pop.tilt))
+		add(body, { Name = "LollipopStick", Size = Vector3.new(size * 0.05, stickLength, size * 0.05), Color = Color3.fromRGB(245, 240, 230) }, mount * CFrame.new(0, stickLength / 2, 0))
+		local discSize = size * (0.46 - (index - 1) * 0.03)
+		local discPos = mount * CFrame.new(0, stickLength, 0) * CFrame.Angles(0, math.rad(90), 0)
+		add(body, { Name = "LollipopDisc", Shape = Enum.PartType.Cylinder, Size = Vector3.new(size * 0.07, discSize, discSize), Color = pair[1] }, discPos)
+		add(body, { Name = "LollipopSwirl", Shape = Enum.PartType.Cylinder, Size = Vector3.new(size * 0.075, discSize * 0.6, discSize * 0.6), Color = pair[2] }, discPos * CFrame.new(size * 0.005, 0, 0))
+		add(body, { Name = "LollipopCore", Shape = Enum.PartType.Cylinder, Size = Vector3.new(size * 0.08, discSize * 0.25, discSize * 0.25), Color = pair[1] }, discPos * CFrame.new(size * 0.01, 0, 0))
+	end
+	-- sweets piled in the opening and spilling out of the mouth
+	local sweets = {
+		{ Vector3.new(-0.5, 0.98, 0.1), 0.26, Color3.fromRGB(255, 190, 60) },
+		{ Vector3.new(0.52, 0.96, -0.05), 0.24, Color3.fromRGB(160, 225, 120) },
+		{ Vector3.new(-0.12, 1.02, 0.25), 0.22, Color3.fromRGB(190, 150, 255) },
+		{ Vector3.new(0.18, 1.02, -0.22), 0.25, Color3.fromRGB(255, 130, 40) },
+		{ Vector3.new(0.42, 0.2, -0.54), 0.2, Color3.fromRGB(255, 220, 90) },
+		{ Vector3.new(-0.46, 0.18, -0.55), 0.18, Color3.fromRGB(160, 225, 120) },
+		{ Vector3.new(0.03, 0.1, -0.6), 0.2, Color3.fromRGB(190, 150, 255) },
+	}
+	for _, sweet in sweets do
+		local diameter = size * sweet[2]
+		add(body, { Name = "Sweet", Shape = Enum.PartType.Ball, Size = Vector3.new(diameter, diameter, diameter), Color = sweet[3] },
+			CFrame.new(sweet[1].X * size, height * sweet[1].Y - diameter * 0.2, sweet[1].Z * size))
+	end
+	-- wrapped candies: a small barrel with a twisted wrapper at each end
+	for index, wrapperColor in { Color3.fromRGB(255, 150, 40), Color3.fromRGB(190, 150, 255) } do
+		local wrapSide = if index == 1 then -1 else 1
+		local at = CFrame.new(wrapSide * size * 0.28, height * 1.02, size * 0.16) * CFrame.Angles(0, math.rad(40 * wrapSide), math.rad(20 * wrapSide))
+		add(body, { Name = "WrappedCandy", Shape = Enum.PartType.Cylinder, Size = Vector3.new(size * 0.3, size * 0.17, size * 0.17), Color = wrapperColor }, at)
+		for _, end_ in { -1, 1 } do
+			add(body, { Name = "Wrapper", Size = Vector3.new(size * 0.1, size * 0.2, size * 0.04), Color = wrapperColor }, at * CFrame.new(end_ * size * 0.2, 0, 0))
+		end
+	end
 	local light = Instance.new("PointLight")
 	light.Color = if golden then Color3.fromRGB(255, 230, 120) else Color3.fromRGB(255, 150, 50)
 	light.Range = if golden then 20 else 12

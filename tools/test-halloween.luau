@@ -323,7 +323,7 @@ end
 check(service:find("species.Model and not species.EventOnly", 1, true), "Event-only monsters are never picked for Mother Invasions")
 check(Config.Halloween.Invasion.Mothers == nil and not service:find("custom.Health", 1, true), "Invasions use the game's regular Mothers (no extra Halloween Mother types)")
 check(service:find("HauntedGlow", 1, true) and service:find("SpookyWisps", 1, true) and service:find("PumpkinEmbers", 1, true), "Invasion Mothers get Halloween effects")
-check(service:find("Color3.fromRGB(205, 62, 14)", 1, true), "Hunt pumpkins use the approved squat red-orange look")
+check(service:find("LollipopDisc", 1, true) and service:find("Name = \"Mouth\"", 1, true) and service:find("WrappedCandy", 1, true), "Hunt pumpkins are jack-o'-lantern candy bowls (face, lollipops, sweets)")
 check(service:find('if regionInfo then regionInfo.Region else "Void"', 1, true) and Config.MotherAttacks.Elements.Void, "Event Mothers fall back to the Void element (Halloween region is not a zone region)")
 check(Config.Camera.MinZoom > 0 and Config.Camera.MaxZoom > Config.Camera.MinZoom, "Camera zoom limits are configured")
 check(read("src/client/init.client.luau"):find("CameraMaxZoomDistance", 1, true), "Client applies the camera zoom limit")
