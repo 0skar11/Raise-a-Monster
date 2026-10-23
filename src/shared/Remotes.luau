@@ -51,6 +51,13 @@ local EVENT_NAMES = {
 	"MonsterAttack", -- (attack) علامة ضربة الوحش على الأرض + الـ VFX لكل اللاعبين
 	"PlayerHurt", -- (damage, color) اللاعب اتضرب: هزة كاميرا ولون أحمر
 	"HitFeedback", -- (position, damage, crit) رقم الضرر فوق الهدف للي ضرب
+	-- Halloween event (all server validated; the client only ever sends an item id string)
+	"HalloweenState", -- (state) Candy, owned/equipped items, boost time left, event timers
+	"HalloweenOpenShop", -- () the Pumpkin Merchant prompt was used close enough to the merchant
+	"HalloweenHint", -- ({ Sector, Band, Remaining } | nil) soft pumpkin direction, never the exact spot
+	"HalloweenBuy", -- (itemId)
+	"HalloweenEquip", -- (itemId, equip)
+	"HalloweenSync", -- () ask for a fresh HalloweenState
 }
 
 local Remotes = {}

@@ -117,3 +117,6 @@
 | `src/server/StealService.luau` | نظام السرقة |
 | `src/client/init.client.luau` | منطق الواجهة والأزرار وتأثير Rainbow |
 | `src/client/UI.luau` | بناء الواجهة |
+
+## Halloween 2026 (event)
+مناسبة محدودة: غزو الأمهات كل ساعة، وصيد القرع كل 30 دقيقة، عملة Candy، وتاجر القرع. كلها خلف `Config.Halloween.Enabled`. التفاصيل في `docs/Halloween-2026.md`.

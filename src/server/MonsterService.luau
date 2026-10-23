@@ -35,6 +35,12 @@ local lastCollect: { [Player]: number } = {}
 local lastFeed: { [Player]: { [string]: number } } = {}
 local lastAutoFeed: { [Player]: number } = {}
 
+-- Temporary event multiplier on live income only (Halloween Candy Boost). It is deliberately NOT
+-- folded into GetCoinMultiplier, so it is never saved as the offline-income multiplier.
+MonsterService.GetEventMultiplier = function(_player: Player): number
+	return 1
+end
+
 local function rateLimited(player: Player): boolean
 	local now = os.clock()
 	if lastAction[player] and now - lastAction[player] < 0.15 then
@@ -969,12 +975,14 @@ local function tickPlayer(player: Player, dt: number)
 	end
 	local data = profile.Data
 	local multiplier = MonsterService.GetCoinMultiplier(player)
+	local okEvent, eventValue = pcall(MonsterService.GetEventMultiplier, player)
+	local eventMultiplier = if okEvent and type(eventValue) == "number" and eventValue >= 1 and eventValue < 100 then eventValue else 1
 
 	for id, monster in data.Monsters do
 		if MonsterService.IsPlaced(player, monster) and not MonsterService.IsCarried(player, id) then
 			monster.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * dt)
 			monster.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * dt)
-			data.PendingCoins += MonsterMath.GetProduction(monster) * multiplier * dt
+			data.PendingCoins += MonsterMath.GetProduction(monster) * multiplier * eventMultiplier * dt
 			if monster.Hunger >= 50 and monster.Happiness >= 50 then
 				addXp(player, monster, Config.PassiveXpPerSecond * dt)
 			end

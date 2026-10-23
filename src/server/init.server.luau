@@ -22,11 +22,14 @@ local LeaderboardService = require(script.LeaderboardService)
 local RewardService = require(script.RewardService)
 local TradeService = require(script.TradeService)
 local ArenaService = require(script.ArenaService)
+local HalloweenService = require(script.HalloweenService)
 
 local remotes = Remotes.Get()
 
 -- Hooks (عشان MonsterService مايحتاجش يعمل require للخدمات اللي بتعتمد عليه)
 MonsterService.HasPass = MonetizationService.HasPass
+-- Halloween Candy Boost (inert unless Config.Halloween is running)
+MonsterService.GetEventMultiplier = HalloweenService.GetCashMultiplier
 MonsterService.ExtraState = function(player: Player): { [string]: any }
 	local profile = DataService.Get(player)
 	return {
@@ -56,6 +59,7 @@ ZoneService.Init()
 TerrainService.Init()
 MonetizationService.Init(remotes)
 EventService.Init()
+HalloweenService.Init(remotes)
 LeaderboardService.Init()
 RewardService.Init(remotes)
 TradeService.Init(remotes)
@@ -116,9 +120,11 @@ local function onCharacter(player: Player, character: Model)
 	end
 	CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player), if profile then profile.Data.Weapons else {}, if profile then profile.Data.EquippedWeapon else "Bat")
 	MonetizationService.OnCharacter(player)
+	HalloweenService.OnCharacter(player)
 	task.spawn(function()
 		CharacterService.ApplyAppearance(player, character)
 		if player.Character ~= character then return end
+		HalloweenService.OnCharacter(player) -- ApplyDescription can replace accessories, so re-apply
 		CharacterService.UpdateSpeed(player)
 		CharacterService.UpdateHealth(player)
 		if profile then CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories, profile.Data.EquippedSpeedAccessory) end
@@ -181,6 +187,7 @@ local function onPlayerAdded(player: Player)
 	end
 
 	MonsterService.SetupPlayer(player)
+	HalloweenService.SetupPlayer(player)
 
 	if profile.Temporary then
 		MonsterService.Notify(player, "Studio test session: saving is unavailable. Your live progress is safe; changes here will not be saved.", "error")
@@ -202,6 +209,7 @@ Players.PlayerRemoving:Connect(function(player)
 	RewardService.CleanupPlayer(player)
 	ZoneService.CleanupPlayer(player)
 	MonsterAttack.CleanupPlayer(player)
+	HalloweenService.CleanupPlayer(player)
 	MonetizationService.CleanupPlayer(player)
 	CharacterService.Cleanup(player)
 	MonsterService.CleanupPlayer(player)

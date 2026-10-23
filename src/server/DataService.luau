@@ -37,7 +37,18 @@ export type PlayerData = {
 	LastSpin: number,
 	ProcessedReceipts: { [string]: boolean },
 	SpeedBoostUntil: number,
+	Halloween: HalloweenData, -- event currency + purchases; safe to keep forever (see Config.Halloween)
 }
+
+export type HalloweenData = {
+	Candy: number,
+	TotalCandy: number,
+	BoostUntil: number, -- os.time epoch
+	Converted: number, -- coins already paid out for leftover Candy
+	Owned: { [string]: boolean },
+	Equipped: { [string]: string }, -- slot (Hat/Trail/Aura/Title) -> item id
+}
+
 
 export type Profile = {
 	Data: PlayerData,
@@ -67,6 +78,7 @@ local DEFAULT_DATA: PlayerData = {
 	LastSpin = 0,
 	ProcessedReceipts = {},
 	SpeedBoostUntil = 0,
+	Halloween = { Candy = 0, TotalCandy = 0, BoostUntil = 0, Converted = 0, Owned = {}, Equipped = {} },
 }
 
 local store: DataStore? = nil
@@ -131,7 +143,7 @@ local function validRecord(record: any): boolean
 	if type(record) ~= "table" then return false end
 	for key, template in DEFAULT_DATA do
 		local value = record[key]
-		if value ~= nil and key ~= "Version" and key ~= "Weapons" and key ~= "SpeedAccessories" and key ~= "EquippedWeapon" then
+		if value ~= nil and key ~= "Version" and key ~= "Weapons" and key ~= "SpeedAccessories" and key ~= "EquippedWeapon" and key ~= "Halloween" then
 			if type(value) ~= type(template) then return false end
 			if type(value) == "number" and (value ~= value or math.abs(value) == math.huge) then return false end
 		end
@@ -197,6 +209,40 @@ local function reconcileGear(data: PlayerData)
 	data.Version = math.max(if type(data.Version) == "number" then data.Version else 0, 2)
 end
 
+-- Halloween data is rebuilt field by field: old saves without it get the defaults, and anything
+-- invalid (wrong type, NaN, negative, unknown item) is dropped instead of crashing or being trusted.
+local function sanitizeHalloween(data: PlayerData)
+	local source: any = data.Halloween
+	if type(source) ~= "table" then source = {} end
+	local items = Config.Halloween.Items
+	local cap = Config.Halloween.CandyCap
+	local function number(value: any, maximum: number): number
+		if type(value) ~= "number" or value ~= value or value < 0 then return 0 end
+		return math.min(math.floor(value), maximum)
+	end
+	local owned: { [string]: boolean } = {}
+	if type(source.Owned) == "table" then
+		for id, flag in source.Owned do
+			if type(id) == "string" and flag == true and items[id] then owned[id] = true end
+		end
+	end
+	local equipped: { [string]: string } = {}
+	if type(source.Equipped) == "table" then
+		for slot, id in source.Equipped do
+			if type(slot) == "string" and type(id) == "string" and owned[id] and items[id].Kind == slot then equipped[slot] = id end
+		end
+	end
+	data.Halloween = {
+		Candy = number(source.Candy, cap),
+		TotalCandy = number(source.TotalCandy, cap * 1000),
+		BoostUntil = number(source.BoostUntil, 4e9),
+		Converted = number(source.Converted, 1e18),
+		Owned = owned,
+		Equipped = equipped,
+	}
+end
+DataService.SanitizeHalloween = sanitizeHalloween
+
 function DataService.Load(player: Player): Profile
 	while loading[player] do task.wait() end
 	if profiles[player] then return profiles[player] end
@@ -238,6 +284,7 @@ function DataService.Load(player: Player): Profile
 	end
 
 	reconcileGear(data)
+	sanitizeHalloween(data)
 	DataService.NormalizeMonsterSlots(data, Config.MaxSlots)
 	local profile: Profile = {
 		Data = data, LoadFailed = loadFailed, CanSave = not loadFailed, SessionId = sessionId,

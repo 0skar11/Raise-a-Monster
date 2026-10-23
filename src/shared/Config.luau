@@ -868,4 +868,121 @@ Config.UIEffects = {
 	ReadyPulse = 1.08, -- الزرار اللي فيه Ready! بينبض
 }
 
+-- Halloween 2026 event --------------------------------------------------------------------------
+-- Runs until it is switched off. To END the event: set Enabled = false (or EndsAt to a unix time)
+-- and publish. Leftover Candy is then converted to coins on the next join / at the end of the event.
+-- In Studio you can also run  game.ServerStorage.RaiseAMonsterDebug.HalloweenToggle:Fire()  to flip it live.
+export type HalloweenItem = {
+	Name: string,
+	Kind: string, -- "Boost" | "Hat" | "Trail" | "Aura" | "Title" | "Egg" | "Monster"
+	Cost: number, -- in Candy
+	Order: number,
+	Description: string,
+	Color: Color3,
+	Unique: boolean?, -- one purchase per player (Pumpkin King)
+	Duration: number?, -- Boost: seconds added per purchase
+	Multiplier: number?, -- Boost: cash multiplier while active
+	MaxBoostSeconds: number?, -- Boost: cap on stored time so stacking can't run away
+	TitleText: string?,
+	EggWeights: { [string]: number }?, -- Egg: weights over Config.Eggs keys
+	Species: string?, -- Monster
+}
+Config.Halloween = {
+	Enabled = true,
+	Name = "Halloween 2026",
+	EndsAt = 0, -- unix seconds; 0 = no scheduled end (runs until Enabled = false)
+	CandyToCoinRate = 20, -- each leftover Candy becomes this many coins when the event is over
+	CandyCap = 1000000000, -- sanity cap on stored Candy
+	Invasion = {
+		Interval = 3600, -- Mother Invasion every hour on the hour (server clock, same time in every server)
+		Offset = 0,
+		AnnounceBefore = 60, -- warn everyone this many seconds ahead
+		Lifetime = 900, -- invaders that survive this long run off
+		-- How many Mothers invade: minimum 3, 3-6 are common and larger waves are increasingly rare.
+		MinCount = 3,
+		CountWeights = { [3] = 28, [4] = 26, [5] = 20, [6] = 14, [7] = 6, [8] = 3.5, [9] = 1.7, [10] = 0.8 } :: { [number]: number },
+		MinLevel = 1,
+		MaxLevel = Config.MaxLevel,
+		ParticipationFraction = 0.05, -- must deal >= 5% of the Mother's max HP to be rewarded
+		CandyPerLevel = 5, -- reward = Mother level * 5 Candy
+		HealthAtMinLevel = 2500, -- Mother HP grows exponentially from level 1 to the max level
+		HealthAtMaxLevel = 3000000,
+		DamageAtMinLevel = 5,
+		DamageAtMaxLevel = 45,
+		-- Where invaders spawn / may walk (the open plaza in front of the bases, never inside a base).
+		Area = { MinX = 10, MaxX = 88, HalfZ = 150 },
+		SpawnSpacing = 22, -- minimum distance between two invaders at spawn
+		ChaseSpeed = 14, -- slower than a player (25) so they can run away
+		NoticeRange = 34,
+		LeashRange = 90,
+	},
+	Pumpkins = {
+		Interval = 1800, -- Pumpkin Hunt every 30 minutes
+		Offset = 900, -- :15 and :45 so it never lands on the Mother Invasion
+		Count = 5,
+		Lifetime = 120, -- pumpkins vanish after 2 minutes
+		CandyMin = 3,
+		CandyMax = 10,
+		GoldenChance = 0.08, -- per pumpkin
+		GoldenCandy = 50,
+		PickupDistance = 14, -- server re-checks the player's real distance
+		PickupDebounce = 0.4,
+		HintInterval = 6,
+		-- The hint only says roughly which way (8 sectors) and how far (bands), never the spot.
+		HintBands = { 40, 100 } :: { number },
+		MinSpacing = 28,
+		Area = { MinX = 8, MaxX = 90, HalfZ = 235 },
+		-- keep clear of the egg shop, the merchant and the zone gate road
+		KeepClear = { { X = 92, Z = -55, Radius = 24 }, { X = 76, Z = -34, Radius = 14 }, { X = 100, Z = 0, Radius = 24 } },
+	},
+	Merchant = {
+		Name = "Pumpkin Merchant",
+		Position = Vector3.new(76, 0, -34),
+		FaceTowards = Vector3.new(40, 0, -34),
+		PromptDistance = 12,
+		ShopDistance = 18, -- the server only opens/accepts shop actions this close to the merchant
+		PurchaseCooldown = 0.35,
+	},
+	Atmosphere = {
+		ClockTime = 0,
+		Brightness = 0.6,
+		Ambient = Color3.fromRGB(70, 45, 95),
+		OutdoorAmbient = Color3.fromRGB(60, 40, 85),
+		FogColor = Color3.fromRGB(45, 28, 60),
+		FogStart = 120,
+		FogEnd = 900,
+		AtmosphereDensity = 0.42,
+		AtmosphereOffset = 0.15,
+		AtmosphereColor = Color3.fromRGB(110, 70, 140),
+		AtmosphereDecay = Color3.fromRGB(70, 35, 95),
+		Haze = 1.4,
+		TintColor = Color3.fromRGB(255, 205, 235),
+		Saturation = 0.12,
+		Contrast = 0.08,
+		BloomIntensity = 0.5,
+		BloomThreshold = 1.6,
+		StarCount = 3000,
+		PumpkinPropCount = 46, -- jack-o-lanterns / pumpkin piles around the plaza
+		LanternRange = 14,
+		Seed = 20261031,
+	},
+	Items = {
+		CandyBoost = { Name = "Candy Boost", Kind = "Boost", Cost = 150, Order = 1, Description = "2x cash from your monsters for 10 minutes. Buying again adds time.", Color = Color3.fromRGB(255, 190, 60), Duration = 600, Multiplier = 2, MaxBoostSeconds = 3600 },
+		PumpkinHat = { Name = "Pumpkin Hat", Kind = "Hat", Cost = 300, Order = 2, Description = "A glowing jack-o-lantern on your head.", Color = Color3.fromRGB(255, 130, 30) },
+		GhostTrail = { Name = "Ghost Trail", Kind = "Trail", Cost = 500, Order = 3, Description = "A pale ghostly trail follows you.", Color = Color3.fromRGB(190, 230, 255) },
+		CandyAura = { Name = "Candy Aura", Kind = "Aura", Cost = 800, Order = 4, Description = "Sweet sparkles swirl around you.", Color = Color3.fromRGB(255, 120, 200) },
+		HalloweenTitle = { Name = "Halloween 2026 Title", Kind = "Title", Cost = 1000, Order = 5, Description = "Show 'Halloween 2026' above your head.", Color = Color3.fromRGB(190, 110, 255), TitleText = "Halloween 2026" },
+		HauntedEgg = { Name = "Haunted Egg", Kind = "Egg", Cost = 400, Order = 6, Description = "A real egg: Rare Egg (common) or Mythic Egg (rarer). Hatches into a real monster.", Color = Color3.fromRGB(150, 255, 160), EggWeights = { Rare = 70, Mythic = 30 } :: { [string]: number } },
+		GhostSlime = { Name = "Ghost Slime", Kind = "Monster", Cost = 1500, Order = 7, Description = "Exclusive spooky slime monster.", Color = Color3.fromRGB(200, 240, 255), Species = "HalloweenGhostSlime" },
+		SkeletonImp = { Name = "Skeleton Imp", Kind = "Monster", Cost = 3000, Order = 8, Description = "Exclusive rattling imp monster.", Color = Color3.fromRGB(235, 232, 215), Species = "HalloweenSkeletonImp" },
+		PumpkinKing = { Name = "Pumpkin King", Kind = "Monster", Cost = 12000, Order = 9, Description = "The ultimate Halloween monster. One per player.", Color = Color3.fromRGB(255, 120, 20), Species = "HalloweenPumpkinKing", Unique = true },
+	} :: { [string]: HalloweenItem },
+}
+
+-- Event-exclusive monsters. They are not in any egg pool and use the generated body (no rig yet).
+-- Defined after the accessory table above on purpose: they have no per-species accessories.
+Config.Species.HalloweenGhostSlime = { DisplayName = "Ghost Slime", Rarity = "Epic", BaseProduction = 45, SellValue = 1800, Color = Color3.fromRGB(205, 235, 255), Horns = false }
+Config.Species.HalloweenSkeletonImp = { DisplayName = "Skeleton Imp", Rarity = "Legendary", BaseProduction = 140, SellValue = 5600, Color = Color3.fromRGB(238, 234, 214), Horns = true }
+Config.Species.HalloweenPumpkinKing = { DisplayName = "Pumpkin King", Rarity = "Mythic", BaseProduction = 520, SellValue = 20800, Color = Color3.fromRGB(255, 125, 20), Horns = true }
+
 return Config
