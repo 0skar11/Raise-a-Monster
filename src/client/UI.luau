@@ -52,7 +52,7 @@ UI.Colors = COLORS
 
 -- Shop dimensions are native pixels; the catalog reflows instead of shrinking text.
 function UI.ShopBounds(viewport: Vector2): Vector2
-	return Vector2.new(math.min(740, math.max(1, viewport.X - 24)), math.min(470, math.max(1, viewport.Y - 24)))
+	return Vector2.new(math.min(1060, math.max(1, viewport.X - 24)), math.min(520, math.max(1, viewport.Y - 24)))
 end
 
 local function corner(parent: Instance, radius: number?)

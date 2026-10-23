@@ -1,0 +1,13 @@
+{"regions":[
+{"id":"presentation-ground","kind":"chrome","container":true,"box":{"x":0,"y":0,"w":1,"h":1},"note":"Presentation ground with two shop states. Board titles and example game scene are reference context only."},
+{"id":"forge-shell","kind":"texture","box":{"x":0.193,"y":0.006,"w":0.668,"h":0.483},"note":"Carved midnight stone frame with bronze corners; empty scalable shell, no text or controls."},
+{"id":"damage-art","kind":"image","box":{"x":0.321,"y":0.588,"w":0.245,"h":0.151},"note":"Crossed red orange flaming swords; isolate without x2 lettering or card."},
+{"id":"vip-art","kind":"image","box":{"x":0.603,"y":0.595,"w":0.206,"h":0.141},"note":"Golden angular sword and crown; isolate without VIP text or card."},
+{"id":"collect-art","kind":"image","box":{"x":0.32,"y":0.841,"w":0.084,"h":0.079},"note":"Magnet attracting golden coins; transparent isolated art."},
+{"id":"slots-art","kind":"image","box":{"x":0.438,"y":0.843,"w":0.087,"h":0.076},"note":"Two blue monster pedestals; transparent isolated art."},
+{"id":"feeder-art","kind":"image","box":{"x":0.586,"y":0.845,"w":0.078,"h":0.076},"note":"Food bowl with bone and monster food; transparent isolated art."},
+{"id":"minigame-art","kind":"image","box":{"x":0.719,"y":0.84,"w":0.078,"h":0.079},"note":"Red play toy on stone stand; transparent isolated art."},
+{"id":"navigation","kind":"control","box":{"x":0.198,"y":0.087,"w":0.098,"h":0.393},"note":"Native category buttons and text in vertical navigation."},
+{"id":"weapon-grid","kind":"control","box":{"x":0.306,"y":0.09,"w":0.313,"h":0.39},"note":"Native weapon cards with actual model ViewportFrames and real prices."},
+{"id":"weapon-detail","kind":"control","box":{"x":0.626,"y":0.043,"w":0.223,"h":0.433},"note":"Native selected weapon preview, stats, current price and purchase control."}
+]}

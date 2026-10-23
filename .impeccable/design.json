@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-23T21:20:00Z",
+  "title": "Design System: Monster Forge",
+  "extensions": {
+    "platform": "nativeRoblox",
+    "scope": "Monster Forge shop only",
+    "evidence": ["src/client/MonsterForge.luau", "src/client/UI.luau", "PRODUCT.md", "docs/monster-forge/brief.md", "assets/MonsterForge/README.md", "assets/MonsterForge/provenance.json"],
+    "previewPolicy": "Native Roblox components have no faithful HTML/CSS runtime equivalent here. Component entries identify source-backed native patterns; browser snippets and invented tonal ramps are deliberately omitted.",
+    "colorMeta": {
+      "gold": {"role": "primary", "displayName": "Gold"},
+      "bronze": {"role": "primary", "displayName": "Bronze"},
+      "cyan": {"role": "secondary", "displayName": "Selection Cyan"},
+      "red": {"role": "secondary", "displayName": "Damage Red"},
+      "ink": {"role": "neutral", "displayName": "Ink"},
+      "stone": {"role": "neutral", "displayName": "Stone"},
+      "raised": {"role": "neutral", "displayName": "Raised Stone"},
+      "edge": {"role": "neutral", "displayName": "Edge"},
+      "ivory": {"role": "neutral", "displayName": "Ivory"},
+      "text": {"role": "neutral", "displayName": "Text"},
+      "muted": {"role": "neutral", "displayName": "Muted"}
+    },
+    "typographyMeta": {
+      "body": {"displayName": "Native supporting copy", "purpose": "Descriptions; compact variants use native TextSize 12."},
+      "label": {"displayName": "Native category label", "purpose": "Navigation; compact variants use native TextSize 12."}
+    },
+    "nativeRendering": {
+      "units": "Native offset pixels and TextSize; CSS lengths in DESIGN.md serialize those values only.",
+      "gradients": [
+        {"name": "card", "value": "UIGradient: Raised to Ink, Rotation 90"},
+        {"name": "detail", "value": "UIGradient: RGB(13,31,43) to Ink, Rotation 90"},
+        {"name": "action", "value": "UIGradient: RGB(255,218,126) to RGB(218,145,42), Rotation 90"}
+      ],
+      "borders": [
+        {"name": "shell", "value": "UIStroke Bronze, Thickness 3"},
+        {"name": "ordinary", "value": "UIStroke Edge, Thickness 1"},
+        {"name": "selected-gear", "value": "UIStroke Cyan, Thickness 3"}
+      ],
+      "textStroke": "Ink; TextStrokeTransparency 0.3",
+      "interaction": "AutoButtonColor true; state-driven Active and Selectable; no custom focus, tween or easing tokens.",
+      "inactiveActionCaveat": "Changing BackgroundColor3 to Edge does not remove the warm UIGradient.",
+      "shellSliceCenter": [64,144,1799,780]
+    },
+    "breakpoints": [
+      {"name": "compact-width", "value": "panel width < 840 native pixels"},
+      {"name": "compact-height", "value": "panel height < 420 native pixels"},
+      {"name": "labels-only-navigation", "value": "panel width < 480 native pixels"},
+      {"name": "stacked-detail-width", "value": "content width < 370 native pixels"},
+      {"name": "stacked-detail-height", "value": "content height < 300 native pixels"}
+    ],
+    "verification": {
+      "sourceDerived": true,
+      "studioRuntimeVerified": false,
+      "visuallyAccepted": false,
+      "fullCompFidelityVerified": false,
+      "decorativeAssetsPublished": false,
+      "pendingDecorativeFiles": 7,
+      "reason": "Studio disconnected; Creator Dashboard DNS failed; user explicitly deferred Studio QA."
+    },
+    "notCanonized": [
+      "Selected-item eyebrow",
+      "Frame-built glyph icons",
+      "GothamBlack system display faces",
+      "Seven local decorative raster files with zero runtime asset IDs",
+      "Damage-art composition drift and unverified capsule translucency recorded in provenance"
+    ]
+  },
+  "components": [
+    {"name": "Purchase or equip action", "kind": "button", "refersTo": "button-primary", "description": "Native TextButton with UICorner, UIStroke and warm UIGradient; pending and ownership states remain native text."},
+    {"name": "Close", "kind": "button", "refersTo": "button-close", "description": "Native square Stone TextButton; inherited action gradient explicitly removed."},
+    {"name": "Category navigation", "kind": "nav", "refersTo": "category", "description": "Native scrolling category column; selected category uses category-selected tokens."},
+    {"name": "Catalog card", "kind": "card", "refersTo": "catalog-card", "description": "Native gradient Frame with selection outline, actual model preview and native state labels."},
+    {"name": "Stat block", "kind": "custom", "refersTo": "stat", "description": "Native wrapped TextLabel with Ink background transparency 0.15 and Edge stroke."}
+  ],
+  "narrative": {
+    "northStar": "Monster Forge",
+    "overview": "The implemented shop uses midnight stone, bronze framing and warm ivory text to hold a dense catalog of native Roblox controls and actual game models. Gold marks purchase actions; cyan outlines the selected gear card. This document is scoped to the Monster Forge shop, not the rest of Raise a Monster.\n\nThis is a source-derived record of the current implementation, not visual acceptance. Sources are `src/client/MonsterForge.luau`, shop sizing and preview helpers in `src/client/UI.luau`, `PRODUCT.md`, `docs/monster-forge/brief.md`, and `assets/MonsterForge/README.md` and `provenance.json`. The approved comp establishes direction; the code establishes the values recorded here. Studio runtime, complete comp fidelity and Roblox asset publication remain unverified.",
+    "keyCharacteristics": ["Dense dark containers with warm metal edges.", "Native text and controls above decorative art.", "Actual 3D equipment previews.", "Native pixel sizing with scrolling and responsive reflow."],
+    "rules": [{"name": "The State Accent Rule", "body": "Use the selected gear outline and selected category treatment to communicate the current selection independently of item artwork.", "section": "colors"}],
+    "dos": ["**Do** preserve native labels, prices, states and actionable controls over decorative artwork.", "**Do** use actual equipment models for item previews.", "**Do** reflow and scroll the catalog using native pixel sizes.", "**Do** distinguish source delivery, asset activation and Studio visual acceptance."],
+    "donts": ["**Don't** bake control labels or prices into raster art.", "**Don't** treat pending zero asset IDs as uploaded Roblox artwork.", "**Don't** extend this shop-specific palette into unrelated screens without inspecting their incumbent system."]
+  }
+}

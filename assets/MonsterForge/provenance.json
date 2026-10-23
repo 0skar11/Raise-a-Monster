@@ -1,0 +1,13 @@
+{
+  "mode": "built-in image_gen",
+  "approvedComp": "C:\\Users\\ywsf5\\.codex\\generated_images\\01a165d1-f2ea-7f60-9535-8bf1ab17dfef\\exec-edd5d9ac-7f13-4a67-a55a-bd633e1fbe9f.png",
+  "spec": ".impeccable/build/spec.json",
+  "shellSource": "C:\\Users\\ywsf5\\.codex\\generated_images\\01a16a55-8f16-77a0-b34d-73aff630879a\\exec-5748a520-9200-4ea6-9c4b-827ba17c4a82.png",
+  "atlasSource": "C:\\Users\\ywsf5\\.codex\\generated_images\\01a16a55-8f16-77a0-b34d-73aff630879a\\exec-bc01cc71-bf79-4fbf-8db2-51168e2d237c.png",
+  "postprocess": "Deterministic atlas extraction and alpha-preserving fit/padding only, no chroma key",
+  "review": "unscored; parent/human checkpoint pending",
+  "drift": [
+    "Damage art has one crossed pair; approved card has two flanking pairs. Can be reused twice by layout.",
+    "Glass capsule interiors stylized cyan; convincing real translucency unverified."
+  ]
+}

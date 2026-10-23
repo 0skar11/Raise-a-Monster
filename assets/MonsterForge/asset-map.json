@@ -1,0 +1,124 @@
+{
+  "DoubleDamage": {
+    "path": "assets/plates/damage-art.png",
+    "size": [
+      960,
+      370
+    ],
+    "atlasCrop": [
+      0,
+      0,
+      565,
+      520
+    ],
+    "alphaBounds": [
+      279,
+      12,
+      680,
+      358
+    ]
+  },
+  "VIP": {
+    "path": "assets/plates/vip-art.png",
+    "size": [
+      840,
+      360
+    ],
+    "atlasCrop": [
+      572,
+      0,
+      1176,
+      520
+    ],
+    "alphaBounds": [
+      216,
+      12,
+      623,
+      348
+    ]
+  },
+  "AutoCollect": {
+    "path": "assets/plates/collect-art.png",
+    "size": [
+      640,
+      376
+    ],
+    "atlasCrop": [
+      1177,
+      0,
+      1717,
+      520
+    ],
+    "alphaBounds": [
+      135,
+      13,
+      505,
+      364
+    ]
+  },
+  "ExtraSlots": {
+    "path": "assets/plates/slots-art.png",
+    "size": [
+      736,
+      400
+    ],
+    "atlasCrop": [
+      0,
+      523,
+      582,
+      916
+    ],
+    "alphaBounds": [
+      77,
+      23,
+      659,
+      376
+    ]
+  },
+  "AutoFeeder": {
+    "path": "assets/plates/feeder-art.png",
+    "size": [
+      660,
+      400
+    ],
+    "atlasCrop": [
+      610,
+      530,
+      1130,
+      916
+    ],
+    "alphaBounds": [
+      70,
+      17,
+      589,
+      382
+    ]
+  },
+  "AutoMinigame": {
+    "path": "assets/plates/minigame-art.png",
+    "size": [
+      636,
+      400
+    ],
+    "atlasCrop": [
+      1178,
+      522,
+      1717,
+      916
+    ],
+    "alphaBounds": [
+      64,
+      15,
+      571,
+      385
+    ]
+  },
+  "Shell": {
+    "path": "assets/plates/forge-shell.png",
+    "size": [
+      1863,
+      844
+    ],
+    "alphaCenter": 0
+  }
+}

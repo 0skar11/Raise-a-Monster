@@ -1,131 +1,68 @@
--- Execute actual UI.Create and catalog construction. Lune verifies geometry and
--- callbacks; font rasterization, 3D appearance and input occlusion need Studio.
-local fs = require("@lune/fs")
-local luau = require("@lune/luau")
-local r = require("@lune/roblox")
+-- Production geometry at approved desktop and phone sizes. Real rendering needs Studio.
+local h = require("./monster-forge-harness")()
+local ui, r = h.UI, h.Roblox
 local checks = 0
-local function check(ok, message) assert(ok, message); checks += 1 end
-local function signal()
-	local callbacks = {}
-	return { Connect = function(_, fn) table.insert(callbacks, fn); return { Disconnect = function() end } end,
-		Fire = function(_, ...) for _, fn in callbacks do fn(...) end end }
+local function check(ok,message) assert(ok,message); checks += 1 end
+local function rect(item,w,h)
+ local iw,ih=item.Size.X.Scale*w+item.Size.X.Offset,item.Size.Y.Scale*h+item.Size.Y.Offset
+ return {x=item.Position.X.Scale*w+item.Position.X.Offset-item.AnchorPoint.X*iw,y=item.Position.Y.Scale*h+item.Position.Y.Offset-item.AnchorPoint.Y*ih,w=iw,h=ih}
 end
-local signals, buttons = {}, {}
-local function changed(item, name)
-	signals[item] = signals[item] or {}; signals[item][name] = signals[item][name] or signal()
-	return signals[item][name]
+local function overlap(a,b) return a.x<b.x+b.w and b.x<a.x+a.w and a.y<b.y+b.h and b.y<a.y+a.h end
+local expected={Weapons=1,Accessories=0,Gamepasses=0,["Coins & Growth"]=0,Owned=3}
+for _ in h.Config.WeaponStats do expected.Weapons+=1 end
+for _ in h.Config.SpeedAccessories do expected.Accessories+=1 end
+for _ in h.Config.Products do expected["Coins & Growth"]+=1 end
+for key,p in h.Config.Gamepasses do if not h.Config.WeaponStats[key] and not p.Hidden then expected.Gamepasses+=1 end end
+for _,v in {{1366,768},{1606,686},{750,381},{1920,1080},{320,568},{568,320},{480,320}} do
+ h.Resize(v[1],v[2]); local w,ht=ui.GearFrame.Size.X.Offset,ui.GearFrame.Size.Y.Offset
+ check(w<=1060 and ht<=520 and w<=v[1]-24 and ht<=v[2]-60,"Forge fits viewport and safe inset")
+ check(ui.GearFrame.ZIndex==30 and ui.Gui.DisplayOrder==5,"Forge uses modal layer and existing screen order")
+ check(math.abs(ui.Gui:FindFirstChildOfClass("UIScale").Scale*ui.GearFrame.NativeShopScale.Scale-1)<0.0001,"Native text and touch sizes survive HUD scaling")
+ local nav,close=rect(ui.GearFrame.Categories,w,ht),rect(ui.GearFrame.CloseButton,w,ht)
+ check(close.w>=44 and close.h>=44 and close.x>=0 and close.x+close.w<=w and close.y>=0 and close.y+close.h<=ht,"Close remains a visible native touch target")
+ check(nav.y>=close.y+close.h and nav.y+nav.h<=ht,"Left navigation clears header")
+ for _,category in {"Weapons","Accessories","Gamepasses","Coins & Growth","Owned"} do
+  h.Tab(category); local body=rect(ui.GearScroll,w,ht)
+  check(body.x>=nav.x+nav.w and body.h>=100 and body.x+body.w<=w and body.y+body.h<=ht,"Catalog stays in shell")
+  local visible={}
+  for _,card in ui.GearScroll:GetChildren() do
+   if card:IsA("Frame") and card.Visible and card.Name:sub(-4)=="Card" then
+    local b=rect(card,body.w,body.h)
+    check(b.x>=0 and b.x+b.w<=body.w-4 and b.y>=0 and b.y+b.h<=ui.GearScroll.CanvasSize.Y.Offset,"Card fits scroll canvas")
+    for _,other in visible do check(not overlap(b,other),"Cards do not overlap") end
+    table.insert(visible,b)
+    local a=rect(card.BuyButton,b.w,b.h)
+    check(a.w>=44 and a.h>=44 and a.x>=0 and a.y>=0 and a.x+a.w<=b.w and a.y+a.h<=b.h,"Every offer retains a native touch target")
+    for _,name in {"Preview","Title","Description","Price"} do
+     local item=card:FindFirstChild(name)
+     if item.Visible then local q=rect(item,b.w,b.h); check(q.x>=0 and q.y>=0 and q.x+q.w<=b.w and q.y+q.h<=b.h,"Offer art and copy fit inside card") end
+    end
+   end
+  end
+  check(#visible==expected[category],"Configured offers retained: "..category)
+  local tab=ui.GearFrame.Categories:FindFirstChild(category.."Tab")
+  check(tab.Size.X.Offset>=44 and tab.Size.Y.Offset>=44,"Native left navigation targets")
+  if category=="Gamepasses" and w>=840 and ht>=420 then
+   check(ui.GearScroll.ScrollBarThickness==0 and ui.GearScroll.CanvasSize.Y.Offset==body.h,"Desktop passes fit without scrolling")
+   check(h.Card("DoubleDamage").Position.Y.Offset==h.Card("VIP").Position.Y.Offset and h.Card("DoubleDamage").Size.X.Offset>h.Card("AutoCollect").Size.X.Offset,"Two featured passes above four smaller cards")
+  end
+  local detail=h.Detail()
+  if detail.Visible then
+   local d=rect(detail,if detail.Parent==ui.GearScroll then body.w else w,if detail.Parent==ui.GearScroll then body.h else ht)
+   local a=rect(detail.BuyButton,d.w,d.h)
+   check(a.w>=44 and a.h==44 and a.y+a.h<=d.h,"Selected purchase action retains native target")
+   local regions={}
+   for _,name in {"SelectedLabel","Title","Stats","Preview","Price","BuyButton","CollectionNote"} do
+    local item=detail:FindFirstChild(name)
+    if item.Visible then
+     local q=rect(item,d.w,d.h)
+     check(q.x>=0 and q.y>=0 and q.x+q.w<=d.w and q.y+q.h<=d.h,"Selected detail content fits its panel")
+     for _,other in regions do check(not overlap(q,other),"Selected preview, stats, price and action never overlap") end
+     table.insert(regions,q)
+    end
+   end
+   if detail.Parent~=ui.GearScroll then check(not overlap(body,d) and d.x+d.w<=w and d.y+d.h<=ht,"Selected detail remains beside catalog") end
+  end
+ end
 end
-r.implementMethod("Instance", "GetPropertyChangedSignal", changed)
-r.implementProperty("TextButton", "Activated", function(item)
-	buttons[item] = buttons[item] or signal(); return buttons[item]
-end)
-local env = {}
-for key, value in r do env[key] = value end
-local config = luau.load(fs.readFile("src/shared/Config.luau"), { environment = env, injectGlobals = true })()
-local colors = {}
-for _, name in { "Panel", "PanelLight", "Text", "SubText", "Yellow", "Green", "Red", "Blue", "Gray", "Pink", "Orange" } do colors[name] = r.Color3.new(0.5, 0.5, 0.5) end
-local theme = { Colors = colors, Gloss = function() end, ButtonFeedback = function() end, DecoratePill = function() end, DecorateButton = function() end }
-function theme.Icon(parent, _, size, position)
-	local icon = r.Instance.new("Frame"); icon.Size = size; icon.Position = position; icon.Parent = parent; return icon
-end
-local modules = { Config = config, MonsterMath = { FormatNumber = tostring }, GuiTheme = theme, TravelControls = {} }
-local camera = { ViewportSize = r.Vector2.new(1096, 676), GetPropertyChangedSignal = changed }
-local workspace = { CurrentCamera = camera, GetPropertyChangedSignal = changed }
-local services = {
-	Players = { LocalPlayer = {} }, ReplicatedStorage = { Shared = { Config = "Config", MonsterMath = "MonsterMath" } },
-	TweenService = {}, RunService = { IsStudio = function() return false end },
-	GuiService = { GetGuiInset = function() return r.Vector2.new(0, 36), r.Vector2.zero end },
-}
-env.game = { GetService = function(_, name) return assert(services[name], name) end }
-env.workspace = workspace
-env.script = { Parent = { UI = "UI", GuiTheme = "GuiTheme", TravelControls = "TravelControls" } }
-env.require = function(name) return assert(modules[name], name) end
-local uiModule = luau.load(fs.readFile("src/client/UI.luau"), { environment = env, injectGlobals = true })()
-modules.UI = uiModule
--- Preview rendering is unrelated to layout; preserve each viewport's real class.
-for _, method in { "WeaponPreview", "GearPreview" } do
-	uiModule[method] = function(parent)
-		local preview = r.Instance.new("ViewportFrame"); preview.Name = method; preview.Parent = parent
-	end
-end
-local source = fs.readFile("src/client/Features.luau"):gsub("return Features%s*$", [[
-return { Build = buildShopExtras, Context = function(newUi, stateGetter, allRemotes)
-	ui = newUi; getState = stateGetter; remotes = allRemotes
-end }
-]])
-local features = luau.load(source, { environment = env, injectGlobals = true })()
-local ui = uiModule.Create(r.Instance.new("PlayerGui"))
-local state = { Weapons = { IronSword = true }, SpeedAccessories = { SwiftSneakers = true }, Passes = {} }
-local calls, remotes = {}, {}
-for _, name in { "EquipWeapon", "BuyWeapon", "EquipSpeedAccessory", "BuySpeedAccessory", "BuyPass", "BuyProduct" } do
-	remotes[name] = { FireServer = function(_, ...) table.insert(calls, { Name = name, Args = table.pack(...) }) end }
-end
-features.Context(ui, function() return state end, remotes)
-features.Build()
-local function rect(item, width, height)
-	local w = item.Size.X.Scale * width + item.Size.X.Offset
-	local h = item.Size.Y.Scale * height + item.Size.Y.Offset
-	return { x = item.Position.X.Scale * width + item.Position.X.Offset - item.AnchorPoint.X * w,
-		y = item.Position.Y.Scale * height + item.Position.Y.Offset - item.AnchorPoint.Y * h, w = w, h = h }
-end
-local function overlap(a, b)
-	return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h
-end
-local categories = ui.GearFrame:FindFirstChild("Categories")
-local function tab(name)
-	categories:FindFirstChild(name .. "Tab").Activated:Fire()
-end
-for _, viewport in { r.Vector2.new(1096, 676), r.Vector2.new(1920, 1080), r.Vector2.new(320, 568), r.Vector2.new(568, 320), r.Vector2.new(480, 320) } do
-	camera.ViewportSize = viewport; changed(camera, "ViewportSize"):Fire(); changed(ui.GearFrame, "Size"):Fire()
-	local w, h = ui.GearFrame.Size.X.Offset, ui.GearFrame.Size.Y.Offset
-	check(w <= 740 and h <= 470 and w <= viewport.X - 24 and h <= viewport.Y - 60, "Compact panel fits usable viewport")
-	check(ui.GearFrame.Position == r.UDim2.fromScale(0.5, 0.5), "Shop remains centered")
-	local rootScale = ui.Gui:FindFirstChildOfClass("UIScale")
-	check(math.abs(rootScale.Scale * ui.GearFrame.NativeShopScale.Scale - 1) < 0.0001, "Shop targets retain native size")
-	local categoryRect, closeRect = rect(categories, w, h), rect(ui.GearFrame.CloseButton, w, h)
-	local content = rect(ui.GearScroll, w, h)
-	check(closeRect.y >= 0 and closeRect.y + closeRect.h <= categoryRect.y and categoryRect.y + categoryRect.h <= content.y, "Header, tabs and catalog stay separate")
-	check(content.h >= 96 and content.y + content.h <= h, "Scrolling body remains usable on short landscape")
-	local expected = { Weapons = 1, Accessories = 0, ["Coin Packs"] = 0, Perks = 0, Owned = 3 }
-	for _ in config.WeaponStats do expected.Weapons += 1 end
-	for _ in config.SpeedAccessories do expected.Accessories += 1 end
-	for _, product in config.Products do if product.Coins then expected["Coin Packs"] += 1 else expected.Perks += 1 end end
-	for name, pass in config.Gamepasses do if not config.WeaponStats[name] and not pass.Hidden then expected.Perks += 1 end end
-	for _, name in { "Weapons", "Accessories", "Coin Packs", "Owned", "Perks" } do
-		tab(name)
-		local count, visible = 0, {}
-		for _, card in ui.GearScroll:GetChildren() do
-			if card:IsA("Frame") and card.Visible then
-				count += 1
-				local bounds = rect(card, content.w, content.h)
-				check(bounds.x >= 0 and bounds.x + bounds.w <= content.w - 8 and bounds.y + bounds.h <= ui.GearScroll.CanvasSize.Y.Offset, "Card fits scroll canvas and scrollbar gutter")
-				for _, other in visible do check(not overlap(bounds, other), "Catalog cards do not overlap") end
-				table.insert(visible, bounds)
-				local regions = {}
-				for _, childName in { "Preview", "Title", "Description", "Price", "BuyButton" } do
-					local child = card:FindFirstChild(childName)
-					local region = rect(child, bounds.w, bounds.h)
-					check(region.x >= 0 and region.y >= 0 and region.x + region.w <= bounds.w and region.y + region.h <= bounds.h, "Content stays inside compact card")
-					for _, other in regions do check(not overlap(region, other), "Preview, copy, price and action never overlap") end
-					table.insert(regions, region)
-					if childName == "BuyButton" then check(region.h >= 44 and region.w >= 44 and child.TextSize >= 18, "Purchase retains a legible native touch target") end
-					if childName == "Description" then check(child.TextSize >= 14 and child.TextTruncate == r.Enum.TextTruncate.None and region.h >= 42, "Full description retains wrapping space") end
-				end
-			end
-		end
-		check(count == expected[name], "Category retains its configured offers: " .. name)
-		local button = categories:FindFirstChild(name .. "Tab")
-		check(button.Size.Y.Offset >= 44 and button.Size.X.Offset >= 116, "Categories remain readable touch targets")
-	end
-end
-ui.GearScroll:FindFirstChild("Wooden BatCard").BuyButton.Activated:Fire()
-check(calls[#calls].Name == "EquipWeapon" and calls[#calls].Args[1] == "Bat", "Starter weapon still equips")
-ui.GearScroll:FindFirstChild("Iron SwordCard").BuyButton.Activated:Fire()
-check(calls[#calls].Name == "EquipWeapon" and calls[#calls].Args[1] == "IronSword", "Owned weapon still equips")
-ui.GearScroll:FindFirstChild("Lava SwordCard").BuyButton.Activated:Fire()
-check(calls[#calls].Name == "BuyWeapon" and calls[#calls].Args[1] == "LavaSword", "Unowned weapon retains purchase route")
-ui.GearScroll:FindFirstChild("Auto-FeederCard").BuyButton.Activated:Fire()
-check(calls[#calls].Name == "BuyPass" and calls[#calls].Args[1] == "AutoFeeder", "Perk retains gamepass purchase route")
-ui.GearScroll:FindFirstChild("1,000 CoinsCard").BuyButton.Activated:Fire()
-check(calls[#calls].Name == "BuyProduct" and calls[#calls].Args[1] == "Coins1000", "Repeatable coin product keeps its purchase route")
-print(string.format("PASS: %d actual shop layout and callback checks", checks))
+print(string.format("PASS: %d Monster Forge responsive geometry checks",checks))

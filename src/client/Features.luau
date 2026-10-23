@@ -12,6 +12,7 @@ local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local UI = require(script.Parent.UI)
 local RewardsArcade = require(script.Parent.RewardsArcade)
 local TravelControls = require(script.Parent.TravelControls)
+local MonsterForge = require(script.Parent.MonsterForge)
 
 local COLORS = UI.Colors
 local player = Players.LocalPlayer
@@ -28,10 +29,6 @@ local statusLabel: TextLabel
 local rewardsButton: TextButton
 local launcherActions: { [string]: () -> () } = {}
 local rewardsController: any
-local passButtons: { [string]: TextButton } = {}
-local productButtons: { [string]: TextButton } = {}
-local speedAccessoryButtons: { [string]: TextButton } = {}
-local weaponButtons: { [string]: TextButton } = {}
 local accessoryRows: { [string]: { Row: Frame, Button: TextButton, Info: TextLabel } } = {}
 local accessoriesFrame: Frame
 local miniGameFrame: Frame
@@ -285,14 +282,6 @@ local function offerAvailable(id: number): boolean
 	return id ~= 0 or RunService:IsStudio()
 end
 
-local function refreshOffer(button: TextButton, id: number, owned: boolean)
-	local available = offerAvailable(id) and not owned
-	button.Text = if owned then "Owned ✓" elseif id == 0 then (if RunService:IsStudio() then "Test free (Studio)" else "Coming soon") else "Buy"
-	button.BackgroundColor3 = if available then COLORS.Green else COLORS.Gray
-	button.Active = available
-	button.Selectable = available
-end
-
 local function buyPass(name: string)
 	local pass = Config.Gamepasses[name]
 	if pass and offerAvailable(pass.Id) and not ((getState() or {}).Passes or {})[name] then remotes.BuyPass:FireServer(name) end
@@ -377,220 +366,14 @@ end
 
 local function buildShopExtras()
 	buildAdultChooser()
-	local scroll = ui.GearScroll
-	local selected = "Weapons"
-	local cards: { { Frame: Frame, Category: string, Price: number, Owned: () -> boolean } } = {}
-	local tabs: { [string]: TextButton } = {}
-	local tabScroll = Instance.new("ScrollingFrame")
-	tabScroll.Name = "Categories"
-	tabScroll.BackgroundTransparency = 1
-	tabScroll.BorderSizePixel = 0
-	tabScroll.ScrollBarThickness = 3
-	tabScroll.ScrollBarImageColor3 = COLORS.Yellow
-	tabScroll.ScrollingDirection = Enum.ScrollingDirection.X
-	tabScroll.CanvasSize = UDim2.fromOffset(0, 0)
-	tabScroll.Parent = ui.GearFrame
-	local eggsButton: TextButton? = nil
-	local empty = UI.Label(scroll, "No gear owned yet. Buy an item to find it here.", UDim2.new(1, -16, 0, 80), UDim2.fromOffset(0, 12), 20)
-	empty.TextColor3 = COLORS.SubText
-	empty.Visible = false
-	local function ownedWeapon(name: string): boolean
-		local state = getState() or {}
-		return name == "Bat" or (state.Weapons or {})[name] == true or (state.Passes or {})[name] == true
-	end
-	local function card(parent: Instance, name: string, description: string, price: number, icon: string, onBuy: () -> (), currency: string): (Frame, TextButton)
-		local frame = Instance.new("Frame")
-		frame.Name = name .. "Card"
-		frame.Size = UDim2.fromOffset(216, 260)
-		frame.BackgroundColor3 = COLORS.Panel
-		frame.Parent = parent
-		UI.Corner(frame, 12)
-		UI.Stroke(frame, COLORS.Yellow, 2)
-		if UI.Card then UI.Card(frame, COLORS.Yellow) end
-		local title = UI.Label(frame, name, UDim2.new(1, -20, 0, 36), UDim2.fromOffset(10, 92), 18)
-		title.Name = "Title"
-		title.TextColor3 = COLORS.Text
-		local preview = Instance.new("Frame")
-		preview.Name = "Preview"
-		-- a soft spotlight panel behind the item art
-		preview.BackgroundColor3 = Color3.fromRGB(46, 52, 118)
-		preview.BackgroundTransparency = 0.3
-		preview.Size = UDim2.new(1, -20, 0, 84)
-		preview.Position = UDim2.fromOffset(10, 4)
-		preview.Parent = frame
-		UI.Corner(preview, 8)
-		local spotlight = Instance.new("UIGradient")
-		spotlight.Rotation = 90
-		spotlight.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(150, 156, 205))
-		spotlight.Parent = preview
-		if icon:sub(1, 7) == "Weapon:" then
-			UI.WeaponPreview(preview, icon:sub(8))
-		elseif icon:sub(1, 5) == "Gear:" then
-			UI.GearPreview(preview, icon:sub(6))
-		else
-			UI.Icon(preview, icon, UDim2.fromOffset(80, 80), UDim2.new(0.5, -40, 0.5, -40))
-		end
-		for _, child in preview:GetChildren() do
-			if child:IsA("ViewportFrame") then child.Position = UDim2.fromScale(0, 0); child.Size = UDim2.fromScale(1, 1) end
-		end
-		local desc = UI.Label(frame, description, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 130), 14)
-		desc.Name = "Description"
-		desc.TextColor3 = COLORS.SubText
-		local costText = if currency == "Coins " then MonsterMath.FormatNumber(price) .. " Coins" else currency .. MonsterMath.FormatNumber(price)
-		local cost = UI.Label(frame, costText, UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 176), 18)
-		cost.Name = "Price"
-		cost.TextColor3 = COLORS.Yellow
-		local buy = UI.Button(frame, "Buy", COLORS.Green, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 206))
-		buy.Name = "BuyButton"
-		buy.TextSize = 18
-		buy.Activated:Connect(onBuy)
-		return frame, buy
-	end
-	local function catalog(category: string, name: string, description: string, price: number, icon: string, onBuy: () -> (), owned: (() -> boolean)?, currency: string?): TextButton
-		local frame, buy = card(scroll, name, description, price, icon, onBuy, currency or "Coins ")
-		table.insert(cards, { Frame = frame, Category = category, Price = price, Owned = owned or function() return false end })
-		return buy
-	end
-	local function layout()
-		-- The panel cancels the HUD scale. Cards keep their native text/touch size.
-		local width = if ui.GearFrame.Size.X.Offset > 0 then ui.GearFrame.Size.X.Offset else 740
-		local height = if ui.GearFrame.Size.Y.Offset > 0 then ui.GearFrame.Size.Y.Offset else 470
-		local padding = if width < 500 then 12 else 16
-		tabScroll.Position = UDim2.fromOffset(padding, 58)
-		tabScroll.Size = UDim2.new(1, -padding * 2, 0, 48)
-		local tabWidth = math.max(116, math.floor((width - padding * 2 - 32) / 5))
-		for index, category in { "Weapons", "Accessories", "Coin Packs", "Owned", "Perks" } do
-			local tab = tabs[category]
-			if tab then
-				tab.Size = UDim2.fromOffset(tabWidth, 44)
-				tab.Position = UDim2.fromOffset((index - 1) * (tabWidth + 8), 0)
-				tab.Text = string.upper(category)
-			end
-		end
-		tabScroll.CanvasSize = UDim2.fromOffset(5 * (tabWidth + 8) - 8, 0)
-		scroll.Position = UDim2.fromOffset(padding, 114)
-		scroll.Size = UDim2.new(1, -padding * 2, 1, -128)
-		local availableWidth = width - padding * 2 - 12
-		local horizontal = height < 340 and availableWidth >= 400
-		local columns = if horizontal then 1 else math.clamp(math.floor((availableWidth + 12) / 206), 1, 3)
-		local cardWidth = math.floor((availableWidth - (columns - 1) * 12) / columns)
-		local cardHeight = if horizontal then 164 else 260
-		local count = 0
-		for _, entry in cards do
-			local visible = entry.Category == selected or (selected == "Owned" and (entry.Category == "Weapons" or entry.Category == "Accessories") and entry.Owned())
-			entry.Frame.Visible = visible
-			if visible then
-				local frame = entry.Frame
-				frame.Size = UDim2.fromOffset(cardWidth, cardHeight)
-				frame.Position = UDim2.fromOffset((count % columns) * (cardWidth + 12), math.floor(count / columns) * (cardHeight + 12) + 4)
-				local preview = frame:FindFirstChild("Preview") :: Frame
-				preview.Position = UDim2.fromOffset(10, if horizontal then 22 else 4)
-				preview.Size = if horizontal then UDim2.fromOffset(112, 112) else UDim2.new(1, -20, 0, 84)
-				local textX = if horizontal then 136 else 10
-				local function place(name: string, y: number, height: number)
-					local item = frame:FindFirstChild(name) :: GuiObject
-					item.Position = UDim2.fromOffset(textX, y)
-					item.Size = UDim2.new(1, -textX - 10, 0, height)
-				end
-				place("Title", if horizontal then 8 else 92, 36)
-				place("Description", if horizontal then 44 else 130, 44)
-				place("Price", if horizontal then 88 else 176, 22)
-				place("BuyButton", if horizontal then 112 else 206, 44)
-				count += 1
-			end
-		end
-		empty.Visible = count == 0
-		local bottom = math.max(84, math.ceil(count / columns) * (cardHeight + 12) + 8)
-		if eggsButton then
-			eggsButton.Visible = selected == "Perks"
-			eggsButton.Position = UDim2.fromOffset(0, bottom)
-			eggsButton.Size = UDim2.fromOffset(availableWidth, 44)
-			if eggsButton.Visible then bottom += 56 end
-		end
-		scroll.CanvasSize = UDim2.fromOffset(0, bottom)
-		for name, tab in tabs do
-			tab.BackgroundColor3 = if name == selected then COLORS.Text else COLORS.Panel
-			tab.TextColor3 = if name == selected then COLORS.Panel else COLORS.Text
-			local border = tab:FindFirstChildOfClass("UIStroke")
-			if border then border.Thickness = if name == selected then 3 else 1 end
-		end
-	end
-	refreshShopCatalog = layout
-	local categories = { "Weapons", "Accessories", "Coin Packs", "Owned", "Perks" }
-	for index, category in categories do
-		local tab = UI.Button(tabScroll, string.upper(category), COLORS.Panel, UDim2.fromOffset(132, 44), UDim2.fromOffset((index - 1) * 140, 0))
-		tab.Name = category .. "Tab"
-		tab.TextSize = 16
-		tabs[category] = tab
-		tab.Activated:Connect(function() selected = category; scroll.CanvasPosition = Vector2.zero; layout() end)
-	end
-	weaponButtons.Bat = catalog("Weapons", "Wooden Bat", "Your starter weapon", 0, "Weapon:WoodenBat", function()
-		remotes.EquipWeapon:FireServer("Bat")
-	end, function() return true end)
-	local weapons = {}
-	for name in Config.WeaponStats do table.insert(weapons, name) end
-	table.sort(weapons, function(a, b) return Config.WeaponCoinPrices[a] < Config.WeaponCoinPrices[b] end)
-	for _, name in weapons do
-		local pass = Config.Gamepasses[name]
-		weaponButtons[name] = catalog("Weapons", pass.Name, pass.Description, Config.WeaponCoinPrices[name], "Weapon:" .. Config.WeaponStats[name].Template, function()
-			if ownedWeapon(name) then remotes.EquipWeapon:FireServer(name) else remotes.BuyWeapon:FireServer(name) end
-		end, function() return ownedWeapon(name) end)
-	end
-	local accessories = {}
-	for name, accessory in Config.SpeedAccessories do table.insert(accessories, { Name = name, Accessory = accessory }) end
-	table.sort(accessories, function(a, b) return a.Accessory.Price < b.Accessory.Price end)
-	for _, entry in accessories do
-		local accessory = entry.Accessory
-		local function owned(): boolean return ((getState() or {}).SpeedAccessories or {})[entry.Name] == true end
-		speedAccessoryButtons[entry.Name] = catalog("Accessories", accessory.Name, string.format("Speed +%d%%  •  HP +%d", math.floor((accessory.Multiplier - 1) * 100 + 0.5), accessory.HealthBonus), accessory.Price, "Gear:" .. entry.Name, function()
-			local state = getState() or {}
-			if owned() then
-				remotes.EquipSpeedAccessory:FireServer(if state.EquippedSpeedAccessory == entry.Name then nil else entry.Name)
-			else remotes.BuySpeedAccessory:FireServer(entry.Name) end
-		end, owned)
-	end
-	local passes = {}
-	for name, pass in Config.Gamepasses do
-		if not Config.WeaponStats[name] and not pass.Hidden and name ~= "AutoFeeder" then table.insert(passes, { Name = name, Pass = pass }) end
-	end
-	table.sort(passes, function(a, b) return a.Pass.Price < b.Pass.Price end)
-	for _, entry in passes do
-		local buy = catalog("Perks", entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, if entry.Name == "AutoMinigame" then "Play" else "Rebirth", function() buyPass(entry.Name) end, function() return ((getState() or {}).Passes or {})[entry.Name] == true end, "R$ ")
-		passButtons[entry.Name] = buy
-		refreshOffer(buy, entry.Pass.Id, false)
-	end
-	local products = {}
-	for name, product in Config.Products do table.insert(products, { Name = name, Product = product }) end
-	table.sort(products, function(a, b) return a.Product.Price < b.Product.Price end)
-	for _, entry in products do
-		local product = entry.Product
-		local buy = catalog(if product.Coins then "Coin Packs" else "Perks", product.Name, product.Description, product.Price, if product.Coins then "Coins" else "Potion", function() buyProduct(entry.Name) end, nil, "R$ ")
-		productButtons[entry.Name] = buy
-		refreshOffer(buy, product.Id, false)
-		if entry.Name == "SkipToAdultAll" then
-			local description = buy.Parent:FindFirstChild("Description") :: TextLabel
-			refreshAdultSummary = function()
-				local count = #adultCandidates()
-				description.Text = tostring(count) .. " current " .. (if count == 1 then "monster" else "monsters") .. " below Adult. Future monsters excluded."
-			end
-		end
-	end
-	refreshAdultSummary()
-	local feeder = Config.Gamepasses.AutoFeeder
-	local buy = catalog("Perks", feeder.Name, feeder.Description, feeder.Price, "Pets", function() buyPass("AutoFeeder") end, function() return ((getState() or {}).Passes or {}).AutoFeeder == true end, "R$ ")
-	passButtons.AutoFeeder = buy
-	refreshOffer(buy, feeder.Id, false)
-	if next(ui.EggButtons) then
-		local eggs = UI.Button(scroll, "Eggs", COLORS.Pink, UDim2.fromOffset(184, 44), UDim2.fromOffset(0, 0))
-		eggsButton = eggs
-		eggs.Activated:Connect(function() UI.Open(ui, ui.EggShopFrame) end)
-	end
-	table.sort(cards, function(a, b)
-		return if a.Price == b.Price then a.Frame.Name < b.Frame.Name else a.Price < b.Price
-	end)
-	scroll.AutomaticCanvasSize = Enum.AutomaticSize.None
-	ui.GearFrame:GetPropertyChangedSignal("Size"):Connect(layout)
-	layout()
+	local controller = MonsterForge.Mount(ui.GearFrame, ui.GearScroll, {
+		GetState = getState,
+		Remotes = remotes,
+		BuyPass = buyPass,
+		BuyProduct = buyProduct,
+		AdultCandidates = adultCandidates,
+	})
+	refreshShopCatalog = function() controller:Refresh() end
 end
 
 -- الهدية اليومية وعجلة الحظ في شباك واحد: اليومية على الشمال والعجلة على اليمين ----------------
@@ -1043,35 +826,6 @@ function Features.Refresh()
 	local spinIn = state.SpinReadyIn or 0
 	rewardsButton.Text = if dailyIn > 0 and spinIn > 0 then "Rewards" else "Rewards!"
 
-	-- الـ Gamepasses
-	local passes = state.Passes or {}
-	for name, button in passButtons do
-		refreshOffer(button, Config.Gamepasses[name].Id, passes[name] == true)
-	end
-	for name, button in productButtons do refreshOffer(button, Config.Products[name].Id, false) end
-	local speedAccessories = state.SpeedAccessories or {}
-	for name, button in speedAccessoryButtons do
-		local accessory = Config.SpeedAccessories[name]
-		if speedAccessories[name] then
-			local equipped = state.EquippedSpeedAccessory == name
-			button.Text = if equipped then "Equipped · Unequip" else "Equip"
-			button.BackgroundColor3 = if equipped then COLORS.Gray else COLORS.Blue
-		else
-			button.Text = "Buy"
-			button.BackgroundColor3 = COLORS.Green
-		end
-	end
-	local weapons = state.Weapons or {}
-	for name, button in weaponButtons do
-		if name == "Bat" or weapons[name] or passes[name] then
-			local equipped = (state.EquippedWeapon or "Bat") == name
-			button.Text = if equipped then "Equipped ✓" else "Equip"
-			button.BackgroundColor3 = if equipped then COLORS.Gray else COLORS.Blue
-		else
-			button.Text = "Buy"
-			button.BackgroundColor3 = COLORS.Green
-		end
-	end
 
 	if accessoriesFrame.Visible then
 		refreshAccessories(state)

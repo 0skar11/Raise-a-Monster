@@ -1,0 +1,655 @@
+{
+  "tool": "comp-spec",
+  "version": 1,
+  "createdAt": "2026-10-23T19:58:00.107Z",
+  "comp": "C:/Users/ywsf5/.codex/generated_images/01a165d1-f2ea-7f60-9535-8bf1ab17dfef/exec-edd5d9ac-7f13-4a67-a55a-bd633e1fbe9f.png",
+  "warnings": [
+    "region presentation-ground: \"container\": true set in the regions file (the region-size refusal is overridden: one undivided element)",
+    "region damage-art: the artwork runs off the box on the top (its ink reaches the edge over 35% of that side). Widen the region so the box holds the whole shape with a margin; a plate placed with object-fit: cover on this box would be cut there."
+  ],
+  "uncoveredInkCells": [],
+  "compSize": {
+    "width": 1586,
+    "height": 992
+  },
+  "aspect": 1.5988,
+  "orientation": "landscape",
+  "palette": [
+    {
+      "hex": "#0e151c",
+      "coverage": 0.6734
+    },
+    {
+      "hex": "#3d2b32",
+      "coverage": 0.1355
+    },
+    {
+      "hex": "#684851",
+      "coverage": 0.0794
+    },
+    {
+      "hex": "#3b3b59",
+      "coverage": 0.0779
+    },
+    {
+      "hex": "#2f140b",
+      "coverage": 0.0339
+    }
+  ],
+  "bands": [
+    {
+      "y": 0.05,
+      "strength": 0.3132
+    },
+    {
+      "y": 0.1,
+      "strength": 0.2523
+    },
+    {
+      "y": 0.2625,
+      "strength": 0.216
+    },
+    {
+      "y": 0.3375,
+      "strength": 0.2694
+    },
+    {
+      "y": 0.4,
+      "strength": 0.2088
+    },
+    {
+      "y": 0.4875,
+      "strength": 0.3076
+    },
+    {
+      "y": 0.525,
+      "strength": 0.2762
+    },
+    {
+      "y": 0.55,
+      "strength": 0.453
+    },
+    {
+      "y": 0.5875,
+      "strength": 0.3712
+    },
+    {
+      "y": 0.6625,
+      "strength": 0.2203
+    },
+    {
+      "y": 0.75,
+      "strength": 0.4417
+    },
+    {
+      "y": 0.8,
+      "strength": 0.3943
+    },
+    {
+      "y": 0.825,
+      "strength": 0.3894
+    },
+    {
+      "y": 0.925,
+      "strength": 0.7586
+    },
+    {
+      "y": 0.9625,
+      "strength": 0.8243
+    },
+    {
+      "y": 0.9875,
+      "strength": 0.3357
+    }
+  ],
+  "regions": [
+    {
+      "id": "presentation-ground",
+      "kind": "chrome",
+      "note": "Presentation ground with two shop states. Board titles and example game scene are reference context only.",
+      "grid": null,
+      "container": true,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "px": {
+        "x": 0,
+        "y": 0,
+        "w": 1586,
+        "h": 992
+      },
+      "aspect": 1.5988,
+      "palette": [
+        {
+          "hex": "#0e151c",
+          "coverage": 0.6734
+        },
+        {
+          "hex": "#3d2b32",
+          "coverage": 0.1355
+        },
+        {
+          "hex": "#684851",
+          "coverage": 0.0794
+        },
+        {
+          "hex": "#3b3b59",
+          "coverage": 0.0779
+        },
+        {
+          "hex": "#2f140b",
+          "coverage": 0.0339
+        }
+      ],
+      "detail": {
+        "energy": 49.0666
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": false,
+        "rules": false
+      },
+      "flags": [
+        {
+          "id": "painted-pixels",
+          "message": "Looks painted: 82 colours beyond its two main tones and soft shading across 55% of it. Drawn in code, this becomes a flat copy."
+        }
+      ]
+    },
+    {
+      "id": "forge-shell",
+      "kind": "texture",
+      "note": "Carved midnight stone frame with bronze corners; empty scalable shell, no text or controls.",
+      "grid": null,
+      "box": {
+        "x": 0.193,
+        "y": 0.006,
+        "w": 0.668,
+        "h": 0.483
+      },
+      "px": {
+        "x": 306,
+        "y": 6,
+        "w": 1059,
+        "h": 479
+      },
+      "aspect": 2.2109,
+      "palette": [
+        {
+          "hex": "#0c161d",
+          "coverage": 0.8553
+        },
+        {
+          "hex": "#112445",
+          "coverage": 0.0439
+        },
+        {
+          "hex": "#2d3d4b",
+          "coverage": 0.0396
+        },
+        {
+          "hex": "#2a181d",
+          "coverage": 0.0361
+        },
+        {
+          "hex": "#453327",
+          "coverage": 0.0252
+        }
+      ],
+      "detail": {
+        "energy": 43.9727
+      },
+      "medium": "raster",
+      "plate": "assets/plates/forge-shell.png",
+      "text": null
+    },
+    {
+      "id": "damage-art",
+      "kind": "image",
+      "note": "Crossed red orange flaming swords; isolate without x2 lettering or card.",
+      "grid": null,
+      "box": {
+        "x": 0.321,
+        "y": 0.588,
+        "w": 0.245,
+        "h": 0.151
+      },
+      "px": {
+        "x": 509,
+        "y": 583,
+        "w": 389,
+        "h": 150
+      },
+      "aspect": 2.5933,
+      "palette": [
+        {
+          "hex": "#4a0a0a",
+          "coverage": 0.3217
+        },
+        {
+          "hex": "#1f0a0a",
+          "coverage": 0.3097
+        },
+        {
+          "hex": "#8a0e08",
+          "coverage": 0.1721
+        },
+        {
+          "hex": "#ed3109",
+          "coverage": 0.0998
+        },
+        {
+          "hex": "#6b0c09",
+          "coverage": 0.0967
+        }
+      ],
+      "detail": {
+        "energy": 55.265
+      },
+      "medium": "raster",
+      "clipped": [
+        "top"
+      ],
+      "plate": "assets/plates/damage-art.png",
+      "text": null
+    },
+    {
+      "id": "vip-art",
+      "kind": "image",
+      "note": "Golden angular sword and crown; isolate without VIP text or card.",
+      "grid": null,
+      "box": {
+        "x": 0.603,
+        "y": 0.595,
+        "w": 0.206,
+        "h": 0.141
+      },
+      "px": {
+        "x": 956,
+        "y": 590,
+        "w": 327,
+        "h": 140
+      },
+      "aspect": 2.3357,
+      "palette": [
+        {
+          "hex": "#2f1608",
+          "coverage": 0.3102
+        },
+        {
+          "hex": "#562509",
+          "coverage": 0.2772
+        },
+        {
+          "hex": "#803c09",
+          "coverage": 0.1685
+        },
+        {
+          "hex": "#130b09",
+          "coverage": 0.1438
+        },
+        {
+          "hex": "#b2520b",
+          "coverage": 0.1003
+        }
+      ],
+      "detail": {
+        "energy": 41.2697
+      },
+      "medium": "raster",
+      "plate": "assets/plates/vip-art.png",
+      "text": null
+    },
+    {
+      "id": "collect-art",
+      "kind": "image",
+      "note": "Magnet attracting golden coins; transparent isolated art.",
+      "grid": null,
+      "box": {
+        "x": 0.32,
+        "y": 0.841,
+        "w": 0.084,
+        "h": 0.079
+      },
+      "px": {
+        "x": 508,
+        "y": 834,
+        "w": 133,
+        "h": 78
+      },
+      "aspect": 1.7051,
+      "palette": [
+        {
+          "hex": "#1a1819",
+          "coverage": 0.5051
+        },
+        {
+          "hex": "#f3331f",
+          "coverage": 0.2023
+        },
+        {
+          "hex": "#5d090c",
+          "coverage": 0.1043
+        },
+        {
+          "hex": "#36291e",
+          "coverage": 0.1031
+        },
+        {
+          "hex": "#f8e638",
+          "coverage": 0.0852
+        }
+      ],
+      "detail": {
+        "energy": 19.8039
+      },
+      "medium": "raster",
+      "plate": "assets/plates/collect-art.png",
+      "text": null
+    },
+    {
+      "id": "slots-art",
+      "kind": "image",
+      "note": "Two blue monster pedestals; transparent isolated art.",
+      "grid": null,
+      "box": {
+        "x": 0.438,
+        "y": 0.843,
+        "w": 0.087,
+        "h": 0.076
+      },
+      "px": {
+        "x": 695,
+        "y": 836,
+        "w": 138,
+        "h": 75
+      },
+      "aspect": 1.84,
+      "palette": [
+        {
+          "hex": "#0b1924",
+          "coverage": 0.5316
+        },
+        {
+          "hex": "#0f2c51",
+          "coverage": 0.2135
+        },
+        {
+          "hex": "#0e4a89",
+          "coverage": 0.1013
+        },
+        {
+          "hex": "#0a82e5",
+          "coverage": 0.0784
+        },
+        {
+          "hex": "#1eaef6",
+          "coverage": 0.0752
+        }
+      ],
+      "detail": {
+        "energy": 21.7014
+      },
+      "medium": "raster",
+      "plate": "assets/plates/slots-art.png",
+      "text": null
+    },
+    {
+      "id": "feeder-art",
+      "kind": "image",
+      "note": "Food bowl with bone and monster food; transparent isolated art.",
+      "grid": null,
+      "box": {
+        "x": 0.586,
+        "y": 0.845,
+        "w": 0.078,
+        "h": 0.076
+      },
+      "px": {
+        "x": 929,
+        "y": 838,
+        "w": 124,
+        "h": 75
+      },
+      "aspect": 1.6533,
+      "palette": [
+        {
+          "hex": "#191e1e",
+          "coverage": 0.4611
+        },
+        {
+          "hex": "#1e1e2e",
+          "coverage": 0.3066
+        },
+        {
+          "hex": "#dc3512",
+          "coverage": 0.0791
+        },
+        {
+          "hex": "#886658",
+          "coverage": 0.0791
+        },
+        {
+          "hex": "#53484d",
+          "coverage": 0.0742
+        }
+      ],
+      "detail": {
+        "energy": 16.0591
+      },
+      "medium": "raster",
+      "plate": "assets/plates/feeder-art.png",
+      "text": null
+    },
+    {
+      "id": "minigame-art",
+      "kind": "image",
+      "note": "Red play toy on stone stand; transparent isolated art.",
+      "grid": null,
+      "box": {
+        "x": 0.719,
+        "y": 0.84,
+        "w": 0.078,
+        "h": 0.079
+      },
+      "px": {
+        "x": 1140,
+        "y": 833,
+        "w": 124,
+        "h": 78
+      },
+      "aspect": 1.5897,
+      "palette": [
+        {
+          "hex": "#10161b",
+          "coverage": 0.566
+        },
+        {
+          "hex": "#2e354a",
+          "coverage": 0.1462
+        },
+        {
+          "hex": "#f43727",
+          "coverage": 0.1297
+        },
+        {
+          "hex": "#35272c",
+          "coverage": 0.0943
+        },
+        {
+          "hex": "#9f1926",
+          "coverage": 0.0637
+        }
+      ],
+      "detail": {
+        "energy": 11.8207
+      },
+      "medium": "raster",
+      "plate": "assets/plates/minigame-art.png",
+      "text": null
+    },
+    {
+      "id": "navigation",
+      "kind": "control",
+      "note": "Native category buttons and text in vertical navigation.",
+      "grid": null,
+      "box": {
+        "x": 0.198,
+        "y": 0.087,
+        "w": 0.098,
+        "h": 0.393
+      },
+      "px": {
+        "x": 314,
+        "y": 86,
+        "w": 155,
+        "h": 390
+      },
+      "aspect": 0.3974,
+      "palette": [
+        {
+          "hex": "#0b181e",
+          "coverage": 0.8662
+        },
+        {
+          "hex": "#3f3126",
+          "coverage": 0.0506
+        },
+        {
+          "hex": "#2f3844",
+          "coverage": 0.0356
+        },
+        {
+          "hex": "#939db4",
+          "coverage": 0.0301
+        },
+        {
+          "hex": "#57606e",
+          "coverage": 0.0175
+        }
+      ],
+      "detail": {
+        "energy": 16.4499
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": true,
+        "rules": false
+      }
+    },
+    {
+      "id": "weapon-grid",
+      "kind": "control",
+      "note": "Native weapon cards with actual model ViewportFrames and real prices.",
+      "grid": null,
+      "box": {
+        "x": 0.306,
+        "y": 0.09,
+        "w": 0.313,
+        "h": 0.39
+      },
+      "px": {
+        "x": 485,
+        "y": 89,
+        "w": 496,
+        "h": 387
+      },
+      "aspect": 1.2817,
+      "palette": [
+        {
+          "hex": "#0b1319",
+          "coverage": 0.8984
+        },
+        {
+          "hex": "#1d3246",
+          "coverage": 0.0535
+        },
+        {
+          "hex": "#f2f3f3",
+          "coverage": 0.0221
+        },
+        {
+          "hex": "#3a4142",
+          "coverage": 0.0132
+        },
+        {
+          "hex": "#2e2618",
+          "coverage": 0.0128
+        }
+      ],
+      "detail": {
+        "energy": 38.3552
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": true,
+        "rules": false
+      }
+    },
+    {
+      "id": "weapon-detail",
+      "kind": "control",
+      "note": "Native selected weapon preview, stats, current price and purchase control.",
+      "grid": null,
+      "box": {
+        "x": 0.626,
+        "y": 0.043,
+        "w": 0.223,
+        "h": 0.433
+      },
+      "px": {
+        "x": 993,
+        "y": 43,
+        "w": 354,
+        "h": 430
+      },
+      "aspect": 0.8233,
+      "palette": [
+        {
+          "hex": "#0d1620",
+          "coverage": 0.7146
+        },
+        {
+          "hex": "#0f2649",
+          "coverage": 0.1371
+        },
+        {
+          "hex": "#373b4c",
+          "coverage": 0.0554
+        },
+        {
+          "hex": "#eba64d",
+          "coverage": 0.0503
+        },
+        {
+          "hex": "#0f4980",
+          "coverage": 0.0425
+        }
+      ],
+      "detail": {
+        "energy": 38.4698
+      },
+      "medium": "semantic",
+      "plate": null,
+      "text": null,
+      "surface": {
+        "flat": true,
+        "rules": false
+      }
+    }
+  ],
+  "compSha256": "3b45e120f714a11f72fdaac053470e9ffb89975e7f4f1cc9e7e504cf873b9452",
+  "regionsSource": {
+    "path": ".impeccable/forge-regions-v2.json",
+    "sha256": "6b856d34240684ff6cb8fd7150a9c16fb62c23387e012f311552d03617e446c3"
+  }
+}
