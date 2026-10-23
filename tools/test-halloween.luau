@@ -289,4 +289,30 @@ check(candyClient:find('WaitForChild("CandyCounter"', 1, true) and not candyClie
 check(candyClient:find("HalloweenState.OnClientEvent", 1, true) and candyClient:find("CompactMoney.Format", 1, true) and candyClient:find("state.Enabled == true", 1, true), "CandyCounter shows state.Candy compactly and hides when the event is off")
 check(read("src/client/init.client.luau"):find("task.spawn(CandyCounter.Init,", 1, true), "Client starts the Candy counter on its own thread")
 check(not ui:find("candyLabel", 1, true), "The old Candy pill number is gone from HalloweenUI")
+-- Studio-authored persistent world: the server ADOPTS Workspace.HalloweenWorld, never rebuilds/moves/destroys it
+check(service:find('CollectionService:GetTagged(TAG_MERCHANT)', 1, true) and service:find('"HalloweenMerchant"', 1, true), "Merchant is found by the HalloweenMerchant tag")
+check(service:find('authored:FindFirstChild("Props")', 1, true) or service:find('world:FindFirstChild("Props")', 1, true), "Props are adopted from Workspace.HalloweenWorld.Props")
+check(service:find("local function merchantPart()", 1, true) and service:find("local merchant = merchantPart()", 1, true), "Shop distance is measured from the merchant's CURRENT position")
+check(not service:find("settings.Merchant.Position", 1, true) or service:find("buildDefaultMerchant", 1, true), "Config position is only used by the fallback merchant")
+check(service:find("merchantRoot", 1, true) == nil, "No cached merchant position/root is used for the shop check any more")
+do
+	local adopt = service:match("local function adoptMerchant%(%).-\nend\n") or ""
+	check(adopt ~= "" and adopt:find("findMerchantModel()", 1, true) and adopt:find("buildDefaultMerchant()", 1, true), "adoptMerchant builds the default only when no authored merchant exists")
+	check(not adopt:find("PivotTo", 1, true) and not adopt:find(":Destroy()", 1, true) and not adopt:find(".CFrame", 1, true) and not adopt:find(".Position =", 1, true), "Adopting the merchant never moves or destroys him")
+	local build = service:match("local function buildProps%(%).-\n\tlocal a = settings.Atmosphere") or ""
+	check(build:find("propFolder = authored", 1, true) and build:find("#authored:GetChildren() > 0", 1, true) and not build:find(":Destroy()", 1, true), "Existing props are adopted untouched; defaults are built only when none exist")
+	local stop = service:match("function HalloweenService%.Stop%(%).-\nend\n") or ""
+	check(stop:find("hideWorld()", 1, true) and not stop:find('HalloweenWorld"):Destroy', 1, true), "Stopping the event stashes the authored world instead of destroying it")
+	local hide = service:match("local function hideWorld%(%).-\nend\n") or ""
+	check(hide:find('GetAttribute("AutoBuilt")', 1, true) and hide:find("world.Parent = nil", 1, true), "Only auto-built fallback worlds are destroyed; authored ones are stashed")
+	local start = service:match("function HalloweenService%.Start%(%).-\nend\n") or ""
+	check(start:find('workspace:FindFirstChild("HalloweenEvent")', 1, true) and not start:find('FindFirstChild("HalloweenWorld")', 1, true) and start:find("showWorld()", 1, true), "Start rebuilds only the runtime HalloweenEvent folder and restores the authored world")
+end
+check(ui:find('GetTagged("HalloweenMerchant")', 1, true) and not ui:find('"PumpkinMerchant"', 1, true), "The shop panel closes by distance to the tagged (possibly moved) merchant")
+do
+	local decor = read("src/client/HalloweenDecor.luau")
+	check(decor:find("HalloweenSpider", 1, true) and decor:find("HalloweenFloat", 1, true) and decor:find("HalloweenEyes", 1, true) and decor:find("HalloweenMerchant", 1, true), "Client decor animation covers spiders, floating props, eyes and the merchant")
+	check(decor:find("state.Base = current", 1, true) and not decor:find("FireServer", 1, true), "Decor idle motion re-bases on external moves and never talks to the server")
+	check(read("src/client/init.client.luau"):find("task.spawn(HalloweenDecor.Init)", 1, true), "Client starts the decor animations on their own thread")
+end
 print(string.format("PASS: %d Halloween checks (config, rules, rewards, shop, persistence/migration, wiring)", checks))

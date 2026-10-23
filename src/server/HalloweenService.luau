@@ -8,6 +8,7 @@
 --  * Pumpkin Merchant NPC + shop (server authoritative), spooky atmosphere and props.
 -- Rules that don't need Roblox live in ReplicatedStorage.Shared.HalloweenLogic (and are unit tested).
 
+local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -70,7 +71,9 @@ local rootFolder: Folder? = nil
 local invaderFolder: Folder? = nil
 local pumpkinFolder: Folder? = nil
 local propFolder: Folder? = nil
-local merchantRoot: BasePart? = nil
+local merchantModel: Model? = nil -- the Studio-authored (or fallback-built) Pumpkin Merchant character
+local merchantPromptConnection: RBXScriptConnection? = nil
+local stashedWorld: Folder? = nil -- Workspace.HalloweenWorld while the event is off (runtime only, never destroyed)
 local snapshot: AtmosphereSnapshot? = nil
 local invaders: { Invader } = {}
 local hunt: Hunt? = nil
@@ -625,12 +628,56 @@ local function clearOf(x: number, z: number, margin: number): boolean
 	return true
 end
 
+-- Workspace.HalloweenWorld is authored in Studio (Edit mode) so the decorations and the merchant are visible
+-- without pressing Play and stay wherever the designer moved them. The server only ADOPTS what is there. Only
+-- when something is missing does it build the code-made default, into the same folder structure.
+local TAG_MERCHANT = "HalloweenMerchant"
+
+local function ensureWorld(): Folder
+	local existing = workspace:FindFirstChild("HalloweenWorld")
+	if existing and existing:IsA("Folder") then
+		return existing
+	end
+	local created = folder("HalloweenWorld", workspace)
+	created:SetAttribute("AutoBuilt", true)
+	return created
+end
+
+-- Event off: take the authored world out of the running game (the saved place is untouched, nothing is
+-- destroyed or moved) and bring it back, as authored, when the event starts.
+local function hideWorld()
+	local world = workspace:FindFirstChild("HalloweenWorld")
+	if world and world:IsA("Folder") then
+		if world:GetAttribute("AutoBuilt") == true then
+			world:Destroy()
+		else
+			stashedWorld = world
+			world.Parent = nil
+		end
+	end
+end
+
+local function showWorld()
+	local stashed = stashedWorld
+	stashedWorld = nil
+	if stashed and not workspace:FindFirstChild("HalloweenWorld") then
+		stashed.Parent = workspace
+	end
+end
+
 local function buildProps()
 	if propFolder then
 		return
 	end
-	local parent = folder("Props", rootFolder :: Folder)
-	propFolder = parent
+	local world = ensureWorld()
+	local authored = world:FindFirstChild("Props")
+	if authored and authored:IsA("Folder") and #authored:GetChildren() > 0 then
+		propFolder = authored -- adopt: the decorations already exist, leave them exactly as they are
+		return
+	end
+	local parent = authored or folder("Props", world)
+	parent:SetAttribute("AutoBuilt", true)
+	propFolder = parent :: Folder
 	local a = settings.Atmosphere
 	local random = Random.new(a.Seed)
 	local placed, attempts = 0, 0
@@ -699,9 +746,34 @@ end
 
 -- merchant --------------------------------------------------------------------------------------------
 
+local function findMerchantModel(): Model?
+	for _, tagged in CollectionService:GetTagged(TAG_MERCHANT) do
+		if tagged:IsA("Model") and tagged:IsDescendantOf(workspace) then
+			return tagged
+		end
+	end
+	local world = workspace:FindFirstChild("HalloweenWorld")
+	local named = world and world:FindFirstChild("PumpkinMerchant", true)
+	return if named and named:IsA("Model") then named else nil
+end
+
+-- Where the merchant stands RIGHT NOW (he may have been moved in Studio): never the Config position.
+local function merchantPart(): BasePart?
+	local model = merchantModel
+	if not model or not model:IsDescendantOf(workspace) then
+		model = findMerchantModel()
+		merchantModel = model
+	end
+	if not model then
+		return nil
+	end
+	local part = model:FindFirstChild("Torso") or model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+	return if part and part:IsA("BasePart") then part else nil
+end
+
 local function openShopFor(player: Player)
 	local root = rootOf(player)
-	local merchant = merchantRoot
+	local merchant = merchantPart()
 	if not active or not root or not merchant or not isAlive(player) then
 		return
 	end
@@ -712,10 +784,9 @@ local function openShopFor(player: Player)
 	remotes.HalloweenOpenShop:FireClient(player)
 end
 
-local function buildMerchant()
-	if merchantRoot then
-		return
-	end
+-- Fallback only (the authored merchant is missing): a simple code-built merchant at Config.Halloween.Merchant,
+-- built into the same HalloweenWorld/Merchant folder and tagged so the normal adoption path wires it.
+local function buildDefaultMerchant()
 	local info = settings.Merchant
 	local model = Instance.new("Model")
 	model.Name = "PumpkinMerchant"
@@ -760,16 +831,46 @@ local function buildMerchant()
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.Parent = model
 	model.PrimaryPart = torso
-	model.Parent = rootFolder
+	local world = ensureWorld()
+	local holder = world:FindFirstChild("Merchant") or folder("Merchant", world)
+	holder:SetAttribute("AutoBuilt", true)
+	CollectionService:AddTag(model, TAG_MERCHANT)
+	model.Parent = holder
 
 	local gui, label = Build.MakeBillboard(head, UDim2.fromOffset(240, 60), Vector3.new(0, 4.5, 0), 90)
 	gui.AlwaysOnTop = false
 	label.Text = '<font color="#FFA030">' .. info.Name .. '</font>\n🎃 Trade your Candy!'
-	local prompt = Build.MakePrompt(torso, "MerchantPrompt", "Open Shop", Enum.KeyCode.E, 0)
-	prompt.ObjectText = info.Name
-	prompt.MaxActivationDistance = info.PromptDistance
-	prompt.Triggered:Connect(openShopFor)
-	merchantRoot = torso
+end
+
+-- Adopt the authored merchant (find by tag/name, never move or rebuild it), make sure his prompt exists and
+-- opens the shop. Builds the default only if no merchant exists at all.
+local function adoptMerchant()
+	local model = findMerchantModel()
+	if not model then
+		buildDefaultMerchant()
+		model = findMerchantModel()
+	end
+	merchantModel = model
+	local part = merchantPart()
+	if not model or not part then
+		warn("[HalloweenService] no Pumpkin Merchant found or built")
+		return
+	end
+	local prompt = part:FindFirstChildOfClass("ProximityPrompt")
+	if not prompt then
+		local found = model:FindFirstChildWhichIsA("ProximityPrompt", true)
+		prompt = found
+	end
+	if not prompt then
+		prompt = Build.MakePrompt(part, "MerchantPrompt", "Open Shop", Enum.KeyCode.E, 0)
+		prompt.ObjectText = settings.Merchant.Name
+		prompt.MaxActivationDistance = settings.Merchant.PromptDistance
+	end
+	prompt.Enabled = true
+	if merchantPromptConnection then
+		merchantPromptConnection:Disconnect()
+	end
+	merchantPromptConnection = prompt.Triggered:Connect(openShopFor)
 end
 
 -- Mother Invasion -------------------------------------------------------------------------------------
@@ -1289,7 +1390,7 @@ end
 
 local function nearMerchant(player: Player): boolean
 	local root = rootOf(player)
-	local merchant = merchantRoot
+	local merchant = merchantPart()
 	return root ~= nil and merchant ~= nil and (root.Position - merchant.Position).Magnitude <= settings.Merchant.ShopDistance * 1.5
 end
 
@@ -1431,8 +1532,9 @@ function HalloweenService.Start()
 	rootFolder = folder("HalloweenEvent", workspace)
 	invaderFolder = folder("Invaders", rootFolder :: Folder)
 	pumpkinFolder = folder("Pumpkins", rootFolder :: Folder)
-	buildProps()
-	buildMerchant()
+	showWorld()
+	buildProps() -- adopts Workspace.HalloweenWorld.Props (builds a default only if it is missing)
+	adoptMerchant() -- adopts the authored Pumpkin Merchant wherever he stands now
 	local now = os.time()
 	nextInvasionAt = HalloweenLogic.NextOccurrence(now, invasionSettings.Interval, invasionSettings.Offset)
 	nextPumpkinAt = HalloweenLogic.NextOccurrence(now, pumpkinSettings.Interval, pumpkinSettings.Offset)
@@ -1460,9 +1562,14 @@ function HalloweenService.Stop()
 	table.clear(nightHolds)
 	restoreAtmosphere()
 	if rootFolder then
-		rootFolder:Destroy()
+		rootFolder:Destroy() -- runtime-only objects (invaders, pumpkin pickups)
 	end
-	rootFolder, invaderFolder, pumpkinFolder, propFolder, merchantRoot = nil, nil, nil, nil, nil
+	if merchantPromptConnection then
+		merchantPromptConnection:Disconnect()
+		merchantPromptConnection = nil
+	end
+	hideWorld() -- the authored decorations/merchant are stashed (never destroyed) until the event runs again
+	rootFolder, invaderFolder, pumpkinFolder, propFolder, merchantModel = nil, nil, nil, nil, nil
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		if character then
@@ -1534,6 +1641,8 @@ function HalloweenService.Init(allRemotes: { [string]: RemoteEvent })
 
 	if wantActive() then
 		HalloweenService.Start()
+	else
+		hideWorld() -- event off: the authored decorations are not part of the running game
 	end
 
 	task.spawn(function()

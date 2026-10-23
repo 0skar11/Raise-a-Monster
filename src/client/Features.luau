@@ -317,6 +317,7 @@ local function buildShopExtras()
 		frame.Parent = parent
 		UI.Corner(frame, 12)
 		UI.Stroke(frame, COLORS.Yellow, 2)
+		if UI.Card then UI.Card(frame, COLORS.Yellow) end
 		local title = UI.Label(frame, name, UDim2.new(1, -12, 0, 36), UDim2.fromOffset(6, 150), 20)
 		title.TextColor3 = COLORS.Text
 		if icon:sub(1, 7) == "Weapon:" then
