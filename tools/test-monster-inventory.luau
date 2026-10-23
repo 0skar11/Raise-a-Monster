@@ -157,12 +157,12 @@ local assignments = {}
 for id, monster in profile.Data.Monsters do assignments[id] = monster.Slot end
 monsters.AutoPlace(p)
 for id, monster in profile.Data.Monsters do check(assignments[id] == monster.Slot, "Auto Place deterministic ties") end
--- Only placed monsters generate income, needs decay or passive XP.
+-- Bench monsters age naturally, but never generate income or consume needs.
 for id in profile.Data.Monsters do monsters.BenchMonster(p, id) end
 local xp, hunger = first.Xp, first.Hunger
 local pending = profile.Data.PendingCoins
 tick(1)
-check(profile.Data.PendingCoins == pending and first.Xp == xp and first.Hunger == hunger, "Bench has no passive income/XP/decay")
+check(profile.Data.PendingCoins == pending and first.Xp > xp and first.Hunger == hunger, "Bench ages without income or needs decay")
 monsters.PlaceMonster(p, "1", 1)
 first.Hunger, first.Happiness, first.Xp = 0, 0, 0
 pending = profile.Data.PendingCoins
@@ -222,4 +222,36 @@ local offerId = next(profile.Data.Monsters)
 remotes.TradeSetOffer.OnServerEvent:Fire(p, {offerId})
 remotes.TradeCancel.OnServerEvent:Fire(q)
 check(not monsters.IsUnavailable(p, offerId) and profile.Data.Monsters[offerId] ~= nil, "Cancel releases reservation without deleting")
+
+-- Save -> leave -> advance wall clock -> rejoin -> collect, using real services.
+profile.Data.Monsters = { offline = { Id = "offline", Species = "Grassland_1", Level = 1, Xp = 0,
+	Slot = 1, Hunger = 0, Happiness = 0, LastProgressAt = env.os.time() } }
+profile.Data.Eggs = {}
+profile.Data.IncomeMultiplier, profile.Data.IncomeUnlockedSlots = 1, config.BaseSlots
+profile.Data.PendingCoins = 0.25
+local expectedMonster = copy(profile.Data.Monsters.offline)
+local expectedOffline = mathModule.AdvanceProgress(expectedMonster, env.os.time() + 9000, true, 1)
+monsters.CleanupPlayer(p)
+data.Release(p)
+clock += 9000
+profile = data.Load(p)
+monsters.SetupPlayer(p)
+check(profile.Data.Monsters.offline.Level == 25, "Offline rejoin reaches Adult after 2h 30m")
+check(math.abs(profile.Data.PendingCoins - expectedOffline - 0.25) < 0.001, "Offline income joins existing uncollected balance")
+local summary = lastState[p].OfflineEarnings
+check(summary.SecondsAway == 9000 and math.abs(summary.CoinsEarned - expectedOffline) < 0.001 and summary.MonstersGrown == 1, "Join summary reports real offline earnings and elapsed seconds")
+pending = profile.Data.PendingCoins
+monsters.SetupPlayer(p)
+check(profile.Data.PendingCoins == pending and lastState[p].OfflineEarnings.Id == summary.Id, "Repeated setup cannot replay income or create another summary")
+local wallet = profile.Data.Coins
+monsters.Collect(p)
+check(profile.Data.Coins == wallet + math.floor(pending) and math.abs(profile.Data.PendingCoins - (pending % 1)) < 0.001, "Offline income is claimable through the normal collect path")
+monsters.Collect(p)
+check(profile.Data.Coins == wallet + math.floor(pending), "Repeated collection cannot replay offline income")
+check(data.Save(p), "Claimed income and consumed timestamps save together")
+monsters.CleanupPlayer(p)
+data.Release(p)
+profile = data.Load(p)
+monsters.SetupPlayer(p)
+check(profile.Data.Coins == wallet + math.floor(pending) and lastState[p].OfflineEarnings.CoinsEarned == 0, "Immediate saved rejoin does not award the same absence twice")
 print(string.format("PASS: monster inventory (%d checks)", checks))

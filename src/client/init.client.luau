@@ -22,6 +22,7 @@ local Settings = require(script.Settings)
 local MonsterInventory = require(script.MonsterInventory)
 local Effects = require(script.Effects)
 local CashCounterFormatter = require(script.CashCounterFormatter)
+local OfflineEarnings = require(script.OfflineEarnings)
 local HalloweenUI = require(script.HalloweenUI)
 local CandyCounter = require(script.CandyCounter)
 local HalloweenDecor = require(script.HalloweenDecor)
@@ -30,6 +31,7 @@ local player = Players.LocalPlayer
 local remotes = Remotes.Get()
 local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
 CashCounterFormatter.Start(player:WaitForChild("PlayerGui"))
+local offlineEarnings = OfflineEarnings.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
 
 local state: any = nil
 local openMonsterId: string? = nil
@@ -179,6 +181,7 @@ Features.SetInventoryOpener(function() inventory.Open() end)
 
 remotes.StateUpdate.OnClientEvent:Connect(function(newState)
 	state = newState
+	offlineEarnings.Update(newState)
 	refresh()
 end)
 

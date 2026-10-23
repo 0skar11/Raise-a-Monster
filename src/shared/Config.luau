@@ -225,6 +225,7 @@ Config.Play = {
 
 -- المستويات والتطور -------------------------------------------------------------
 Config.MaxLevel = 60
+Config.AdultGrowthSeconds = 2 * 60 * 60 + 30 * 60 -- Natural Baby -> Adult growth, including offline time.
 Config.ProductionLevelBonusPerLevel = 0.05
 Config.SellLevelBonusPerLevel = 0.1
 

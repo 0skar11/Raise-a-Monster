@@ -34,6 +34,8 @@ local lastAction: { [Player]: number } = {}
 local lastCollect: { [Player]: number } = {}
 local lastFeed: { [Player]: { [string]: number } } = {}
 local lastAutoFeed: { [Player]: number } = {}
+type OfflineEarnings = { Id: string, SecondsAway: number, CoinsEarned: number, CollectiblePending: number, MonstersGrown: number }
+local offlineEarnings: { [Player]: OfflineEarnings } = {}
 
 -- Temporary event multiplier on live income only (Halloween Candy Boost). It is deliberately NOT
 -- folded into GetCoinMultiplier, so it is never saved as the offline-income multiplier.
@@ -181,6 +183,7 @@ function MonsterService.PushState(player: Player)
 	local state: { [string]: any } = {
 		Coins = data.Coins,
 		PendingCoins = data.PendingCoins,
+		OfflineEarnings = offlineEarnings[player],
 		UnlockedSlots = MonsterService.GetUnlockedSlots(player),
 		MaxSlots = Config.MaxSlots,
 		NextSlotCost = nextSlotCost,
@@ -414,6 +417,7 @@ local function hatch(player: Player, eggData: DataService.EggData)
 		Hunger = 100,
 		Happiness = 100,
 		Slot = eggData.Slot,
+		LastProgressAt = os.time(),
 	}
 	profile.Data.Eggs[eggData.Id] = nil
 	profile.Data.Monsters[monster.Id] = monster
@@ -445,6 +449,7 @@ function MonsterService.AddMonster(player: Player, species: string, mutation: st
 		Hunger = 100,
 		Happiness = 100,
 		Slot = slot,
+		LastProgressAt = os.time(),
 	}
 	profile.Data.Monsters[monster.Id] = monster
 	if slot > 0 then PlotService.RenderMonster(player, monster) end
@@ -524,19 +529,10 @@ end
 -- التربية ---------------------------------------------------------------------------
 
 local function addXp(player: Player, monster: MonsterMath.MonsterData, amount: number)
-	if monster.Level >= Config.MaxLevel then
-		monster.Xp = 0
-		return
-	end
+	local oldLevel = monster.Level
 	local oldStage = MonsterMath.GetStageIndex(monster.Level)
-	monster.Xp += amount
-	local leveled = false
-	while monster.Level < Config.MaxLevel and monster.Xp >= Config.XpForLevel(monster.Level) do
-		monster.Xp -= Config.XpForLevel(monster.Level)
-		monster.Level += 1
-		leveled = true
-	end
-	if not leveled then
+	MonsterMath.AddXp(monster, amount)
+	if monster.Level == oldLevel then
 		return
 	end
 	local newStage = MonsterMath.GetStageIndex(monster.Level)
@@ -968,25 +964,60 @@ end
 
 -- اللوب الأساسي ------------------------------------------------------------------------
 
+local function prepareProgress(player: Player)
+	if offlineEarnings[player] then return end
+	local profile = DataService.Get(player)
+	if not profile then return end
+	local data = profile.Data
+	local slots = data.IncomeUnlockedSlots or (Config.BaseSlots + (data.SlotUpgrades or 0))
+	local multiplier = data.IncomeMultiplier or 1
+	if slots ~= slots or math.abs(slots) == math.huge then slots = Config.BaseSlots end
+	if multiplier ~= multiplier or math.abs(multiplier) == math.huge then multiplier = 1 end
+	slots = math.clamp(math.floor(slots), 0, Config.MaxSlots)
+	multiplier = math.clamp(multiplier, 1, Config.VIPCoinMultiplier * Config.CoinBoostMultiplier)
+	local now, coins, secondsAway, grown = os.time(), 0, 0, 0
+	for _, monster in data.Monsters do
+		local previous = monster.LastProgressAt
+		if type(previous) == "number" and previous == previous and previous >= 0 and previous <= now then
+			secondsAway = math.max(secondsAway, now - previous)
+		end
+		local stage = MonsterMath.GetStageIndex(monster.Level)
+		coins += MonsterMath.AdvanceProgress(monster, now, monster.Slot >= 1 and monster.Slot <= slots, multiplier)
+		if MonsterMath.GetStageIndex(monster.Level) > stage then grown += 1 end
+	end
+	data.PendingCoins += coins
+	-- Stored in the same atomic profile snapshot as the consumed timestamps.
+	data.IncomeMultiplier = MonsterService.GetCoinMultiplier(player)
+	data.IncomeUnlockedSlots = MonsterService.GetUnlockedSlots(player)
+	offlineEarnings[player] = {
+		Id = profile.SessionId or tostring(now), SecondsAway = secondsAway,
+		CoinsEarned = coins, CollectiblePending = math.floor(data.PendingCoins), MonstersGrown = grown,
+	}
+end
+
 local function tickPlayer(player: Player, dt: number)
 	local profile = DataService.Get(player)
 	if not profile or not PlotService.GetPlot(player) then
 		return
 	end
+	-- Pass lookup can yield before SetupPlayer. Settle the saved interval first.
+	prepareProgress(player)
 	local data = profile.Data
 	local multiplier = MonsterService.GetCoinMultiplier(player)
+	local progressAt = os.time()
+	data.IncomeMultiplier = multiplier
+	data.IncomeUnlockedSlots = MonsterService.GetUnlockedSlots(player)
 	local okEvent, eventValue = pcall(MonsterService.GetEventMultiplier, player)
 	local eventMultiplier = if okEvent and type(eventValue) == "number" and eventValue >= 1 and eventValue < 100 then eventValue else 1
 
 	for id, monster in data.Monsters do
-		if MonsterService.IsPlaced(player, monster) and not MonsterService.IsCarried(player, id) then
-			monster.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * dt)
-			monster.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * dt)
-			data.PendingCoins += MonsterMath.GetProduction(monster) * multiplier * eventMultiplier * dt
-			if monster.Hunger >= 50 and monster.Happiness >= 50 then
-				addXp(player, monster, Config.PassiveXpPerSecond * dt)
-			end
-			PlotService.UpdateMonster(player, monster, false)
+		local oldStage = MonsterMath.GetStageIndex(monster.Level)
+		local producing = MonsterService.IsPlaced(player, monster) and not MonsterService.IsCarried(player, id)
+		data.PendingCoins += MonsterMath.AdvanceProgress(monster, progressAt, producing, multiplier * eventMultiplier)
+		if producing then
+			local evolved = MonsterMath.GetStageIndex(monster.Level) ~= oldStage
+			PlotService.UpdateMonster(player, monster, evolved)
+			if evolved then MonsterService.Notify(player, "✨ " .. MonsterMath.GetDisplayName(monster) .. " evolved into " .. MonsterMath.GetStage(monster.Level).Name .. "!", "success") end
 		end
 	end
 
@@ -1027,6 +1058,7 @@ function MonsterService.SetupPlayer(player: Player)
 	-- Marketplace can still be checking ExtraSlots. Keep saved assignments until
 	-- ownership is known; locked slots remain inactive and cannot earn income.
 	DataService.NormalizeMonsterSlots(data, Config.MaxSlots)
+	prepareProgress(player)
 	PlotService.SetUnlockedSlots(player, unlocked)
 	for _, monster in data.Monsters do
 		if MonsterService.IsPlaced(player, monster) then PlotService.RenderMonster(player, monster) end
@@ -1039,6 +1071,7 @@ function MonsterService.SetupPlayer(player: Player)
 end
 
 function MonsterService.CleanupPlayer(player: Player)
+	offlineEarnings[player] = nil
 	FollowerService.CleanupPlayer(player)
 	lastPlay[player] = nil
 	activeGames[player] = nil

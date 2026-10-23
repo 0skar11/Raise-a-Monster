@@ -8,15 +8,74 @@
       <float name="EnvironmentSpecularScale">1</float>
     </Properties>
   </Item>
-  <Item class="ReplicatedStorage" referent="1">
+  <Item class="StarterGui" referent="1">
+    <Properties>
+      <string name="Name">StarterGui</string>
+    </Properties>
+  </Item>
+  <Item class="ReplicatedStorage" referent="2">
     <Properties>
       <string name="Name">ReplicatedStorage</string>
     </Properties>
-    <Item class="Folder" referent="2">
+    <Item class="Folder" referent="3">
       <Properties>
         <string name="Name">Shared</string>
       </Properties>
-      <Item class="ModuleScript" referent="3">
+      <Item class="ModuleScript" referent="4">
+        <Properties>
+          <string name="Name">CompactMoney</string>
+          <string name="Source"><![CDATA[--!strict
+-- Display-only formatting. Never replace the stored balance with this text.
+
+local CompactMoney = {}
+local suffixes = { "", "k", "m", "b", "t" }
+
+local function decimal(value: number): string
+	return (string.format("%.2f", value):gsub("0+$", ""):gsub("%.$", ""))
+end
+
+function CompactMoney.Format(value: number): string
+	if value ~= value or math.abs(value) == math.huge then
+		return "—"
+	end
+	local magnitude = math.abs(value)
+	local sign = if value < 0 then "-" else ""
+	if magnitude < 1000 then
+		local whole = math.floor(magnitude)
+		return if whole == 0 then "0" else sign .. tostring(whole)
+	end
+
+	local index = 1
+	while magnitude >= 1000 and index < #suffixes do
+		magnitude /= 1000
+		index += 1
+	end
+	local roundingUnit = 1000 ^ (index - 1) / 100
+	magnitude = math.floor(math.abs(value) / roundingUnit + 0.5) / 100
+	if magnitude >= 1000 and index < #suffixes then
+		magnitude /= 1000
+		index += 1
+	end
+
+	-- Keep even balances beyond the supported suffix range inside the label.
+	if magnitude >= 1000 then
+		local exponent = math.floor(math.log10(math.abs(value)))
+		local mantissa = math.floor(math.abs(value) / 10 ^ exponent * 100 + 0.5) / 100
+		if mantissa >= 10 then
+			mantissa /= 10
+			exponent += 1
+		end
+		return sign .. decimal(mantissa) .. "e" .. tostring(exponent)
+	end
+
+	return sign .. decimal(magnitude) .. suffixes[index]
+end
+
+return CompactMoney
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="5">
         <Properties>
           <string name="Name">Config</string>
           <string name="Source"><![CDATA[--!strict
@@ -246,6 +305,7 @@ Config.Play = {
 
 -- المستويات والتطور -------------------------------------------------------------
 Config.MaxLevel = 60
+Config.AdultGrowthSeconds = 2 * 60 * 60 + 30 * 60 -- Natural Baby -> Adult growth, including offline time.
 Config.ProductionLevelBonusPerLevel = 0.05
 Config.SellLevelBonusPerLevel = 0.1
 
@@ -889,11 +949,386 @@ Config.UIEffects = {
 	ReadyPulse = 1.08, -- الزرار اللي فيه Ready! بينبض
 }
 
+-- Halloween 2026 event --------------------------------------------------------------------------
+-- Runs until it is switched off. To END the event: set Enabled = false (or EndsAt to a unix time)
+-- and publish. Leftover Candy is then converted to coins on the next join / at the end of the event.
+-- In Studio you can also run  game.ServerStorage.RaiseAMonsterDebug.HalloweenToggle:Fire()  to flip it live.
+export type HalloweenItem = {
+	Name: string,
+	Kind: string, -- "Boost" | "Hat" | "Trail" | "Aura" | "Title" | "Egg" | "Monster"
+	Cost: number, -- in Candy
+	Order: number,
+	Description: string,
+	Color: Color3,
+	Unique: boolean?, -- one purchase per player (Pumpkin King)
+	Duration: number?, -- Boost: seconds added per purchase
+	Multiplier: number?, -- Boost: cash multiplier while active
+	MaxBoostSeconds: number?, -- Boost: cap on stored time so stacking can't run away
+	TitleText: string?,
+	EggWeights: { [string]: number }?, -- Egg: weights over Config.Eggs keys
+	Species: string?, -- Monster
+}
+Config.Halloween = {
+	Enabled = true,
+	Name = "Halloween 2026",
+	EndsAt = 0, -- unix seconds; 0 = no scheduled end (runs until Enabled = false)
+	CandyToCoinRate = 20, -- each leftover Candy becomes this many coins when the event is over
+	CandyCap = 1000000000, -- sanity cap on stored Candy
+	Invasion = {
+		Interval = 3600, -- Mother Invasion every hour on the hour (server clock, same time in every server)
+		Offset = 0,
+		AnnounceBefore = 60, -- warn everyone this many seconds ahead
+		Lifetime = 900, -- invaders that survive this long run off
+		-- How many Mothers invade: minimum 3, 3-6 are common and larger waves are increasingly rare.
+		MinCount = 3,
+		CountWeights = { [3] = 28, [4] = 26, [5] = 20, [6] = 14, [7] = 6, [8] = 3.5, [9] = 1.7, [10] = 0.8 } :: { [number]: number },
+		MinLevel = 1,
+		MaxLevel = Config.MaxLevel,
+		ParticipationFraction = 0.05, -- must deal >= 5% of the Mother's max HP to be rewarded
+		CandyPerLevel = 5, -- reward = Mother level * 5 Candy
+		HealthAtMinLevel = 2500, -- Mother HP grows exponentially from level 1 to the max level
+		HealthAtMaxLevel = 3000000,
+		DamageAtMinLevel = 5,
+		DamageAtMaxLevel = 45,
+		-- Where invaders spawn / may walk (the open plaza in front of the bases, never inside a base).
+		Area = { MinX = 10, MaxX = 88, HalfZ = 150 },
+		SpawnSpacing = 22, -- minimum distance between two invaders at spawn
+		ChaseSpeed = 14, -- slower than a player (25) so they can run away
+		NoticeRange = 34,
+		LeashRange = 90,
+	},
+	Pumpkins = {
+		Interval = 1800, -- Pumpkin Hunt every 30 minutes
+		Offset = 900, -- :15 and :45 so it never lands on the Mother Invasion
+		Count = 5,
+		Lifetime = 120, -- pumpkins vanish after 2 minutes
+		CandyMin = 3,
+		CandyMax = 10,
+		GoldenChance = 0.08, -- per pumpkin
+		GoldenCandy = 50,
+		PickupDistance = 14, -- server re-checks the player's real distance
+		PickupDebounce = 0.4,
+		HintInterval = 6,
+		-- The hint only says roughly which way (8 sectors) and how far (bands), never the spot.
+		HintBands = { 40, 100 } :: { number },
+		MinSpacing = 28,
+		Area = { MinX = 8, MaxX = 90, HalfZ = 235 },
+		-- keep clear of the egg shop, the merchant and the zone gate road
+		KeepClear = { { X = 92, Z = -55, Radius = 24 }, { X = 76, Z = -34, Radius = 14 }, { X = 100, Z = 0, Radius = 24 } },
+	},
+	Merchant = {
+		Name = "Pumpkin Merchant",
+		Position = Vector3.new(76, 0, -34),
+		FaceTowards = Vector3.new(40, 0, -34),
+		PromptDistance = 12,
+		ShopDistance = 18, -- the server only opens/accepts shop actions this close to the merchant
+		PurchaseCooldown = 0.35,
+	},
+	Atmosphere = {
+		ClockTime = 0,
+		FadeSeconds = 3, -- smooth fade in/out when an event starts/ends
+		Brightness = 1.8, -- event-only night; brighter than the first version (was 0.6)
+		Ambient = Color3.fromRGB(125, 95, 165),
+		OutdoorAmbient = Color3.fromRGB(115, 90, 160),
+		FogColor = Color3.fromRGB(70, 48, 100),
+		FogStart = 260,
+		FogEnd = 2000,
+		AtmosphereDensity = 0.28,
+		AtmosphereOffset = 0.15,
+		AtmosphereColor = Color3.fromRGB(135, 100, 175),
+		AtmosphereDecay = Color3.fromRGB(70, 35, 95),
+		Haze = 1.4,
+		TintColor = Color3.fromRGB(255, 205, 235),
+		Saturation = 0.12,
+		Contrast = 0.08,
+		BloomIntensity = 0.45,
+		BloomThreshold = 1.6,
+		StarCount = 3000,
+		PumpkinPropCount = 46, -- jack-o-lanterns / pumpkin piles around the plaza
+		LanternRange = 14,
+		Seed = 20261031,
+	},
+	Items = {
+		CandyBoost = { Name = "Candy Boost", Kind = "Boost", Cost = 150, Order = 1, Description = "2x cash from your monsters for 10 minutes. Buying again adds time.", Color = Color3.fromRGB(255, 190, 60), Duration = 600, Multiplier = 2, MaxBoostSeconds = 3600 },
+		PumpkinHat = { Name = "Pumpkin Hat", Kind = "Hat", Cost = 300, Order = 2, Description = "A glowing jack-o-lantern on your head.", Color = Color3.fromRGB(255, 130, 30) },
+		GhostTrail = { Name = "Ghost Trail", Kind = "Trail", Cost = 500, Order = 3, Description = "A pale ghostly trail follows you.", Color = Color3.fromRGB(190, 230, 255) },
+		CandyAura = { Name = "Candy Aura", Kind = "Aura", Cost = 800, Order = 4, Description = "Sweet sparkles swirl around you.", Color = Color3.fromRGB(255, 120, 200) },
+		HalloweenTitle = { Name = "Halloween 2026 Title", Kind = "Title", Cost = 1000, Order = 5, Description = "Show 'Halloween 2026' above your head.", Color = Color3.fromRGB(190, 110, 255), TitleText = "Halloween 2026" },
+		HauntedEgg = { Name = "Haunted Egg", Kind = "Egg", Cost = 400, Order = 6, Description = "A real egg: Rare Egg (common) or Mythic Egg (rarer). Hatches into a real monster.", Color = Color3.fromRGB(150, 255, 160), EggWeights = { Rare = 70, Mythic = 30 } :: { [string]: number } },
+		GhostSlime = { Name = "Ghost Slime", Kind = "Monster", Cost = 1500, Order = 7, Description = "Exclusive spooky slime monster.", Color = Color3.fromRGB(200, 240, 255), Species = "HalloweenGhostSlime" },
+		SkeletonImp = { Name = "Skeleton Imp", Kind = "Monster", Cost = 3000, Order = 8, Description = "Exclusive rattling imp monster.", Color = Color3.fromRGB(235, 232, 215), Species = "HalloweenSkeletonImp" },
+		PumpkinKing = { Name = "Pumpkin King", Kind = "Monster", Cost = 12000, Order = 9, Description = "The ultimate Halloween monster. One per player.", Color = Color3.fromRGB(255, 120, 20), Species = "HalloweenPumpkinKing", Unique = true },
+	} :: { [string]: HalloweenItem },
+}
+
+-- Event-exclusive monsters. They are not in any egg pool and use the generated body (no rig yet).
+-- Defined after the accessory table above on purpose: they have no per-species accessories.
+Config.Species.HalloweenGhostSlime = { DisplayName = "Ghost Slime", Rarity = "Epic", BaseProduction = 45, SellValue = 1800, Color = Color3.fromRGB(205, 235, 255), Horns = false }
+Config.Species.HalloweenSkeletonImp = { DisplayName = "Skeleton Imp", Rarity = "Legendary", BaseProduction = 140, SellValue = 5600, Color = Color3.fromRGB(238, 234, 214), Horns = true }
+Config.Species.HalloweenPumpkinKing = { DisplayName = "Pumpkin King", Rarity = "Mythic", BaseProduction = 520, SellValue = 20800, Color = Color3.fromRGB(255, 125, 20), Horns = true }
+
 return Config
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="4">
+      <Item class="ModuleScript" referent="6">
+        <Properties>
+          <string name="Name">HalloweenLogic</string>
+          <string name="Source"><![CDATA[--!strict
+-- Pure Halloween event rules (no Roblox services): counts, rewards, scheduling, hints and purchase checks.
+-- HalloweenService uses these on the server and tools/test-halloween.luau exercises them directly.
+
+export type Settings = { [string]: any }
+export type Tracker = {
+	MaxHealth: number,
+	Health: number,
+	Damage: { [number]: number }, -- by UserId, so a player leaving never leaves a dangling Player reference
+	Record: (self: Tracker, userId: number, damage: number) -> number,
+	Participants: (self: Tracker, fraction: number) -> { number },
+}
+
+local HalloweenLogic = {}
+
+local function sortedKeys(weights: { [any]: number }): { any }
+	local keys = {}
+	for key, weight in weights do
+		if type(weight) == "number" and weight > 0 and weight == weight and weight ~= math.huge then
+			table.insert(keys, key)
+		end
+	end
+	table.sort(keys, function(a, b)
+		if type(a) == type(b) then return a < b end
+		return tostring(a) < tostring(b)
+	end)
+	return keys
+end
+
+-- roll is a number in [0, 1). Iterates in sorted key order so the result is deterministic for tests.
+function HalloweenLogic.WeightedPick(weights: { [any]: number }, roll: number): any?
+	local keys = sortedKeys(weights)
+	if #keys == 0 then return nil end
+	local total = 0
+	for _, key in keys do total += weights[key] end
+	local target = math.clamp(roll, 0, 0.9999999999) * total
+	for _, key in keys do
+		target -= weights[key]
+		if target < 0 then return key end
+	end
+	return keys[#keys]
+end
+
+function HalloweenLogic.RollInvasionCount(invasion: Settings, roll: number): number
+	local weights: { [number]: number } = {}
+	for count, weight in invasion.CountWeights do
+		if type(count) == "number" and count >= invasion.MinCount then weights[count] = weight end
+	end
+	local picked = HalloweenLogic.WeightedPick(weights, roll)
+	return if type(picked) == "number" then picked else invasion.MinCount
+end
+
+local function levelFraction(invasion: Settings, level: number): number
+	local span = math.max(1, invasion.MaxLevel - invasion.MinLevel)
+	return math.clamp((level - invasion.MinLevel) / span, 0, 1)
+end
+
+function HalloweenLogic.HealthForLevel(invasion: Settings, level: number): number
+	local low, high = invasion.HealthAtMinLevel, invasion.HealthAtMaxLevel
+	return math.floor(low * (high / low) ^ levelFraction(invasion, level) + 0.5)
+end
+
+function HalloweenLogic.DamageForLevel(invasion: Settings, level: number): number
+	local low, high = invasion.DamageAtMinLevel, invasion.DamageAtMaxLevel
+	return math.floor(low + (high - low) * levelFraction(invasion, level) + 0.5)
+end
+
+function HalloweenLogic.CandyForMother(invasion: Settings, level: number): number
+	return math.max(0, math.floor(level)) * invasion.CandyPerLevel
+end
+
+function HalloweenLogic.QualifiesForReward(damage: number, maxHealth: number, fraction: number): boolean
+	return maxHealth > 0 and damage >= maxHealth * fraction - 1e-9
+end
+
+-- Damage ledger for one Mother. Overkill is clipped to the HP that was really left.
+function HalloweenLogic.NewTracker(maxHealth: number): Tracker
+	local tracker = { MaxHealth = maxHealth, Health = maxHealth, Damage = {} } :: any
+	function tracker.Record(self: Tracker, userId: number, damage: number): number
+		if type(userId) ~= "number" or type(damage) ~= "number" or damage ~= damage or damage <= 0 or self.Health <= 0 then
+			return 0
+		end
+		local applied = math.min(damage, self.Health)
+		self.Health -= applied
+		self.Damage[userId] = (self.Damage[userId] or 0) + applied
+		return applied
+	end
+	function tracker.Participants(self: Tracker, fraction: number): { number }
+		local result = {}
+		for userId, dealt in self.Damage do
+			if HalloweenLogic.QualifiesForReward(dealt, self.MaxHealth, fraction) then table.insert(result, userId) end
+		end
+		table.sort(result)
+		return result
+	end
+	return tracker :: Tracker
+end
+
+function HalloweenLogic.PumpkinCandy(pumpkins: Settings, golden: boolean, roll: number): number
+	if golden then return pumpkins.GoldenCandy end
+	local span = pumpkins.CandyMax - pumpkins.CandyMin + 1
+	return pumpkins.CandyMin + math.min(span - 1, math.floor(math.clamp(roll, 0, 0.9999999999) * span))
+end
+
+function HalloweenLogic.ConvertCandy(candy: number, rate: number): number
+	if type(candy) ~= "number" or candy ~= candy or candy <= 0 then return 0 end
+	return math.floor(candy) * math.max(0, rate)
+end
+
+-- Next scheduled time strictly after now. Same wall clock on every server.
+function HalloweenLogic.NextOccurrence(now: number, interval: number, offset: number): number
+	local cycles = math.floor((now - offset) / interval) + 1
+	return cycles * interval + offset
+end
+
+-- 8 compass sectors around +X (sector 0), counter-clockwise looking down. Quantised on purpose.
+function HalloweenLogic.HintSector(fromX: number, fromZ: number, toX: number, toZ: number): number
+	local angle = math.atan2(toZ - fromZ, toX - fromX)
+	return math.floor(((angle + math.pi / 8) % (math.pi * 2)) / (math.pi / 4)) % 8
+end
+
+function HalloweenLogic.HintBand(distance: number, bands: { number }): number
+	for index, limit in bands do
+		if distance <= limit then return index end
+	end
+	return #bands + 1
+end
+
+function HalloweenLogic.SectorDirection(sector: number): (number, number)
+	local angle = sector * math.pi / 4
+	return math.cos(angle), math.sin(angle)
+end
+
+-- The nearest pumpkin only, reduced to (sector, band). Nothing here allows recovering the exact spot.
+function HalloweenLogic.Hint(fromX: number, fromZ: number, spots: { { X: number, Z: number } }, bands: { number }): (number?, number?)
+	local bestDistance, bestSpot = math.huge, nil
+	for _, spot in spots do
+		local distance = math.sqrt((spot.X - fromX) ^ 2 + (spot.Z - fromZ) ^ 2)
+		if distance < bestDistance then bestDistance, bestSpot = distance, spot end
+	end
+	if not bestSpot then return nil, nil end
+	return HalloweenLogic.HintSector(fromX, fromZ, bestSpot.X, bestSpot.Z), HalloweenLogic.HintBand(bestDistance, bands)
+end
+
+function HalloweenLogic.BoostLeft(data: { [string]: any }, now: number): number
+	local boost = data.BoostUntil
+	if type(boost) ~= "number" or boost ~= boost then return 0 end
+	return math.max(0, boost - now)
+end
+
+function HalloweenLogic.CashMultiplier(data: { [string]: any }, now: number, items: { [string]: any }): number
+	if HalloweenLogic.BoostLeft(data, now) <= 0 then return 1 end
+	local best = 1
+	for _, item in items do
+		if item.Kind == "Boost" and type(item.Multiplier) == "number" then best = math.max(best, item.Multiplier) end
+	end
+	return best
+end
+
+-- "ok" or a short reason code. Pure: never mutates data.
+function HalloweenLogic.CheckPurchase(data: { [string]: any }, itemId: any, items: { [string]: any }, now: number): (boolean, string)
+	if type(itemId) ~= "string" then return false, "Unknown" end
+	local item = items[itemId]
+	if not item then return false, "Unknown" end
+	if type(data.Candy) ~= "number" or data.Candy < item.Cost then return false, "NoCandy" end
+	local owned = data.Owned
+	if (item.Unique or item.Kind == "Hat" or item.Kind == "Trail" or item.Kind == "Aura" or item.Kind == "Title")
+		and type(owned) == "table" and owned[itemId] == true then
+		return false, "Owned"
+	end
+	if item.Kind == "Boost" and HalloweenLogic.BoostLeft(data, now) + item.Duration > item.MaxBoostSeconds then
+		return false, "BoostCap"
+	end
+	return true, "ok"
+end
+
+-- Candy ledger ----------------------------------------------------------------------------------
+
+function HalloweenLogic.AwardCandy(data: { [string]: any }, amount: number, cap: number): number
+	if type(amount) ~= "number" or amount ~= amount or amount <= 0 then return 0 end
+	local granted = math.min(math.floor(amount), math.max(0, cap - data.Candy))
+	data.Candy += granted
+	data.TotalCandy += granted
+	return granted
+end
+
+-- Everything left becomes coins. Returns the coins to pay; the caller pays them (DataService.AddCoins).
+function HalloweenLogic.ConvertAll(data: { [string]: any }, rate: number): (number, number)
+	local candy = math.floor(data.Candy)
+	local coins = HalloweenLogic.ConvertCandy(candy, rate)
+	data.Candy -= candy
+	data.Converted += coins
+	return coins, candy
+end
+
+export type Purchase = { Kind: string, EggType: string?, Species: string?, Undo: () -> () }
+
+-- Charges the Candy and records the purchase in one step. Egg / monster grants are done by the caller,
+-- who calls Undo() if the grant fails, so a failed grant never costs the player anything.
+function HalloweenLogic.ApplyPurchase(data: { [string]: any }, itemId: any, items: { [string]: any }, now: number, eggRoll: number): (boolean, string, Purchase?)
+	local ok, reason = HalloweenLogic.CheckPurchase(data, itemId, items, now)
+	if not ok then return false, reason, nil end
+	local item = items[itemId]
+	local oldCandy, oldBoost = data.Candy, data.BoostUntil
+	local oldOwned, oldEquipped = data.Owned[itemId], data.Equipped[item.Kind]
+	local purchase: Purchase = { Kind = item.Kind, Undo = function() end }
+	if item.Kind == "Egg" then
+		local eggType = HalloweenLogic.WeightedPick(item.EggWeights, eggRoll) :: string?
+		if not eggType then return false, "Unknown", nil end
+		purchase.EggType = eggType
+	end
+	data.Candy -= item.Cost
+	if item.Kind == "Boost" then
+		data.BoostUntil = math.max(now, data.BoostUntil) + item.Duration
+	elseif item.Kind == "Hat" or item.Kind == "Trail" or item.Kind == "Aura" or item.Kind == "Title" then
+		data.Owned[itemId] = true
+		data.Equipped[item.Kind] = itemId
+	elseif item.Kind == "Monster" then
+		purchase.Species = item.Species
+		if item.Unique then data.Owned[itemId] = true end
+	end
+	purchase.Undo = function()
+		data.Candy = oldCandy
+		data.BoostUntil = oldBoost
+		data.Owned[itemId] = oldOwned
+		data.Equipped[item.Kind] = oldEquipped
+	end
+	return true, "ok", purchase
+end
+
+-- Equip / unequip an owned cosmetic. Returns false for anything not owned or not equippable.
+function HalloweenLogic.SetEquipped(data: { [string]: any }, itemId: any, items: { [string]: any }, equip: boolean): boolean
+	if type(itemId) ~= "string" then return false end
+	local item = items[itemId]
+	if not item or not (item.Kind == "Hat" or item.Kind == "Trail" or item.Kind == "Aura" or item.Kind == "Title") then return false end
+	if data.Owned[itemId] ~= true then return false end
+	if equip then data.Equipped[item.Kind] = itemId elseif data.Equipped[item.Kind] == itemId then data.Equipped[item.Kind] = nil end
+	return true
+end
+
+-- Who gets Candy when a Mother dies: every player who dealt >= the fraction of her max HP.
+function HalloweenLogic.Settle(tracker: Tracker, invasion: Settings, level: number): { { UserId: number, Candy: number } }
+	local reward = HalloweenLogic.CandyForMother(invasion, level)
+	local result = {}
+	for _, userId in tracker:Participants(invasion.ParticipationFraction) do
+		table.insert(result, { UserId = userId, Candy = reward })
+	end
+	return result
+end
+
+return HalloweenLogic
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="7">
         <Properties>
           <string name="Name">MonsterAnimator</string>
           <string name="Source"><![CDATA[--[[
@@ -1136,7 +1571,7 @@ return MonsterAnimator
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="5">
+      <Item class="ModuleScript" referent="8">
         <Properties>
           <string name="Name">MonsterMath</string>
           <string name="Source"><![CDATA[--!strict
@@ -1153,6 +1588,7 @@ export type MonsterData = {
 	Hunger: number,
 	Happiness: number,
 	Slot: number,
+	LastProgressAt: number?, -- Server epoch; saved with XP and uncollected income.
 	Hat: string?, -- إكسسوارات الوحش (Config.Accessories، بتاعة نوعه بس)
 	Glasses: string?,
 }
@@ -1221,6 +1657,71 @@ function MonsterMath.GetProduction(monster: MonsterData): number
 	return production
 end
 
+local adultLevel = Config.MaxLevel
+for _, stage in Config.Stages do
+	if stage.Name == "Adult" then adultLevel = stage.MinLevel; break end
+end
+local adultXp = 0
+for level = 1, adultLevel - 1 do adultXp += Config.XpForLevel(level) end
+local growthXpPerSecond = adultXp / Config.AdultGrowthSeconds
+
+-- Care rewards still accelerate growth. Natural growth never depends on needs.
+function MonsterMath.AddXp(monster: MonsterData, amount: number)
+	monster.Xp += amount
+	while monster.Level < Config.MaxLevel do
+		local needed = Config.XpForLevel(monster.Level)
+		if monster.Xp + 1e-7 < needed then break end
+		monster.Xp = math.max(0, monster.Xp - needed)
+		monster.Level += 1
+	end
+	if monster.Level >= Config.MaxLevel then monster.Xp = 0 end
+end
+
+-- One clock for online and offline progress. Integration splits only at level and
+-- need thresholds, so years away cost at most MaxLevel + a few iterations.
+-- Unplaced/carried monsters age, but do not produce coins or consume needs.
+-- Legacy records have no reliable last-seen time: their first call starts now.
+function MonsterMath.AdvanceProgress(monster: MonsterData, now: number, producing: boolean, multiplier: number): number
+	local previous = monster.LastProgressAt
+	if type(previous) ~= "number" or previous ~= previous or previous < 0 or previous > now then
+		monster.LastProgressAt = now
+		return 0
+	end
+	local remaining = now - previous
+	monster.LastProgressAt = now
+	local earned = 0
+	MonsterMath.AddXp(monster, 0)
+	while remaining > 1e-7 do
+		local rate = 0
+		if monster.Level < adultLevel then
+			rate = growthXpPerSecond
+		elseif producing and monster.Hunger > 50 and monster.Happiness > 50 and monster.Level < Config.MaxLevel then
+			rate = Config.PassiveXpPerSecond
+		end
+		local duration = remaining
+		if rate > 0 then duration = math.min(duration, (Config.XpForLevel(monster.Level) - monster.Xp) / rate) end
+		if producing then
+			for _, need in { { monster.Hunger, Config.HungerDecayPerSecond }, { monster.Happiness, Config.HappinessDecayPerSecond } } do
+				if need[2] > 0 then
+					for _, threshold in { 50, Config.LowNeedsThreshold, 0 } do
+						if need[1] > threshold then duration = math.min(duration, (need[1] - threshold) / need[2]) end
+					end
+				end
+			end
+			-- Sampling within a segment handles exact threshold crossings correctly.
+			local sample = table.clone(monster)
+			sample.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * duration / 2)
+			sample.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * duration / 2)
+			earned += MonsterMath.GetProduction(sample) * multiplier * duration
+			monster.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * duration)
+			monster.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * duration)
+		end
+		MonsterMath.AddXp(monster, rate * duration)
+		remaining -= duration
+	end
+	return earned
+end
+
 function MonsterMath.GetSellValue(monster: MonsterData): number
 	local species = Config.Species[monster.Species]
 	if not species then
@@ -1265,7 +1766,7 @@ return MonsterMath
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="6">
+      <Item class="ModuleScript" referent="9">
         <Properties>
           <string name="Name">Remotes</string>
           <string name="Source"><![CDATA[--!strict
@@ -1321,6 +1822,13 @@ local EVENT_NAMES = {
 	"MonsterAttack", -- (attack) علامة ضربة الوحش على الأرض + الـ VFX لكل اللاعبين
 	"PlayerHurt", -- (damage, color) اللاعب اتضرب: هزة كاميرا ولون أحمر
 	"HitFeedback", -- (position, damage, crit) رقم الضرر فوق الهدف للي ضرب
+	-- Halloween event (all server validated; the client only ever sends an item id string)
+	"HalloweenState", -- (state) Candy, owned/equipped items, boost time left, event timers
+	"HalloweenOpenShop", -- () the Pumpkin Merchant prompt was used close enough to the merchant
+	"HalloweenHint", -- ({ Sector, Band, Remaining } | nil) soft pumpkin direction, never the exact spot
+	"HalloweenBuy", -- (itemId)
+	"HalloweenEquip", -- (itemId, equip)
+	"HalloweenSync", -- () ask for a fresh HalloweenState
 }
 
 local Remotes = {}
@@ -39542,7 +40050,7 @@ return Remotes
     </Item>
   </Item>
   </Item>
-  <Item class="ServerStorage" referent="7">
+  <Item class="ServerStorage" referent="10">
     <Properties>
       <string name="Name">ServerStorage</string>
     </Properties>
@@ -957396,11 +957904,11 @@ PwUAAABTdGFnZQIFAAAAQWR1bHQ=]]></BinaryString>
 		</Item>
 	</Item>
   </Item>
-  <Item class="ServerScriptService" referent="8">
+  <Item class="ServerScriptService" referent="11">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="9">
+    <Item class="Script" referent="12">
       <Properties>
         <string name="Name">Server</string>
         <token name="RunContext">0</token>
@@ -957428,11 +957936,14 @@ local LeaderboardService = require(script.LeaderboardService)
 local RewardService = require(script.RewardService)
 local TradeService = require(script.TradeService)
 local ArenaService = require(script.ArenaService)
+local HalloweenService = require(script.HalloweenService)
 
 local remotes = Remotes.Get()
 
 -- Hooks (عشان MonsterService مايحتاجش يعمل require للخدمات اللي بتعتمد عليه)
 MonsterService.HasPass = MonetizationService.HasPass
+-- Halloween Candy Boost (inert unless Config.Halloween is running)
+MonsterService.GetEventMultiplier = HalloweenService.GetCashMultiplier
 MonsterService.ExtraState = function(player: Player): { [string]: any }
 	local profile = DataService.Get(player)
 	return {
@@ -957462,6 +957973,7 @@ ZoneService.Init()
 TerrainService.Init()
 MonetizationService.Init(remotes)
 EventService.Init()
+HalloweenService.Init(remotes)
 LeaderboardService.Init()
 RewardService.Init(remotes)
 TradeService.Init(remotes)
@@ -957522,9 +958034,11 @@ local function onCharacter(player: Player, character: Model)
 	end
 	CombatService.GiveWeapons(player, MonetizationService.GetOwnedPasses(player), if profile then profile.Data.Weapons else {}, if profile then profile.Data.EquippedWeapon else "Bat")
 	MonetizationService.OnCharacter(player)
+	HalloweenService.OnCharacter(player)
 	task.spawn(function()
 		CharacterService.ApplyAppearance(player, character)
 		if player.Character ~= character then return end
+		HalloweenService.OnCharacter(player) -- ApplyDescription can replace accessories, so re-apply
 		CharacterService.UpdateSpeed(player)
 		CharacterService.UpdateHealth(player)
 		if profile then CharacterService.ApplySpeedAccessory(player, profile.Data.SpeedAccessories, profile.Data.EquippedSpeedAccessory) end
@@ -957587,6 +958101,7 @@ local function onPlayerAdded(player: Player)
 	end
 
 	MonsterService.SetupPlayer(player)
+	HalloweenService.SetupPlayer(player)
 
 	if profile.Temporary then
 		MonsterService.Notify(player, "Studio test session: saving is unavailable. Your live progress is safe; changes here will not be saved.", "error")
@@ -957608,6 +958123,7 @@ Players.PlayerRemoving:Connect(function(player)
 	RewardService.CleanupPlayer(player)
 	ZoneService.CleanupPlayer(player)
 	MonsterAttack.CleanupPlayer(player)
+	HalloweenService.CleanupPlayer(player)
 	MonetizationService.CleanupPlayer(player)
 	CharacterService.Cleanup(player)
 	MonsterService.CleanupPlayer(player)
@@ -957658,7 +958174,7 @@ if game:GetService("RunService"):IsStudio() then
 end
 ]]></string>
       </Properties>
-      <Item class="ModuleScript" referent="10">
+      <Item class="ModuleScript" referent="13">
         <Properties>
           <string name="Name">ArenaService</string>
           <string name="Source"><![CDATA[--!strict
@@ -958088,7 +958604,7 @@ return ArenaService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="11">
+      <Item class="ModuleScript" referent="14">
         <Properties>
           <string name="Name">Build</string>
           <string name="Source"><![CDATA[--!strict
@@ -958172,7 +958688,7 @@ return Build
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="12">
+      <Item class="ModuleScript" referent="15">
         <Properties>
           <string name="Name">CarryService</string>
           <string name="Source"><![CDATA[--!strict
@@ -958483,7 +958999,7 @@ return CarryService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="13">
+      <Item class="ModuleScript" referent="16">
         <Properties>
           <string name="Name">CharacterService</string>
           <string name="Source"><![CDATA[--!strict
@@ -958933,7 +959449,7 @@ return CharacterService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="14">
+      <Item class="ModuleScript" referent="17">
         <Properties>
           <string name="Name">CombatService</string>
           <string name="Source"><![CDATA[--!strict
@@ -959319,7 +959835,7 @@ return CombatService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="15">
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">DataService</string>
           <string name="Source"><![CDATA[--!strict
@@ -959345,6 +959861,8 @@ export type PlayerData = {
 	Version: number,
 	Coins: number,
 	PendingCoins: number,
+	IncomeMultiplier: number,
+	IncomeUnlockedSlots: number,
 	TotalEarned: number,
 	Monsters: { [string]: MonsterMath.MonsterData },
 	Eggs: { [string]: EggData },
@@ -959361,7 +959879,18 @@ export type PlayerData = {
 	LastSpin: number,
 	ProcessedReceipts: { [string]: boolean },
 	SpeedBoostUntil: number,
+	Halloween: HalloweenData, -- event currency + purchases; safe to keep forever (see Config.Halloween)
 }
+
+export type HalloweenData = {
+	Candy: number,
+	TotalCandy: number,
+	BoostUntil: number, -- os.time epoch
+	Converted: number, -- coins already paid out for leftover Candy
+	Owned: { [string]: boolean },
+	Equipped: { [string]: string }, -- slot (Hat/Trail/Aura/Title) -> item id
+}
+
 
 export type Profile = {
 	Data: PlayerData,
@@ -959376,6 +959905,8 @@ local DEFAULT_DATA: PlayerData = {
 	Version = 2,
 	Coins = Config.StartingCoins,
 	PendingCoins = 0,
+	IncomeMultiplier = 1,
+	IncomeUnlockedSlots = Config.BaseSlots,
 	TotalEarned = 0,
 	Monsters = {},
 	Eggs = {},
@@ -959391,6 +959922,7 @@ local DEFAULT_DATA: PlayerData = {
 	LastSpin = 0,
 	ProcessedReceipts = {},
 	SpeedBoostUntil = 0,
+	Halloween = { Candy = 0, TotalCandy = 0, BoostUntil = 0, Converted = 0, Owned = {}, Equipped = {} },
 }
 
 local store: DataStore? = nil
@@ -959455,7 +959987,7 @@ local function validRecord(record: any): boolean
 	if type(record) ~= "table" then return false end
 	for key, template in DEFAULT_DATA do
 		local value = record[key]
-		if value ~= nil and key ~= "Version" and key ~= "Weapons" and key ~= "SpeedAccessories" and key ~= "EquippedWeapon" then
+		if value ~= nil and key ~= "Version" and key ~= "Weapons" and key ~= "SpeedAccessories" and key ~= "EquippedWeapon" and key ~= "Halloween" then
 			if type(value) ~= type(template) then return false end
 			if type(value) == "number" and (value ~= value or math.abs(value) == math.huge) then return false end
 		end
@@ -959521,6 +960053,40 @@ local function reconcileGear(data: PlayerData)
 	data.Version = math.max(if type(data.Version) == "number" then data.Version else 0, 2)
 end
 
+-- Halloween data is rebuilt field by field: old saves without it get the defaults, and anything
+-- invalid (wrong type, NaN, negative, unknown item) is dropped instead of crashing or being trusted.
+local function sanitizeHalloween(data: PlayerData)
+	local source: any = data.Halloween
+	if type(source) ~= "table" then source = {} end
+	local items = Config.Halloween.Items
+	local cap = Config.Halloween.CandyCap
+	local function number(value: any, maximum: number): number
+		if type(value) ~= "number" or value ~= value or value < 0 then return 0 end
+		return math.min(math.floor(value), maximum)
+	end
+	local owned: { [string]: boolean } = {}
+	if type(source.Owned) == "table" then
+		for id, flag in source.Owned do
+			if type(id) == "string" and flag == true and items[id] then owned[id] = true end
+		end
+	end
+	local equipped: { [string]: string } = {}
+	if type(source.Equipped) == "table" then
+		for slot, id in source.Equipped do
+			if type(slot) == "string" and type(id) == "string" and owned[id] and items[id].Kind == slot then equipped[slot] = id end
+		end
+	end
+	data.Halloween = {
+		Candy = number(source.Candy, cap),
+		TotalCandy = number(source.TotalCandy, cap * 1000),
+		BoostUntil = number(source.BoostUntil, 4e9),
+		Converted = number(source.Converted, 1e18),
+		Owned = owned,
+		Equipped = equipped,
+	}
+end
+DataService.SanitizeHalloween = sanitizeHalloween
+
 function DataService.Load(player: Player): Profile
 	while loading[player] do task.wait() end
 	if profiles[player] then return profiles[player] end
@@ -959562,6 +960128,7 @@ function DataService.Load(player: Player): Profile
 	end
 
 	reconcileGear(data)
+	sanitizeHalloween(data)
 	DataService.NormalizeMonsterSlots(data, Config.MaxSlots)
 	local profile: Profile = {
 		Data = data, LoadFailed = loadFailed, CanSave = not loadFailed, SessionId = sessionId,
@@ -959716,7 +960283,7 @@ return DataService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="16">
+      <Item class="ModuleScript" referent="19">
         <Properties>
           <string name="Name">EventService</string>
           <string name="Source"><![CDATA[--!strict
@@ -959951,7 +960518,7 @@ return EventService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="17">
+      <Item class="ModuleScript" referent="20">
         <Properties>
           <string name="Name">FollowerService</string>
           <string name="Source"><![CDATA[--!strict
@@ -960237,7 +960804,1715 @@ return FollowerService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="18">
+      <Item class="ModuleScript" referent="21">
+        <Properties>
+          <string name="Name">HalloweenService</string>
+          <string name="Source"><![CDATA[--!strict
+-- Halloween 2026 event (everything is gated by Config.Halloween.Enabled / EndsAt):
+--  * Mother Invasion every hour: a random wave of the game's Mother monsters walks into the plaza.
+--    Damage is tracked per player on the server; everyone who dealt >= 5% of a Mother's HP gets Candy
+--    (level x 5) when she dies. No stealing, nothing to carry.
+--  * Pumpkin Hunt every 30 minutes: 5 pumpkins (sometimes a golden one) hidden in the plaza for 2 minutes.
+--  * Candy is persisted in DataService; when the event ends it is converted to coins.
+--  * Pumpkin Merchant NPC + shop (server authoritative), spooky atmosphere and props.
+-- Rules that don't need Roblox live in ReplicatedStorage.Shared.HalloweenLogic (and are unit tested).
+
+local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
+local TweenService = game:GetService("TweenService")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local HalloweenLogic = require(ReplicatedStorage.Shared.HalloweenLogic)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local PlotService = require(script.Parent.PlotService)
+local Build = require(script.Parent.Build)
+local DataService = require(script.Parent.DataService)
+local MonsterService = require(script.Parent.MonsterService)
+local CombatService = require(script.Parent.CombatService)
+local MonsterAttack = require(script.Parent.MonsterAttack)
+local MonsterModels = require(script.Parent.MonsterModels)
+
+local settings = Config.Halloween
+local invasionSettings = settings.Invasion
+local pumpkinSettings = settings.Pumpkins
+local makePart = Build.MakePart
+
+type Invader = {
+	Level: number,
+	Species: string,
+	Element: string,
+	Model: Model,
+	Root: BasePart,
+	Tracker: HalloweenLogic.Tracker,
+	Target: CombatService.Target?,
+	Style: Config.MotherStyle,
+	Fill: Frame,
+	Text: TextLabel,
+	Home: Vector3,
+	BodyRadius: number,
+	Alive: boolean,
+	Aggro: number?, -- UserId of the last player who hit it
+	Moving: boolean,
+	NextAttackAt: number,
+	WindingUntil: number,
+	Engaged: boolean,
+}
+type Pumpkin = { Part: BasePart, Golden: boolean, Candy: number, Claimed: boolean }
+type Hunt = { Id: number, Pumpkins: { Pumpkin }, Remaining: number, EndsAt: number, LastHintAt: number }
+type AtmosphereSnapshot = {
+	Lighting: { [string]: any },
+	Created: { Instance },
+	Atmosphere: Atmosphere?,
+	AtmosphereProps: { [string]: any }?,
+	Sky: Sky?,
+	SkyProps: { [string]: any }?,
+}
+
+local HalloweenService = {}
+
+local remotes: { [string]: RemoteEvent } = {}
+local active = false
+local rootFolder: Folder? = nil
+local invaderFolder: Folder? = nil
+local pumpkinFolder: Folder? = nil
+local propFolder: Folder? = nil
+local merchantModel: Model? = nil -- the Studio-authored (or fallback-built) Pumpkin Merchant character
+local merchantPromptConnection: RBXScriptConnection? = nil
+local stashedWorld: Folder? = nil -- Workspace.HalloweenWorld while the event is off (runtime only, never destroyed)
+local snapshot: AtmosphereSnapshot? = nil
+local invaders: { Invader } = {}
+local hunt: Hunt? = nil
+local huntCounter = 0
+local invasionCounter = 0
+local nextInvasionAt = 0
+local nextPumpkinAt = 0
+local announcedInvasionAt = 0
+local lastBuy: { [Player]: number } = {}
+local lastPick: { [Player]: number } = {}
+local lastSync: { [Player]: number } = {}
+local busy: { [Player]: boolean } = {}
+local rng = Random.new()
+
+-- helpers --------------------------------------------------------------------------------------------
+
+local function wantActive(): boolean
+	if settings.Enabled ~= true then
+		return false
+	end
+	return not (settings.EndsAt > 0 and os.time() >= settings.EndsAt)
+end
+
+local function hdata(player: Player): DataService.HalloweenData?
+	local profile = DataService.Get(player)
+	if not profile or profile.Closing == true then
+		return nil
+	end
+	return profile.Data.Halloween
+end
+
+local function rootOf(player: Player): BasePart?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+local function isAlive(player: Player): boolean
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.Health > 0 and rootOf(player) ~= nil
+end
+
+local function flatDistance(a: Vector3, b: Vector3): number
+	return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
+end
+
+local function announce(text: string, color: Color3?)
+	MonsterService.Announce(text, color or Color3.fromRGB(255, 150, 40))
+end
+
+local function notify(player: Player, text: string, kind: string?)
+	if player.Parent then
+		MonsterService.Notify(player, text, kind)
+	end
+end
+
+local function folder(name: string, parent: Instance): Folder
+	local created = Instance.new("Folder")
+	created.Name = name
+	created.Parent = parent
+	return created
+end
+
+-- state sync ------------------------------------------------------------------------------------------
+
+local function buildState(player: Player): { [string]: any }
+	local data = hdata(player)
+	local now = os.time()
+	local owned, equipped = {}, {}
+	if data then
+		for id in data.Owned do owned[id] = true end
+		for slot, id in data.Equipped do equipped[slot] = id end
+	end
+	local aliveCount = 0
+	for _, invader in invaders do
+		if invader.Alive then aliveCount += 1 end
+	end
+	local current = hunt
+	return {
+		Enabled = active,
+		Name = settings.Name,
+		Candy = if data then data.Candy else 0,
+		TotalCandy = if data then data.TotalCandy else 0,
+		Owned = owned,
+		Equipped = equipped,
+		BoostLeft = if data then HalloweenLogic.BoostLeft(data, now) else 0,
+		NextInvasionIn = if active then math.max(0, nextInvasionAt - now) else 0,
+		NextPumpkinsIn = if active then math.max(0, nextPumpkinAt - now) else 0,
+		InvadersAlive = aliveCount,
+		HuntRemaining = if current then current.Remaining else 0,
+		HuntEndsIn = if current then math.max(0, math.ceil(current.EndsAt - os.clock())) else 0,
+		ConvertRate = settings.CandyToCoinRate,
+	}
+end
+
+local function pushState(player: Player)
+	if player.Parent and remotes.HalloweenState then
+		remotes.HalloweenState:FireClient(player, buildState(player))
+	end
+end
+
+local function pushAll()
+	for _, player in Players:GetPlayers() do
+		pushState(player)
+	end
+end
+
+local function saveSoon(player: Player)
+	DataService.QueueSave(player)
+end
+
+-- Candy -----------------------------------------------------------------------------------------------
+
+function HalloweenService.AddCandy(player: Player, amount: number): number
+	if not active then
+		return 0
+	end
+	local data = hdata(player)
+	if not data then
+		return 0
+	end
+	local granted = HalloweenLogic.AwardCandy(data :: any, amount, settings.CandyCap)
+	if granted > 0 then
+		saveSoon(player)
+		pushState(player)
+	end
+	return granted
+end
+
+-- Leftover Candy becomes coins at Config.Halloween.CandyToCoinRate. Safe to call repeatedly.
+function HalloweenService.ConvertCandy(player: Player): number
+	local data = hdata(player)
+	if not data or data.Candy < 1 then
+		return 0
+	end
+	local coins, candy = HalloweenLogic.ConvertAll(data :: any, settings.CandyToCoinRate)
+	if coins > 0 then
+		DataService.AddCoins(player, coins)
+	end
+	if candy > 0 then
+		notify(player, string.format("🎃 Halloween is over! %d Candy turned into %d coins.", candy, coins), "coins")
+		saveSoon(player)
+		MonsterService.PushState(player)
+	end
+	pushState(player)
+	return coins
+end
+
+function HalloweenService.GetCashMultiplier(player: Player): number
+	if not active then
+		return 1
+	end
+	local data = hdata(player)
+	if not data then
+		return 1
+	end
+	return HalloweenLogic.CashMultiplier(data :: any, os.time(), settings.Items)
+end
+
+-- Cosmetics -------------------------------------------------------------------------------------------
+
+local function removeCosmetics(character: Model)
+	local existing = character:FindFirstChild("HalloweenCosmetics")
+	if existing then
+		existing:Destroy()
+	end
+end
+
+local function weldTo(part: BasePart, to: BasePart)
+	part.Anchored = false
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.Massless = true
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = to
+	weld.Part1 = part
+	weld.Parent = part
+end
+
+local function applyCosmetics(player: Player)
+	local character = player.Character
+	if not character then
+		return
+	end
+	removeCosmetics(character)
+	if not active then
+		return
+	end
+	local data = hdata(player)
+	local root = rootOf(player)
+	local head = character:FindFirstChild("Head")
+	if not data or not root or not head or not head:IsA("BasePart") then
+		return
+	end
+	local container = Instance.new("Model")
+	container.Name = "HalloweenCosmetics"
+	local equipped = data.Equipped
+
+	if equipped.Hat and data.Owned[equipped.Hat] then
+		local hatColor = settings.Items[equipped.Hat].Color
+		local hat = makePart({ Name = "PumpkinHat", Shape = Enum.PartType.Ball, Size = Vector3.new(1.7, 1.4, 1.7), Color = hatColor, Material = Enum.Material.SmoothPlastic, Anchored = false, Parent = container })
+		hat.CFrame = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.45, 0)
+		local stem = makePart({ Name = "PumpkinStem", Size = Vector3.new(0.3, 0.5, 0.3), Color = Color3.fromRGB(70, 110, 40), Material = Enum.Material.Wood, Anchored = false, Parent = container })
+		stem.CFrame = hat.CFrame * CFrame.new(0, 0.85, 0)
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 150, 50)
+		light.Range = 10
+		light.Brightness = 1
+		light.Shadows = false
+		light.Parent = hat
+		weldTo(hat, head)
+		weldTo(stem, head)
+	end
+
+	if equipped.Trail or equipped.Aura then
+		local anchor = makePart({ Name = "CosmeticAnchor", Size = Vector3.new(0.4, 0.4, 0.4), Transparency = 1, Anchored = false, Parent = container })
+		anchor.CFrame = root.CFrame
+		weldTo(anchor, root)
+		if equipped.Trail and data.Owned[equipped.Trail] then
+			local top = Instance.new("Attachment")
+			top.Name = "TrailTop"
+			top.Position = Vector3.new(0, 0.9, 0.4)
+			top.Parent = anchor
+			local bottom = Instance.new("Attachment")
+			bottom.Name = "TrailBottom"
+			bottom.Position = Vector3.new(0, -1.2, 0.4)
+			bottom.Parent = anchor
+			local trail = Instance.new("Trail")
+			trail.Attachment0 = top
+			trail.Attachment1 = bottom
+			trail.Lifetime = 0.9
+			trail.MinLength = 0.1
+			trail.LightEmission = 0.6
+			trail.Color = ColorSequence.new(settings.Items[equipped.Trail].Color, Color3.fromRGB(150, 120, 255))
+			trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+			trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.2) })
+			trail.Parent = anchor
+		end
+		if equipped.Aura and data.Owned[equipped.Aura] then
+			local emitter = Instance.new("ParticleEmitter")
+			emitter.Name = "CandyAura"
+			emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			emitter.Color = ColorSequence.new(settings.Items[equipped.Aura].Color, Color3.fromRGB(255, 220, 90))
+			emitter.LightEmission = 0.7
+			emitter.Rate = 18
+			emitter.Lifetime = NumberRange.new(1, 1.8)
+			emitter.Speed = NumberRange.new(1, 3)
+			emitter.SpreadAngle = Vector2.new(180, 180)
+			emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+			emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+			emitter.Shape = Enum.ParticleEmitterShape.Sphere
+			emitter.Parent = anchor
+		end
+	end
+
+	if equipped.Title and data.Owned[equipped.Title] then
+		local item = settings.Items[equipped.Title]
+		local gui = Instance.new("BillboardGui")
+		gui.Name = "HalloweenTitle"
+		gui.Size = UDim2.fromOffset(190, 28)
+		gui.StudsOffset = Vector3.new(0, 3.1, 0)
+		gui.MaxDistance = 70
+		gui.AlwaysOnTop = false
+		gui.LightInfluence = 0
+		gui.Adornee = head
+		gui.Parent = container
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.Text = "🎃 " .. (item.TitleText or item.Name)
+		label.TextColor3 = item.Color
+		label.TextStrokeTransparency = 0.2
+		label.Parent = gui
+	end
+
+	container.Parent = character
+end
+HalloweenService.ApplyCosmetics = applyCosmetics
+
+function HalloweenService.OnCharacter(player: Player)
+	pcall(applyCosmetics, player)
+end
+
+-- atmosphere ------------------------------------------------------------------------------------------
+
+local LIGHTING_PROPS = { "ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "FogColor", "FogStart", "FogEnd" }
+local ATMOSPHERE_PROPS = { "Density", "Offset", "Color", "Decay", "Haze" }
+
+-- The spooky night is event-only: it is held by "reasons" (Invasion = from the warning until every Mother is
+-- gone, Hunt = while a Pumpkin Hunt runs). Any reason held -> night; none -> the original day lighting.
+-- The original values are snapshotted once and stay snapshotted until the fade back to day has finished,
+-- so overlapping events can never restore mid-event and a re-trigger during the fade-out just fades back in.
+local nightHolds: { [string]: boolean } = {}
+local nightTweens: { Tween } = {}
+local nightToken = 0
+local nightTarget = false
+
+local function cancelNightTweens()
+	for _, tween in nightTweens do
+		tween:Cancel()
+	end
+	table.clear(nightTweens)
+end
+
+local function fade(instance: Instance, goal: { [string]: any }, seconds: number)
+	local tween = TweenService:Create(instance, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), goal)
+	table.insert(nightTweens, tween)
+	tween:Play()
+end
+
+local function captureAtmosphere(): AtmosphereSnapshot
+	local existing = snapshot
+	if existing then
+		return existing
+	end
+	local saved: AtmosphereSnapshot = { Lighting = {}, Created = {} }
+	for _, prop in LIGHTING_PROPS do
+		saved.Lighting[prop] = (Lighting :: any)[prop]
+	end
+	snapshot = saved
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+	if atmosphere then
+		local props = {}
+		for _, prop in ATMOSPHERE_PROPS do props[prop] = (atmosphere :: any)[prop] end
+		saved.Atmosphere, saved.AtmosphereProps = atmosphere, props
+	else
+		-- starts invisible (density 0) so the fade-in has something to fade from
+		atmosphere = Instance.new("Atmosphere")
+		atmosphere.Name = "HalloweenAtmosphere"
+		atmosphere.Density = 0
+		atmosphere.Haze = 0
+		atmosphere.Parent = Lighting
+		table.insert(saved.Created, atmosphere)
+	end
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	if sky then
+		saved.Sky, saved.SkyProps = sky, { StarCount = sky.StarCount, CelestialBodiesShown = sky.CelestialBodiesShown }
+	else
+		sky = Instance.new("Sky")
+		sky.Name = "HalloweenSky"
+		sky.StarCount = 0
+		sky.Parent = Lighting
+		table.insert(saved.Created, sky)
+	end
+	local color = Instance.new("ColorCorrectionEffect")
+	color.Name = "HalloweenColor"
+	color.Parent = Lighting
+	table.insert(saved.Created, color)
+	local bloom = Instance.new("BloomEffect")
+	bloom.Name = "HalloweenBloom"
+	bloom.Intensity = 0
+	bloom.Threshold = settings.Atmosphere.BloomThreshold
+	bloom.Size = 24
+	bloom.Parent = Lighting
+	table.insert(saved.Created, bloom)
+	return saved
+end
+
+local function destroyAtmosphereFx(saved: AtmosphereSnapshot)
+	for _, created in saved.Created do
+		created:Destroy()
+	end
+end
+
+local function fadeToNight()
+	local a = settings.Atmosphere
+	local saved = captureAtmosphere()
+	cancelNightTweens()
+	local seconds = a.FadeSeconds
+	fade(Lighting, {
+		ClockTime = a.ClockTime, Brightness = a.Brightness, Ambient = a.Ambient, OutdoorAmbient = a.OutdoorAmbient,
+		FogColor = a.FogColor, FogStart = a.FogStart, FogEnd = a.FogEnd,
+	}, seconds)
+	local atmosphere = saved.Atmosphere or Lighting:FindFirstChild("HalloweenAtmosphere")
+	if atmosphere and atmosphere:IsA("Atmosphere") then
+		fade(atmosphere, { Density = a.AtmosphereDensity, Offset = a.AtmosphereOffset, Color = a.AtmosphereColor, Decay = a.AtmosphereDecay, Haze = a.Haze }, seconds)
+	end
+	local sky = saved.Sky or Lighting:FindFirstChild("HalloweenSky")
+	if sky and sky:IsA("Sky") then
+		sky.CelestialBodiesShown = true
+		fade(sky, { StarCount = a.StarCount }, seconds)
+	end
+	local color = Lighting:FindFirstChild("HalloweenColor")
+	if color and color:IsA("ColorCorrectionEffect") then
+		fade(color, { TintColor = a.TintColor, Saturation = a.Saturation, Contrast = a.Contrast }, seconds)
+	end
+	local bloom = Lighting:FindFirstChild("HalloweenBloom")
+	if bloom and bloom:IsA("BloomEffect") then
+		fade(bloom, { Intensity = a.BloomIntensity }, seconds)
+	end
+end
+
+-- Instant, complete restore (Stop / shutdown).
+local function restoreAtmosphere()
+	local saved = snapshot
+	nightToken += 1
+	nightTarget = false
+	cancelNightTweens()
+	if not saved then
+		return
+	end
+	snapshot = nil
+	for prop, value in saved.Lighting do
+		(Lighting :: any)[prop] = value
+	end
+	if saved.Atmosphere and saved.AtmosphereProps and saved.Atmosphere.Parent then
+		for prop, value in saved.AtmosphereProps do
+			(saved.Atmosphere :: any)[prop] = value
+		end
+	end
+	if saved.Sky and saved.SkyProps and saved.Sky.Parent then
+		for prop, value in saved.SkyProps do
+			(saved.Sky :: any)[prop] = value
+		end
+	end
+	destroyAtmosphereFx(saved)
+end
+
+local function fadeToDay()
+	local saved = snapshot
+	if not saved then
+		return
+	end
+	cancelNightTweens()
+	local seconds = settings.Atmosphere.FadeSeconds
+	nightToken += 1
+	local token = nightToken
+	local goal: { [string]: any } = {}
+	for prop, value in saved.Lighting do goal[prop] = value end
+	fade(Lighting, goal, seconds)
+	local atmosphere = saved.Atmosphere or Lighting:FindFirstChild("HalloweenAtmosphere")
+	if atmosphere and atmosphere.Parent and atmosphere:IsA("Atmosphere") then
+		fade(atmosphere, saved.AtmosphereProps or { Density = 0, Haze = 0 }, seconds)
+	end
+	local sky = saved.Sky or Lighting:FindFirstChild("HalloweenSky")
+	if sky and sky.Parent and sky:IsA("Sky") then
+		fade(sky, { StarCount = if saved.SkyProps then saved.SkyProps.StarCount else 0 }, seconds)
+	end
+	local color = Lighting:FindFirstChild("HalloweenColor")
+	if color and color:IsA("ColorCorrectionEffect") then
+		fade(color, { TintColor = Color3.new(1, 1, 1), Saturation = 0, Contrast = 0 }, seconds)
+	end
+	local bloom = Lighting:FindFirstChild("HalloweenBloom")
+	if bloom and bloom:IsA("BloomEffect") then
+		fade(bloom, { Intensity = 0 }, seconds)
+	end
+	task.delay(seconds + 0.1, function()
+		-- a newer fade (or a hard restore) owns the lighting now
+		if nightToken ~= token or snapshot ~= saved then
+			return
+		end
+		restoreAtmosphere()
+	end)
+end
+
+local function refreshNight()
+	local wanted = false
+	if active then
+		for _, held in nightHolds do
+			if held then wanted = true break end
+		end
+	end
+	if wanted == nightTarget then
+		return
+	end
+	nightTarget = wanted
+	nightToken += 1
+	if wanted then
+		fadeToNight()
+	else
+		fadeToDay()
+	end
+end
+
+local function setNight(reason: string, on: boolean)
+	nightHolds[reason] = on or nil
+	refreshNight()
+end
+
+-- exposed for tests / debugging
+function HalloweenService.IsNight(): boolean
+	return nightTarget
+end
+
+-- props -----------------------------------------------------------------------------------------------
+
+local ORANGE = Color3.fromRGB(240, 120, 25)
+local FACE = Color3.fromRGB(255, 225, 110)
+
+local function jackOLantern(parent: Instance, position: Vector3, size: number, yaw: number, lit: boolean, tint: Color3?)
+	local base = CFrame.new(position + Vector3.new(0, size * 0.5, 0)) * CFrame.Angles(0, yaw, 0)
+	local common = { CanCollide = false, CanQuery = false, CanTouch = false, Parent = parent }
+	local function part(props: { [string]: any }): Part
+		for key, value in common do props[key] = value end
+		return makePart(props)
+	end
+	local body = part({ Name = "Pumpkin", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 1.15, size, size * 1.15), CFrame = base, Color = tint or ORANGE, Material = Enum.Material.SmoothPlastic })
+	part({ Name = "Stem", Size = Vector3.new(size * 0.2, size * 0.3, size * 0.2), CFrame = base * CFrame.new(0, size * 0.55, 0), Color = Color3.fromRGB(70, 105, 40), Material = Enum.Material.Wood })
+	if lit then
+		for _, side in { -1, 1 } do
+			part({ Name = "Eye", Size = Vector3.new(size * 0.17, size * 0.2, size * 0.06), CFrame = base * CFrame.new(side * size * 0.22, size * 0.1, -size * 0.56), Color = FACE, Material = Enum.Material.Neon })
+		end
+		part({ Name = "Mouth", Size = Vector3.new(size * 0.52, size * 0.12, size * 0.06), CFrame = base * CFrame.new(0, -size * 0.2, -size * 0.57), Color = FACE, Material = Enum.Material.Neon })
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 150, 50)
+		light.Range = settings.Atmosphere.LanternRange
+		light.Brightness = 1.3
+		light.Shadows = false
+		light.Parent = body
+	end
+end
+
+local function deadTree(parent: Instance, position: Vector3, height: number, yaw: number)
+	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+	local wood = Color3.fromRGB(46, 34, 40)
+	local common = { CanCollide = false, CanQuery = false, CanTouch = false, Color = wood, Material = Enum.Material.Wood, Parent = parent }
+	local function part(props: { [string]: any }): Part
+		for key, value in common do props[key] = value end
+		return makePart(props)
+	end
+	part({ Name = "DeadTrunk", Size = Vector3.new(1.4, height, 1.4), CFrame = base * CFrame.new(0, height / 2, 0) })
+	for index, side in { -1, 1, -1 } do
+		part({
+			Name = "DeadBranch",
+			Size = Vector3.new(0.7, height * 0.5, 0.7),
+			CFrame = base * CFrame.new(side * height * 0.18, height * (0.55 + 0.12 * index), 0) * CFrame.Angles(0, index, side * math.rad(40)),
+		})
+	end
+end
+
+local function tombstone(parent: Instance, position: Vector3, yaw: number)
+	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+	local stone = Color3.fromRGB(110, 110, 120)
+	makePart({ Name = "Tombstone", Size = Vector3.new(3, 3.4, 0.9), CFrame = base * CFrame.new(0, 1.7, 0), CanCollide = false, CanQuery = false, CanTouch = false, Color = stone, Material = Enum.Material.Slate, Parent = parent })
+	makePart({
+		Name = "TombstoneTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 3, 3),
+		CFrame = base * CFrame.new(0, 3.4, 0) * CFrame.Angles(0, math.pi / 2, 0),
+		CanCollide = false, CanQuery = false, CanTouch = false, Color = stone, Material = Enum.Material.Slate, Parent = parent,
+	})
+end
+
+local function clearOf(x: number, z: number, margin: number): boolean
+	for _, zone in pumpkinSettings.KeepClear do
+		if math.sqrt((zone.X - x) ^ 2 + (zone.Z - z) ^ 2) < zone.Radius + margin then
+			return false
+		end
+	end
+	return true
+end
+
+-- Workspace.HalloweenWorld is authored in Studio (Edit mode) so the decorations and the merchant are visible
+-- without pressing Play and stay wherever the designer moved them. The server only ADOPTS what is there. Only
+-- when something is missing does it build the code-made default, into the same folder structure.
+local TAG_MERCHANT = "HalloweenMerchant"
+
+local function ensureWorld(): Folder
+	local existing = workspace:FindFirstChild("HalloweenWorld")
+	if existing and existing:IsA("Folder") then
+		return existing
+	end
+	local created = folder("HalloweenWorld", workspace)
+	created:SetAttribute("AutoBuilt", true)
+	return created
+end
+
+-- Event off: take the authored world out of the running game (the saved place is untouched, nothing is
+-- destroyed or moved) and bring it back, as authored, when the event starts.
+local function hideWorld()
+	local world = workspace:FindFirstChild("HalloweenWorld")
+	if world and world:IsA("Folder") then
+		if world:GetAttribute("AutoBuilt") == true then
+			world:Destroy()
+		else
+			stashedWorld = world
+			world.Parent = nil
+		end
+	end
+end
+
+local function showWorld()
+	local stashed = stashedWorld
+	stashedWorld = nil
+	if stashed and not workspace:FindFirstChild("HalloweenWorld") then
+		stashed.Parent = workspace
+	end
+end
+
+local function buildProps()
+	if propFolder then
+		return
+	end
+	local world = ensureWorld()
+	local authored = world:FindFirstChild("Props")
+	if authored and authored:IsA("Folder") and #authored:GetChildren() > 0 then
+		propFolder = authored -- adopt: the decorations already exist, leave them exactly as they are
+		return
+	end
+	local parent = authored or folder("Props", world)
+	parent:SetAttribute("AutoBuilt", true)
+	propFolder = parent :: Folder
+	local a = settings.Atmosphere
+	local random = Random.new(a.Seed)
+	local placed, attempts = 0, 0
+	while placed < a.PumpkinPropCount and attempts < a.PumpkinPropCount * 12 do
+		attempts += 1
+		local x = random:NextNumber(Config.Map.PlazaMinX + 2, Config.Map.ZonesStartX - 6)
+		local z = random:NextNumber(-Config.Map.PlazaHalfZ + 14, Config.Map.PlazaHalfZ - 14)
+		-- keep the path in front of the zone gate and the shop area open
+		if clearOf(x, z, 4) then
+			placed += 1
+			local pos = Vector3.new(x, 0.2, z)
+			local yaw = random:NextNumber(0, math.pi * 2)
+			local kind = placed % 6
+			if kind == 0 then
+				deadTree(parent, pos, random:NextNumber(8, 13), yaw)
+			elseif kind == 1 then
+				tombstone(parent, pos, yaw)
+			elseif kind == 2 or kind == 3 then
+				jackOLantern(parent, pos, random:NextNumber(2.4, 3.6), yaw, true)
+			else
+				-- a small pile: one lit jack and two plain pumpkins
+				jackOLantern(parent, pos, 3, yaw, true)
+				jackOLantern(parent, pos + Vector3.new(2.6, 0, 1.2), 2, yaw + 1, false)
+				jackOLantern(parent, pos + Vector3.new(-2.2, 0, 1.8), 1.7, yaw + 2, false, Color3.fromRGB(225, 95, 20))
+			end
+		end
+	end
+	-- a lantern on each side of every zone gate road
+	for index = 1, #Config.Zones do
+		local gateX = Config.Map.ZonesStartX + (index - 1) * Config.Map.ZoneLength
+		for _, side in { -1, 1 } do
+			jackOLantern(parent, Vector3.new(gateX + 4, 0.2, side * (Config.Map.RoadWidth / 2 + 7)), 3.6, if side < 0 then math.pi / 2 else -math.pi / 2, true)
+		end
+	end
+	-- drifting embers and wisps over the whole plaza
+	local centers = {}
+	for z = -200, 200, 100 do
+		table.insert(centers, Vector3.new((Config.Map.PlazaMinX + Config.Map.ZonesStartX) / 2, 14, z))
+	end
+	for _, center in centers do
+		local emitterPart = makePart({
+			Name = "AmbientEmitter", Size = Vector3.new(100, 8, 90), Position = center, Transparency = 1,
+			CanCollide = false, CanQuery = false, CanTouch = false, Parent = parent,
+		})
+		for _, spec in {
+			{ Color = Color3.fromRGB(255, 140, 40), Rate = 6, Speed = 1.5 },
+			{ Color = Color3.fromRGB(170, 120, 255), Rate = 4, Speed = 0.8 },
+		} do
+			local emitter = Instance.new("ParticleEmitter")
+			emitter.Name = "Wisps"
+			emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+			emitter.Color = ColorSequence.new(spec.Color)
+			emitter.LightEmission = 0.8
+			emitter.Rate = spec.Rate
+			emitter.Lifetime = NumberRange.new(7, 12)
+			emitter.Speed = NumberRange.new(spec.Speed * 0.5, spec.Speed)
+			emitter.Acceleration = Vector3.new(0, 0.4, 0)
+			emitter.SpreadAngle = Vector2.new(180, 180)
+			emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.7), NumberSequenceKeypoint.new(1, 0) })
+			emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.2), NumberSequenceKeypoint.new(1, 1) })
+			emitter.Shape = Enum.ParticleEmitterShape.Box
+			emitter.Parent = emitterPart
+		end
+	end
+end
+
+-- merchant --------------------------------------------------------------------------------------------
+
+local function findMerchantModel(): Model?
+	for _, tagged in CollectionService:GetTagged(TAG_MERCHANT) do
+		if tagged:IsA("Model") and tagged:IsDescendantOf(workspace) then
+			return tagged
+		end
+	end
+	local world = workspace:FindFirstChild("HalloweenWorld")
+	local named = world and world:FindFirstChild("PumpkinMerchant", true)
+	return if named and named:IsA("Model") then named else nil
+end
+
+-- Where the merchant stands RIGHT NOW (he may have been moved in Studio): never the Config position.
+local function merchantPart(): BasePart?
+	local model = merchantModel
+	if not model or not model:IsDescendantOf(workspace) then
+		model = findMerchantModel()
+		merchantModel = model
+	end
+	if not model then
+		return nil
+	end
+	local part = model:FindFirstChild("Torso") or model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+	return if part and part:IsA("BasePart") then part else nil
+end
+
+local function openShopFor(player: Player)
+	local root = rootOf(player)
+	local merchant = merchantPart()
+	if not active or not root or not merchant or not isAlive(player) then
+		return
+	end
+	if (root.Position - merchant.Position).Magnitude > settings.Merchant.ShopDistance then
+		return
+	end
+	pushState(player)
+	remotes.HalloweenOpenShop:FireClient(player)
+end
+
+-- Fallback only (the authored merchant is missing): a simple code-built merchant at Config.Halloween.Merchant,
+-- built into the same HalloweenWorld/Merchant folder and tagged so the normal adoption path wires it.
+local function buildDefaultMerchant()
+	local info = settings.Merchant
+	local model = Instance.new("Model")
+	model.Name = "PumpkinMerchant"
+	local origin = CFrame.lookAt(info.Position + Vector3.new(0, 0.2, 0), Vector3.new(info.FaceTowards.X, info.Position.Y + 0.2, info.FaceTowards.Z))
+	local function limb(name: string, size: Vector3, offset: Vector3, color: Color3, material: Enum.Material?, shape: Enum.PartType?): Part
+		return makePart({
+			Name = name, Size = size, CFrame = origin * CFrame.new(offset), Color = color,
+			Material = material or Enum.Material.Fabric, Shape = shape or Enum.PartType.Block,
+			CanCollide = false, CanQuery = true, CanTouch = false, Parent = model,
+		})
+	end
+	local robe = Color3.fromRGB(58, 30, 84)
+	limb("LeftLeg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 1, 0), robe)
+	limb("RightLeg", Vector3.new(1, 2, 1), Vector3.new(0.5, 1, 0), robe)
+	local torso = limb("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), robe)
+	limb("RobeHem", Vector3.new(2.6, 1.6, 1.5), Vector3.new(0, 1.4, 0), Color3.fromRGB(45, 22, 66))
+	limb("LeftArm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, -0.3), Color3.fromRGB(70, 38, 100))
+	limb("RightArm", Vector3.new(1, 2, 1), Vector3.new(1.5, 3, -0.3), Color3.fromRGB(70, 38, 100))
+	local head = limb("Head", Vector3.new(2.5, 2.2, 2.5), Vector3.new(0, 5.2, 0), ORANGE, Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+	limb("Stem", Vector3.new(0.4, 0.7, 0.4), Vector3.new(0, 6.5, 0), Color3.fromRGB(70, 105, 40), Enum.Material.Wood)
+	for _, side in { -1, 1 } do
+		limb("Eye", Vector3.new(0.45, 0.5, 0.2), Vector3.new(side * 0.55, 5.4, -1.15), FACE, Enum.Material.Neon)
+	end
+	limb("Mouth", Vector3.new(1.3, 0.3, 0.2), Vector3.new(0, 4.7, -1.2), FACE, Enum.Material.Neon)
+	local brim = limb("HatBrim", Vector3.new(0.25, 3.4, 3.4), Vector3.new(0, 6.15, 0), Color3.fromRGB(30, 20, 40), Enum.Material.Fabric, Enum.PartType.Cylinder)
+	brim.CFrame = origin * CFrame.new(0, 6.15, 0) * CFrame.Angles(0, 0, math.pi / 2)
+	limb("HatCone", Vector3.new(2, 1.9, 2), Vector3.new(0, 7.15, 0), Color3.fromRGB(30, 20, 40))
+	local lantern = limb("Lantern", Vector3.new(0.9, 1.1, 0.9), Vector3.new(2.1, 2.2, -0.9), Color3.fromRGB(255, 160, 50), Enum.Material.Neon)
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 150, 60)
+	glow.Range = 22
+	glow.Brightness = 1.6
+	glow.Parent = lantern
+	-- a counter piled with pumpkins in front of him
+	limb("Counter", Vector3.new(7, 3, 2.4), Vector3.new(0, 1.5, -3.2), Color3.fromRGB(80, 50, 32), Enum.Material.Wood)
+	jackOLantern(model, (origin * CFrame.new(-2, 3, -3.2)).Position, 1.8, 0.3, true)
+	jackOLantern(model, (origin * CFrame.new(2.2, 3, -3.2)).Position, 1.5, -0.4, false)
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.DisplayName = ""
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	humanoid.Parent = model
+	model.PrimaryPart = torso
+	local world = ensureWorld()
+	local holder = world:FindFirstChild("Merchant") or folder("Merchant", world)
+	holder:SetAttribute("AutoBuilt", true)
+	CollectionService:AddTag(model, TAG_MERCHANT)
+	model.Parent = holder
+
+	local gui, label = Build.MakeBillboard(head, UDim2.fromOffset(240, 60), Vector3.new(0, 4.5, 0), 90)
+	gui.AlwaysOnTop = false
+	label.Text = '<font color="#FFA030">' .. info.Name .. '</font>\n🎃 Trade your Candy!'
+end
+
+-- Adopt the authored merchant (find by tag/name, never move or rebuild it), make sure his prompt exists and
+-- opens the shop. Builds the default only if no merchant exists at all.
+local function adoptMerchant()
+	local model = findMerchantModel()
+	if not model then
+		buildDefaultMerchant()
+		model = findMerchantModel()
+	end
+	merchantModel = model
+	local part = merchantPart()
+	if not model or not part then
+		warn("[HalloweenService] no Pumpkin Merchant found or built")
+		return
+	end
+	local prompt = part:FindFirstChildOfClass("ProximityPrompt")
+	if not prompt then
+		local found = model:FindFirstChildWhichIsA("ProximityPrompt", true)
+		prompt = found
+	end
+	if not prompt then
+		prompt = Build.MakePrompt(part, "MerchantPrompt", "Open Shop", Enum.KeyCode.E, 0)
+		prompt.ObjectText = settings.Merchant.Name
+		prompt.MaxActivationDistance = settings.Merchant.PromptDistance
+	end
+	prompt.Enabled = true
+	if merchantPromptConnection then
+		merchantPromptConnection:Disconnect()
+	end
+	merchantPromptConnection = prompt.Triggered:Connect(openShopFor)
+end
+
+-- Mother Invasion -------------------------------------------------------------------------------------
+
+local function speciesWeights(): { [string]: number }
+	local weights: { [string]: number } = {}
+	for key, species in Config.Species do
+		if species.Model then
+			weights[key] = Config.NestRarityWeights[species.Rarity] or 1
+		end
+	end
+	return weights
+end
+
+local function updateBar(invader: Invader)
+	local tracker = invader.Tracker
+	invader.Fill.Size = UDim2.fromScale(math.clamp(tracker.Health / tracker.MaxHealth, 0, 1), 1)
+	invader.Text.Text = MonsterMath.FormatNumber(math.max(0, tracker.Health)) .. " / " .. MonsterMath.FormatNumber(tracker.MaxHealth)
+end
+
+local function removeInvader(invader: Invader)
+	invader.Alive = false
+	CombatService.Unregister(invader.Target)
+	invader.Target = nil
+	invader.Model:Destroy()
+	local index = table.find(invaders, invader)
+	if index then
+		table.remove(invaders, index)
+	end
+end
+
+local function settleInvader(invader: Invader, killerName: string)
+	if not invader.Alive then
+		return
+	end
+	local rewards = HalloweenLogic.Settle(invader.Tracker, invasionSettings, invader.Level)
+	removeInvader(invader)
+	local name = Config.Species[invader.Species].DisplayName
+	announce(string.format("🎃 %s finished off a Lv %d %s Mother!", killerName, invader.Level, name), Color3.fromRGB(255, 170, 60))
+	for _, reward in rewards do
+		local player = Players:GetPlayerByUserId(reward.UserId)
+		if player then
+			local granted = HalloweenService.AddCandy(player, reward.Candy)
+			if granted > 0 then
+				notify(player, string.format("🍬 +%d Candy for helping defeat the Lv %d %s!", granted, invader.Level, name), "success")
+			end
+		end
+	end
+	if #invaders == 0 then
+		announce("🎃 The Mother Invasion has been repelled! Great teamwork!", Color3.fromRGB(120, 255, 140))
+		setNight("Invasion", false)
+		pushAll()
+	end
+end
+
+local function spawnInvader(position: Vector3, level: number, species: string): Invader?
+	local info = Config.Species[species].Model
+	local template = info and MonsterModels.Get(info.Region, info.Index, "Adult")
+	if not info or not template or not invaderFolder then
+		return nil
+	end
+	local model: Model = template
+	model:ScaleTo(Config.MotherScale)
+	local pivotHeight = (model:GetAttribute("Scale") or 1) * Config.MotherScale
+	model:SetAttribute("PivotHeight", pivotHeight)
+	local focus = Vector3.new(Config.Map.PlazaMinX + 40, position.Y + pivotHeight, 0)
+	model:PivotTo(CFrame.lookAt(position + Vector3.new(0, pivotHeight, 0), focus))
+	model.Name = "Mother"
+	model:SetAttribute("AnimState", "Idle")
+	model:SetAttribute("HalloweenInvader", true)
+	model.Parent = invaderFolder
+	local root = model.PrimaryPart
+	if not root then
+		model:Destroy()
+		return nil
+	end
+
+	local styles = Config.MotherAttacks.Styles
+	local rigType = model:GetAttribute("RigType") :: string
+	local combo = Config.MotherAttacks.ComboStyles[rigType]
+	local style: Config.MotherStyle = if combo and level >= 30 then combo else (styles[rigType] or styles.Quad)
+	model:SetAttribute("AttackWindup", style.Windup)
+	model:SetAttribute("ComboHits", style.Hits)
+	model:SetAttribute("ComboInterval", style.HitInterval)
+	local extents = model:GetExtentsSize()
+	local height = extents.Y - pivotHeight
+	local element = Config.RegionMonsters[info.Region].Region
+	local maxHealth = HalloweenLogic.HealthForLevel(invasionSettings, level)
+
+	local gui, label = Build.MakeBillboard(root, UDim2.fromScale(16, 5.5), Vector3.new(0, height + 4, 0), 140)
+	gui.Name = "Info"
+	gui.AlwaysOnTop = false
+	label.Size = UDim2.fromScale(1, 0.6)
+	label.Text = string.format(
+		'<font color="#FFA030">🎃 %s</font> · Lv %d MOTHER\n<font color="%s">%s</font>',
+		Config.Species[species].DisplayName,
+		level,
+		Build.ColorToHex(Config.Rarities[Config.Species[species].Rarity].Color),
+		Config.Species[species].Rarity
+	)
+	local bar = Instance.new("Frame")
+	bar.Name = "HealthBar"
+	bar.Size = UDim2.fromScale(1, 0.32)
+	bar.Position = UDim2.fromScale(0, 0.66)
+	bar.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+	bar.BorderSizePixel = 0
+	bar.Parent = gui
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = Color3.fromRGB(255, 120, 30)
+	fill.BorderSizePixel = 0
+	fill.Parent = bar
+	local text = Instance.new("TextLabel")
+	text.Name = "HealthText"
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Font = Enum.Font.FredokaOne
+	text.TextScaled = true
+	text.TextColor3 = Color3.new(1, 1, 1)
+	text.TextStrokeTransparency = 0.3
+	text.ZIndex = 2
+	text.Parent = bar
+	local glowFire = Instance.new("Fire")
+	glowFire.Color = Color3.fromRGB(255, 130, 30)
+	glowFire.SecondaryColor = Color3.fromRGB(120, 40, 160)
+	glowFire.Size = 6
+	glowFire.Heat = 4
+	glowFire.Parent = root
+
+	local invader: Invader = {
+		Level = level,
+		Species = species,
+		Element = element,
+		Model = model,
+		Root = root,
+		Tracker = HalloweenLogic.NewTracker(maxHealth),
+		Target = nil,
+		Style = style,
+		Fill = fill,
+		Text = text,
+		Home = Vector3.new(position.X, position.Y, position.Z),
+		BodyRadius = math.max(extents.X, extents.Z) / 2,
+		Alive = true,
+		Aggro = nil,
+		Moving = false,
+		NextAttackAt = 0,
+		WindingUntil = 0,
+		Engaged = false,
+	}
+	updateBar(invader)
+	invader.Target = CombatService.Register({
+		Part = root,
+		Radius = invader.BodyRadius,
+		OnHit = function(player: Player, damage: number)
+			-- only a loaded, living, in-game player's hit is recorded; the damage number itself comes from
+			-- CombatService (cooldown + weapon validated there), never from a client-supplied value.
+			if not invader.Alive or not active or not player.Parent or not DataService.Get(player) then
+				return
+			end
+			local applied = invader.Tracker:Record(player.UserId, damage)
+			if applied <= 0 then
+				return
+			end
+			invader.Aggro = player.UserId
+			PlotService.Flash(model, Color3.fromRGB(255, 80, 80))
+			updateBar(invader)
+			if invader.Tracker.Health <= 0 then
+				settleInvader(invader, player.DisplayName)
+			end
+		end,
+	})
+	table.insert(invaders, invader)
+	return invader
+end
+
+local function pickInvasionSpots(count: number): { Vector3 }
+	local area = invasionSettings.Area
+	local spots: { Vector3 } = {}
+	local attempts = 0
+	local spacing = invasionSettings.SpawnSpacing
+	while #spots < count and attempts < 400 do
+		attempts += 1
+		local relax = if attempts > 250 then 0.5 else 1
+		local candidate = Vector3.new(rng:NextNumber(area.MinX, area.MaxX), 0.2, rng:NextNumber(-area.HalfZ, area.HalfZ))
+		local ok = true
+		for _, other in spots do
+			if flatDistance(candidate, other) < spacing * relax then
+				ok = false
+				break
+			end
+		end
+		if ok and clearOf(candidate.X, candidate.Z, 6) then
+			table.insert(spots, candidate)
+		end
+	end
+	return spots
+end
+
+function HalloweenService.StartInvasion(forcedCount: number?): number
+	if not active or not invaderFolder then
+		return 0
+	end
+	-- an unfinished previous wave runs off before the next one arrives
+	for _, leftover in table.clone(invaders) do
+		removeInvader(leftover)
+	end
+	invasionCounter += 1
+	local waveId = invasionCounter
+	local count = forcedCount or HalloweenLogic.RollInvasionCount(invasionSettings, rng:NextNumber())
+	count = math.max(invasionSettings.MinCount, math.floor(count))
+	local weights = speciesWeights()
+	local spawned = 0
+	for _, spot in pickInvasionSpots(count) do
+		local species = HalloweenLogic.WeightedPick(weights, rng:NextNumber()) :: string?
+		local level = rng:NextInteger(invasionSettings.MinLevel, invasionSettings.MaxLevel)
+		if species and spawnInvader(spot, level, species) then
+			spawned += 1
+		end
+	end
+	setNight("Invasion", spawned > 0)
+	if spawned > 0 then
+		announce(string.format("👹 MOTHER INVASION! %d Mother monsters are attacking the plaza! Defeat them for Candy!", spawned), Color3.fromRGB(255, 110, 40))
+		pushAll()
+		task.delay(invasionSettings.Lifetime, function()
+			if invasionCounter ~= waveId or not active then
+				return
+			end
+			local left = 0
+			for _, invader in table.clone(invaders) do
+				left += 1
+				removeInvader(invader)
+			end
+			setNight("Invasion", false)
+			if left > 0 then
+				announce("The Mothers retreated into the fog... see you next hour!", Color3.fromRGB(200, 200, 200))
+				pushAll()
+			end
+		end)
+	end
+	return spawned
+end
+
+local function invaderStep(dt: number)
+	local area = invasionSettings.Area
+	local now = os.clock()
+	for _, invader in table.clone(invaders) do
+		if not invader.Alive or not invader.Model.Parent then
+			continue
+		end
+		if now < invader.WindingUntil then
+			continue
+		end
+		local pivot = invader.Model:GetPivot()
+		local nearest: Player? = nil
+		local nearestRoot: BasePart? = nil
+		local bestScore = math.huge
+		for _, player in Players:GetPlayers() do
+			local root = rootOf(player)
+			if root and isAlive(player) and not CombatService.IsInSafeZone(root.Position) then
+				local distance = flatDistance(root.Position, pivot.Position)
+				local isAggro = invader.Aggro == player.UserId
+				local inRange = distance <= invasionSettings.NoticeRange or (isAggro and distance <= invasionSettings.LeashRange)
+				if inRange then
+					local score = if isAggro then distance - 1000 else distance
+					if score < bestScore then
+						nearest, nearestRoot, bestScore = player, root, score
+					end
+				end
+			end
+		end
+		if invader.Aggro and not nearest then
+			invader.Aggro = nil
+		end
+
+		local goal = invader.Home
+		local stopDistance = 0.5
+		if nearestRoot then
+			goal = nearestRoot.Position
+			stopDistance = invader.BodyRadius + 2
+		end
+		local offset = Vector3.new(goal.X - pivot.Position.X, 0, goal.Z - pivot.Position.Z)
+		local distance = offset.Magnitude
+		local moving = distance > stopDistance
+		if moving then
+			local step = math.min(invasionSettings.ChaseSpeed * dt, distance - stopDistance)
+			local position = pivot.Position + offset.Unit * step
+			-- never leave the plaza, never walk into a base
+			position = Vector3.new(
+				math.clamp(position.X, area.MinX - 6, area.MaxX + 6),
+				pivot.Position.Y,
+				math.clamp(position.Z, -area.HalfZ - 10, area.HalfZ + 10)
+			)
+			invader.Model:PivotTo(CFrame.lookAt(position, position + offset.Unit))
+		end
+		if moving ~= invader.Moving then
+			invader.Moving = moving
+			invader.Model:SetAttribute("AnimState", if moving then "Walk" else "Idle")
+		end
+
+		-- M1 on whoever is within reach
+		if nearestRoot and nearest then
+			local style = invader.Style
+			local reach = if style.Shape == "Slam" then style.Radius else math.min(style.Range, Config.MotherAttacks.AggroRange)
+			local current = invader.Model:GetPivot()
+			if flatDistance(nearestRoot.Position, current.Position) <= invader.BodyRadius + reach then
+				if not invader.Engaged then
+					invader.Engaged = true
+					invader.NextAttackAt = math.max(invader.NextAttackAt, now + Config.MotherAttacks.FirstAttackDelay)
+				end
+				if now >= invader.NextAttackAt then
+					local look = Vector3.new(nearestRoot.Position.X, current.Position.Y, nearestRoot.Position.Z)
+					if (look - current.Position).Magnitude > 0.1 then
+						invader.Model:PivotTo(CFrame.lookAt(current.Position, look))
+					end
+					invader.Model:SetAttribute("AnimState", "Attack")
+					invader.Moving = false
+					local model = invader.Model
+					local windup = MonsterAttack.Start({
+						Model = model,
+						Root = invader.Root,
+						BodyRadius = invader.BodyRadius,
+						Target = nearestRoot,
+						Style = style,
+						Element = invader.Element,
+						Damage = HalloweenLogic.DamageForLevel(invasionSettings, invader.Level),
+						IsValid = function()
+							return invader.Alive and active
+						end,
+					})
+					invader.WindingUntil = now + windup + 0.25
+					invader.NextAttackAt = now + windup + style.Cooldown
+					task.delay(windup + 0.25, function()
+						if invader.Alive and not invader.Moving then
+							model:SetAttribute("AnimState", "Idle")
+						end
+					end)
+				end
+			else
+				invader.Engaged = false
+			end
+		else
+			invader.Engaged = false
+		end
+	end
+end
+
+-- Pumpkin Hunt ----------------------------------------------------------------------------------------
+
+local function pickPumpkinSpots(count: number): { Vector3 }
+	local area = pumpkinSettings.Area
+	local spots: { Vector3 } = {}
+	local attempts = 0
+	while #spots < count and attempts < 600 do
+		attempts += 1
+		local relax = if attempts > 400 then 0.4 else 1
+		local candidate = Vector3.new(rng:NextNumber(area.MinX, area.MaxX), 0.2, rng:NextNumber(-area.HalfZ, area.HalfZ))
+		local ok = clearOf(candidate.X, candidate.Z, 0)
+		if ok then
+			for _, other in spots do
+				if flatDistance(candidate, other) < pumpkinSettings.MinSpacing * relax then
+					ok = false
+					break
+				end
+			end
+		end
+		if ok then
+			table.insert(spots, candidate)
+		end
+	end
+	return spots
+end
+
+local function endHunt(current: Hunt, message: string?)
+	if hunt ~= current then
+		return
+	end
+	hunt = nil
+	setNight("Hunt", false)
+	for _, pumpkin in current.Pumpkins do
+		pumpkin.Claimed = true
+		if pumpkin.Part.Parent then
+			pumpkin.Part:Destroy()
+		end
+	end
+	if message then
+		announce(message, Color3.fromRGB(255, 170, 60))
+	end
+	for _, player in Players:GetPlayers() do
+		remotes.HalloweenHint:FireClient(player, nil)
+	end
+	pushAll()
+end
+
+local function claimPumpkin(player: Player, current: Hunt, pumpkin: Pumpkin)
+	if hunt ~= current or pumpkin.Claimed or not active then
+		return
+	end
+	local now = os.clock()
+	if lastPick[player] and now - lastPick[player] < pumpkinSettings.PickupDebounce then
+		return
+	end
+	local root = rootOf(player)
+	if not root or not isAlive(player) or not pumpkin.Part.Parent or not hdata(player) then
+		return
+	end
+	-- trust the player's real position, not the fact that the prompt fired
+	if (root.Position - pumpkin.Part.Position).Magnitude > pumpkinSettings.PickupDistance then
+		return
+	end
+	lastPick[player] = now
+	pumpkin.Claimed = true
+	pumpkin.Part:Destroy()
+	current.Remaining -= 1
+	local granted = HalloweenService.AddCandy(player, pumpkin.Candy)
+	if pumpkin.Golden then
+		announce(string.format("✨ %s found the GOLDEN PUMPKIN (+%d Candy)!", player.DisplayName, granted), Color3.fromRGB(255, 220, 80))
+	else
+		notify(player, string.format("🎃 Pumpkin found! +%d Candy (%d left)", granted, current.Remaining), "success")
+	end
+	if current.Remaining <= 0 then
+		endHunt(current, "🎃 All the pumpkins have been found! See you in half an hour.")
+	else
+		pushAll()
+	end
+end
+
+local function makePumpkinModel(position: Vector3, golden: boolean): Part
+	local size = if golden then 3.6 else 3
+	local color = if golden then Color3.fromRGB(255, 205, 50) else ORANGE
+	local body = makePart({
+		Name = if golden then "GoldenPumpkin" else "HuntPumpkin", Shape = Enum.PartType.Ball,
+		Size = Vector3.new(size * 1.15, size, size * 1.15), Position = position + Vector3.new(0, size / 2, 0),
+		Color = color, Material = if golden then Enum.Material.Neon else Enum.Material.SmoothPlastic,
+		CanCollide = false, CanQuery = true, CanTouch = false, Parent = pumpkinFolder,
+	})
+	local stem = makePart({
+		Name = "Stem", Size = Vector3.new(0.6, 0.9, 0.6), Position = position + Vector3.new(0, size + 0.15, 0),
+		Color = Color3.fromRGB(70, 105, 40), Material = Enum.Material.Wood, CanCollide = false, CanQuery = false, CanTouch = false, Parent = body,
+	})
+	stem.Anchored = true
+	local light = Instance.new("PointLight")
+	light.Color = if golden then Color3.fromRGB(255, 230, 120) else Color3.fromRGB(255, 150, 50)
+	light.Range = if golden then 20 else 12
+	light.Brightness = if golden then 2.2 else 1.2
+	light.Shadows = false
+	light.Parent = body
+	return body
+end
+
+function HalloweenService.StartPumpkinHunt(): number
+	if not active or not pumpkinFolder then
+		return 0
+	end
+	if hunt then
+		endHunt(hunt :: Hunt, nil)
+	end
+	huntCounter += 1
+	local current: Hunt = { Id = huntCounter, Pumpkins = {}, Remaining = 0, EndsAt = os.clock() + pumpkinSettings.Lifetime, LastHintAt = 0 }
+	local goldenIndex: number? = nil
+	if rng:NextNumber() < pumpkinSettings.GoldenChance then
+		goldenIndex = rng:NextInteger(1, pumpkinSettings.Count)
+	end
+	for index, spot in pickPumpkinSpots(pumpkinSettings.Count) do
+		local golden = goldenIndex == index
+		local part = makePumpkinModel(spot, golden)
+		local pumpkin: Pumpkin = {
+			Part = part,
+			Golden = golden,
+			Candy = HalloweenLogic.PumpkinCandy(pumpkinSettings, golden, rng:NextNumber()),
+			Claimed = false,
+		}
+		local prompt = Build.MakePrompt(part, "PumpkinPrompt", "Pick up", Enum.KeyCode.E, 0.2)
+		prompt.ObjectText = if golden then "Golden Pumpkin" else "Pumpkin"
+		prompt.MaxActivationDistance = 10
+		prompt.Triggered:Connect(function(player: Player)
+			claimPumpkin(player, current, pumpkin)
+		end)
+		table.insert(current.Pumpkins, pumpkin)
+		current.Remaining += 1
+	end
+	if current.Remaining == 0 then
+		return 0
+	end
+	hunt = current
+	setNight("Hunt", true)
+	announce(string.format("🎃 PUMPKIN HUNT! %d pumpkins are hiding in the plaza for %d minutes. Follow the hints!", current.Remaining, math.floor(pumpkinSettings.Lifetime / 60)), Color3.fromRGB(255, 150, 40))
+	pushAll()
+	task.delay(pumpkinSettings.Lifetime, function()
+		if hunt == current then
+			endHunt(current, "The pumpkins rotted away... next hunt in 30 minutes!")
+		end
+	end)
+	return current.Remaining
+end
+
+-- Soft hint: a coarse compass sector and distance band for the nearest pumpkin. Never a position.
+local function sendHints(current: Hunt)
+	local spots = {}
+	for _, pumpkin in current.Pumpkins do
+		if not pumpkin.Claimed and pumpkin.Part.Parent then
+			table.insert(spots, { X = pumpkin.Part.Position.X, Z = pumpkin.Part.Position.Z })
+		end
+	end
+	for _, player in Players:GetPlayers() do
+		local root = rootOf(player)
+		if root then
+			local sector, band = HalloweenLogic.Hint(root.Position.X, root.Position.Z, spots, pumpkinSettings.HintBands)
+			if sector and band then
+				remotes.HalloweenHint:FireClient(player, { Sector = sector, Band = band, Remaining = current.Remaining, EndsIn = math.max(0, math.ceil(current.EndsAt - os.clock())) })
+			end
+		end
+	end
+end
+
+-- shop ------------------------------------------------------------------------------------------------
+
+local function nearMerchant(player: Player): boolean
+	local root = rootOf(player)
+	local merchant = merchantPart()
+	return root ~= nil and merchant ~= nil and (root.Position - merchant.Position).Magnitude <= settings.Merchant.ShopDistance * 1.5
+end
+
+local function countSpecies(data: any, species: string): number
+	local count = 0
+	for _, monster in data.Monsters do
+		if monster.Species == species then count += 1 end
+	end
+	return count
+end
+
+local function countRecords(records: any): number
+	local count = 0
+	for _ in records do count += 1 end
+	return count
+end
+
+local REASONS = {
+	NoCandy = "Not enough Candy!",
+	Owned = "You already own that!",
+	BoostCap = "You already have the maximum Candy Boost time stored.",
+	Unknown = "That item isn't available.",
+}
+
+local function onBuy(player: Player, itemId: unknown)
+	if type(itemId) ~= "string" then
+		return
+	end
+	local now = os.clock()
+	if lastBuy[player] and now - lastBuy[player] < settings.Merchant.PurchaseCooldown then
+		return
+	end
+	lastBuy[player] = now
+	if not active then
+		notify(player, "The Halloween event is over.", "error")
+		return
+	end
+	if busy[player] or not nearMerchant(player) then
+		return
+	end
+	local profile = DataService.Get(player)
+	local data = hdata(player)
+	if not profile or not data then
+		return
+	end
+	busy[player] = true
+	local done, failure = pcall(function()
+		local ok, reason, purchase = HalloweenLogic.ApplyPurchase(data :: any, itemId, settings.Items, os.time(), rng:NextNumber())
+		if not ok or not purchase then
+			notify(player, REASONS[reason] or "Can't buy that right now.", "error")
+			return
+		end
+		local item = settings.Items[itemId]
+		local granted = true
+		if purchase.Kind == "Egg" then
+			local eggType = purchase.EggType :: string
+			local before = countRecords(profile.Data.Eggs)
+			if Config.Eggs[eggType] then
+				local called, result = pcall(MonsterService.AddEgg, player, eggType)
+				-- judge by the egg record itself, so a render error can't both grant and refund
+				granted = (called and result == true) or countRecords(profile.Data.Eggs) > before
+				if not called then
+					warn("[HalloweenService] AddEgg failed:", result)
+				end
+			else
+				granted = false
+			end
+			if granted then
+				notify(player, string.format("🥚 The Haunted Egg turned out to be a %s!", Config.Eggs[eggType].DisplayName), "success")
+			end
+		elseif purchase.Kind == "Monster" then
+			local species = purchase.Species :: string
+			local before = countSpecies(profile.Data, species)
+			local called, result = pcall(MonsterService.AddMonster, player, species, nil)
+			granted = (called and result == true) or countSpecies(profile.Data, species) > before
+			if not called then
+				warn("[HalloweenService] AddMonster failed:", result)
+			end
+		end
+		if not granted then
+			purchase.Undo()
+			notify(player, "Couldn't deliver that item, your Candy was not spent.", "error")
+			return
+		end
+		if purchase.Kind == "Boost" then
+			notify(player, "🍬 Candy Boost active: 2x cash!", "success")
+			MonsterService.PushState(player)
+		elseif purchase.Kind == "Hat" or purchase.Kind == "Trail" or purchase.Kind == "Aura" or purchase.Kind == "Title" then
+			notify(player, "🎃 " .. item.Name .. " unlocked and equipped!", "success")
+			pcall(applyCosmetics, player)
+		end
+		saveSoon(player)
+	end)
+	busy[player] = nil
+	if not done then
+		warn("[HalloweenService] purchase failed:", failure)
+	end
+	pushState(player)
+end
+
+local function onEquip(player: Player, itemId: unknown, equip: unknown)
+	if type(itemId) ~= "string" or type(equip) ~= "boolean" or not active then
+		return
+	end
+	local now = os.clock()
+	if lastBuy[player] and now - lastBuy[player] < settings.Merchant.PurchaseCooldown then
+		return
+	end
+	lastBuy[player] = now
+	local data = hdata(player)
+	if not data or not HalloweenLogic.SetEquipped(data :: any, itemId, settings.Items, equip) then
+		return
+	end
+	applyCosmetics(player)
+	saveSoon(player)
+	pushState(player)
+end
+
+local function onSync(player: Player)
+	local now = os.clock()
+	if lastSync[player] and now - lastSync[player] < 1 then
+		return
+	end
+	lastSync[player] = now
+	pushState(player)
+end
+
+-- lifecycle -------------------------------------------------------------------------------------------
+
+function HalloweenService.Start()
+	if active then
+		return
+	end
+	active = true
+	local existing = workspace:FindFirstChild("HalloweenEvent")
+	if existing then
+		existing:Destroy()
+	end
+	rootFolder = folder("HalloweenEvent", workspace)
+	invaderFolder = folder("Invaders", rootFolder :: Folder)
+	pumpkinFolder = folder("Pumpkins", rootFolder :: Folder)
+	showWorld()
+	buildProps() -- adopts Workspace.HalloweenWorld.Props (builds a default only if it is missing)
+	adoptMerchant() -- adopts the authored Pumpkin Merchant wherever he stands now
+	local now = os.time()
+	nextInvasionAt = HalloweenLogic.NextOccurrence(now, invasionSettings.Interval, invasionSettings.Offset)
+	nextPumpkinAt = HalloweenLogic.NextOccurrence(now, pumpkinSettings.Interval, pumpkinSettings.Offset)
+	announce("🎃 " .. settings.Name .. " has begun! Visit the Pumpkin Merchant and watch for Mother Invasions and Pumpkin Hunts!", Color3.fromRGB(255, 150, 40))
+	for _, player in Players:GetPlayers() do
+		applyCosmetics(player)
+	end
+	pushAll()
+end
+
+function HalloweenService.Stop()
+	if not active then
+		return
+	end
+	active = false
+	invasionCounter += 1 -- cancels pending despawn timers
+	for _, invader in table.clone(invaders) do
+		removeInvader(invader)
+	end
+	table.clear(invaders)
+	if hunt then
+		endHunt(hunt :: Hunt, nil)
+	end
+	hunt = nil
+	table.clear(nightHolds)
+	restoreAtmosphere()
+	if rootFolder then
+		rootFolder:Destroy() -- runtime-only objects (invaders, pumpkin pickups)
+	end
+	if merchantPromptConnection then
+		merchantPromptConnection:Disconnect()
+		merchantPromptConnection = nil
+	end
+	hideWorld() -- the authored decorations/merchant are stashed (never destroyed) until the event runs again
+	rootFolder, invaderFolder, pumpkinFolder, propFolder, merchantModel = nil, nil, nil, nil, nil
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		if character then
+			removeCosmetics(character)
+		end
+		HalloweenService.ConvertCandy(player)
+	end
+	announce("🎃 " .. settings.Name .. " has ended. Leftover Candy was converted into coins. Thanks for playing!", Color3.fromRGB(200, 200, 200))
+end
+
+function HalloweenService.IsActive(): boolean
+	return active
+end
+
+-- Called after a profile loads. When the event isn't running, any leftover Candy is converted here.
+function HalloweenService.SetupPlayer(player: Player)
+	if active then
+		task.spawn(applyCosmetics, player)
+		pushState(player)
+	else
+		HalloweenService.ConvertCandy(player)
+		pushState(player)
+	end
+end
+
+function HalloweenService.CleanupPlayer(player: Player)
+	lastBuy[player] = nil
+	lastPick[player] = nil
+	lastSync[player] = nil
+	busy[player] = nil
+end
+
+local function schedulerStep()
+	local wanted = wantActive()
+	if wanted and not active then
+		HalloweenService.Start()
+	elseif not wanted and active then
+		HalloweenService.Stop()
+	end
+	if not active then
+		return
+	end
+	local now = os.time()
+	if now >= nextInvasionAt then
+		HalloweenService.StartInvasion()
+		nextInvasionAt = HalloweenLogic.NextOccurrence(now, invasionSettings.Interval, invasionSettings.Offset)
+		announcedInvasionAt = 0
+	elseif nextInvasionAt - now <= invasionSettings.AnnounceBefore and announcedInvasionAt ~= nextInvasionAt then
+		announcedInvasionAt = nextInvasionAt
+		setNight("Invasion", true) -- night falls with the 60 s warning
+		announce(string.format("⚠️ Mother Invasion in %d seconds! Grab your weapons and get ready to defend the plaza!", math.max(1, nextInvasionAt - now)), Color3.fromRGB(255, 90, 60))
+	end
+	if now >= nextPumpkinAt then
+		HalloweenService.StartPumpkinHunt()
+		nextPumpkinAt = HalloweenLogic.NextOccurrence(now, pumpkinSettings.Interval, pumpkinSettings.Offset)
+	end
+	local current = hunt
+	if current and os.clock() - current.LastHintAt >= pumpkinSettings.HintInterval then
+		current.LastHintAt = os.clock()
+		sendHints(current)
+	end
+end
+
+function HalloweenService.Init(allRemotes: { [string]: RemoteEvent })
+	remotes = allRemotes
+	remotes.HalloweenBuy.OnServerEvent:Connect(onBuy)
+	remotes.HalloweenEquip.OnServerEvent:Connect(onEquip)
+	remotes.HalloweenSync.OnServerEvent:Connect(onSync)
+
+	if wantActive() then
+		HalloweenService.Start()
+	else
+		hideWorld() -- event off: the authored decorations are not part of the running game
+	end
+
+	task.spawn(function()
+		local last = os.clock()
+		local lastPush = 0
+		local lastSchedule = 0
+		while true do
+			task.wait(0.1)
+			local now = os.clock()
+			local dt = now - last
+			last = now
+			if active and #invaders > 0 then
+				local ok, err = pcall(invaderStep, dt)
+				if not ok then
+					warn("[HalloweenService] invader step failed:", err)
+				end
+			end
+			if now - lastSchedule >= 1 then
+				lastSchedule = now
+				local ok, err = pcall(schedulerStep)
+				if not ok then
+					warn("[HalloweenService] scheduler failed:", err)
+				end
+			end
+			if active and now - lastPush >= 15 then
+				lastPush = now
+				pushAll()
+			end
+		end
+	end)
+
+	-- Studio only: trigger or end the event from the Command Bar for testing.
+	if RunService:IsStudio() then
+		local debugFolder = ServerStorage:FindFirstChild("RaiseAMonsterDebug") or folder("RaiseAMonsterDebug", ServerStorage)
+		local function bind(name: string, callback: (...any) -> ())
+			if debugFolder:FindFirstChild(name) then
+				return
+			end
+			local event = Instance.new("BindableEvent")
+			event.Name = name
+			event.Event:Connect(callback)
+			event.Parent = debugFolder
+		end
+		bind("HalloweenInvasion", function(count: number?) HalloweenService.StartInvasion(count) end)
+		bind("HalloweenPumpkins", function() HalloweenService.StartPumpkinHunt() end)
+		bind("HalloweenToggle", function()
+			settings.Enabled = not settings.Enabled
+			print("[HalloweenService] Config.Halloween.Enabled =", settings.Enabled)
+		end)
+		bind("HalloweenCandy", function(amount: number?)
+			local first = Players:GetPlayers()[1]
+			if first then HalloweenService.AddCandy(first, amount or 1000) end
+		end)
+	end
+end
+
+return HalloweenService
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="22">
         <Properties>
           <string name="Name">LeaderboardService</string>
           <string name="Source"><![CDATA[--!strict
@@ -960455,7 +962730,7 @@ return LeaderboardService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="19">
+      <Item class="ModuleScript" referent="23">
         <Properties>
           <string name="Name">MonetizationService</string>
           <string name="Source"><![CDATA[--!strict
@@ -960798,7 +963073,7 @@ return MonetizationService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="20">
+      <Item class="ModuleScript" referent="24">
         <Properties>
           <string name="Name">MonsterAttack</string>
           <string name="Source"><![CDATA[--!strict
@@ -960961,7 +963236,7 @@ return MonsterAttack
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="21">
+      <Item class="ModuleScript" referent="25">
         <Properties>
           <string name="Name">MonsterModels</string>
           <string name="Source"><![CDATA[--[[
@@ -962089,7 +964364,7 @@ return MonsterModels
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="22">
+      <Item class="ModuleScript" referent="26">
         <Properties>
           <string name="Name">MonsterService</string>
           <string name="Source"><![CDATA[--!strict
@@ -962128,6 +964403,14 @@ local lastAction: { [Player]: number } = {}
 local lastCollect: { [Player]: number } = {}
 local lastFeed: { [Player]: { [string]: number } } = {}
 local lastAutoFeed: { [Player]: number } = {}
+type OfflineEarnings = { Id: string, SecondsAway: number, CoinsEarned: number, CollectiblePending: number, MonstersGrown: number }
+local offlineEarnings: { [Player]: OfflineEarnings } = {}
+
+-- Temporary event multiplier on live income only (Halloween Candy Boost). It is deliberately NOT
+-- folded into GetCoinMultiplier, so it is never saved as the offline-income multiplier.
+MonsterService.GetEventMultiplier = function(_player: Player): number
+	return 1
+end
 
 local function rateLimited(player: Player): boolean
 	local now = os.clock()
@@ -962269,6 +964552,7 @@ function MonsterService.PushState(player: Player)
 	local state: { [string]: any } = {
 		Coins = data.Coins,
 		PendingCoins = data.PendingCoins,
+		OfflineEarnings = offlineEarnings[player],
 		UnlockedSlots = MonsterService.GetUnlockedSlots(player),
 		MaxSlots = Config.MaxSlots,
 		NextSlotCost = nextSlotCost,
@@ -962502,6 +964786,7 @@ local function hatch(player: Player, eggData: DataService.EggData)
 		Hunger = 100,
 		Happiness = 100,
 		Slot = eggData.Slot,
+		LastProgressAt = os.time(),
 	}
 	profile.Data.Eggs[eggData.Id] = nil
 	profile.Data.Monsters[monster.Id] = monster
@@ -962533,6 +964818,7 @@ function MonsterService.AddMonster(player: Player, species: string, mutation: st
 		Hunger = 100,
 		Happiness = 100,
 		Slot = slot,
+		LastProgressAt = os.time(),
 	}
 	profile.Data.Monsters[monster.Id] = monster
 	if slot > 0 then PlotService.RenderMonster(player, monster) end
@@ -962612,19 +964898,10 @@ end
 -- التربية ---------------------------------------------------------------------------
 
 local function addXp(player: Player, monster: MonsterMath.MonsterData, amount: number)
-	if monster.Level >= Config.MaxLevel then
-		monster.Xp = 0
-		return
-	end
+	local oldLevel = monster.Level
 	local oldStage = MonsterMath.GetStageIndex(monster.Level)
-	monster.Xp += amount
-	local leveled = false
-	while monster.Level < Config.MaxLevel and monster.Xp >= Config.XpForLevel(monster.Level) do
-		monster.Xp -= Config.XpForLevel(monster.Level)
-		monster.Level += 1
-		leveled = true
-	end
-	if not leveled then
+	MonsterMath.AddXp(monster, amount)
+	if monster.Level == oldLevel then
 		return
 	end
 	local newStage = MonsterMath.GetStageIndex(monster.Level)
@@ -963056,23 +965333,60 @@ end
 
 -- اللوب الأساسي ------------------------------------------------------------------------
 
+local function prepareProgress(player: Player)
+	if offlineEarnings[player] then return end
+	local profile = DataService.Get(player)
+	if not profile then return end
+	local data = profile.Data
+	local slots = data.IncomeUnlockedSlots or (Config.BaseSlots + (data.SlotUpgrades or 0))
+	local multiplier = data.IncomeMultiplier or 1
+	if slots ~= slots or math.abs(slots) == math.huge then slots = Config.BaseSlots end
+	if multiplier ~= multiplier or math.abs(multiplier) == math.huge then multiplier = 1 end
+	slots = math.clamp(math.floor(slots), 0, Config.MaxSlots)
+	multiplier = math.clamp(multiplier, 1, Config.VIPCoinMultiplier * Config.CoinBoostMultiplier)
+	local now, coins, secondsAway, grown = os.time(), 0, 0, 0
+	for _, monster in data.Monsters do
+		local previous = monster.LastProgressAt
+		if type(previous) == "number" and previous == previous and previous >= 0 and previous <= now then
+			secondsAway = math.max(secondsAway, now - previous)
+		end
+		local stage = MonsterMath.GetStageIndex(monster.Level)
+		coins += MonsterMath.AdvanceProgress(monster, now, monster.Slot >= 1 and monster.Slot <= slots, multiplier)
+		if MonsterMath.GetStageIndex(monster.Level) > stage then grown += 1 end
+	end
+	data.PendingCoins += coins
+	-- Stored in the same atomic profile snapshot as the consumed timestamps.
+	data.IncomeMultiplier = MonsterService.GetCoinMultiplier(player)
+	data.IncomeUnlockedSlots = MonsterService.GetUnlockedSlots(player)
+	offlineEarnings[player] = {
+		Id = profile.SessionId or tostring(now), SecondsAway = secondsAway,
+		CoinsEarned = coins, CollectiblePending = math.floor(data.PendingCoins), MonstersGrown = grown,
+	}
+end
+
 local function tickPlayer(player: Player, dt: number)
 	local profile = DataService.Get(player)
 	if not profile or not PlotService.GetPlot(player) then
 		return
 	end
+	-- Pass lookup can yield before SetupPlayer. Settle the saved interval first.
+	prepareProgress(player)
 	local data = profile.Data
 	local multiplier = MonsterService.GetCoinMultiplier(player)
+	local progressAt = os.time()
+	data.IncomeMultiplier = multiplier
+	data.IncomeUnlockedSlots = MonsterService.GetUnlockedSlots(player)
+	local okEvent, eventValue = pcall(MonsterService.GetEventMultiplier, player)
+	local eventMultiplier = if okEvent and type(eventValue) == "number" and eventValue >= 1 and eventValue < 100 then eventValue else 1
 
 	for id, monster in data.Monsters do
-		if MonsterService.IsPlaced(player, monster) and not MonsterService.IsCarried(player, id) then
-			monster.Hunger = math.max(0, monster.Hunger - Config.HungerDecayPerSecond * dt)
-			monster.Happiness = math.max(0, monster.Happiness - Config.HappinessDecayPerSecond * dt)
-			data.PendingCoins += MonsterMath.GetProduction(monster) * multiplier * dt
-			if monster.Hunger >= 50 and monster.Happiness >= 50 then
-				addXp(player, monster, Config.PassiveXpPerSecond * dt)
-			end
-			PlotService.UpdateMonster(player, monster, false)
+		local oldStage = MonsterMath.GetStageIndex(monster.Level)
+		local producing = MonsterService.IsPlaced(player, monster) and not MonsterService.IsCarried(player, id)
+		data.PendingCoins += MonsterMath.AdvanceProgress(monster, progressAt, producing, multiplier * eventMultiplier)
+		if producing then
+			local evolved = MonsterMath.GetStageIndex(monster.Level) ~= oldStage
+			PlotService.UpdateMonster(player, monster, evolved)
+			if evolved then MonsterService.Notify(player, "✨ " .. MonsterMath.GetDisplayName(monster) .. " evolved into " .. MonsterMath.GetStage(monster.Level).Name .. "!", "success") end
 		end
 	end
 
@@ -963113,6 +965427,7 @@ function MonsterService.SetupPlayer(player: Player)
 	-- Marketplace can still be checking ExtraSlots. Keep saved assignments until
 	-- ownership is known; locked slots remain inactive and cannot earn income.
 	DataService.NormalizeMonsterSlots(data, Config.MaxSlots)
+	prepareProgress(player)
 	PlotService.SetUnlockedSlots(player, unlocked)
 	for _, monster in data.Monsters do
 		if MonsterService.IsPlaced(player, monster) then PlotService.RenderMonster(player, monster) end
@@ -963125,6 +965440,7 @@ function MonsterService.SetupPlayer(player: Player)
 end
 
 function MonsterService.CleanupPlayer(player: Player)
+	offlineEarnings[player] = nil
 	FollowerService.CleanupPlayer(player)
 	lastPlay[player] = nil
 	activeGames[player] = nil
@@ -963185,7 +965501,7 @@ return MonsterService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="23">
+      <Item class="ModuleScript" referent="27">
         <Properties>
           <string name="Name">PlotService</string>
           <string name="Source"><![CDATA[--!strict
@@ -963309,6 +965625,19 @@ PlotService.ShopPosition = SHOP_ORIGIN
 local SHOP_FRAME = CFrame.new(SHOP_ORIGIN) * CFrame.Angles(0, math.rad(Config.Shop.Yaw), 0)
 PlotService.ShopTeleportCFrame = CFrame.lookAt(SHOP_FRAME:PointToWorldSpace(Config.Shop.TeleportOffset), SHOP_ORIGIN + Vector3.new(0, Config.Shop.TeleportOffset.Y, 0))
 
+-- The authored Blacksmith's "Open Shop" prompt (tag GearShopPrompt) opens the same shop as the old counter.
+local boundGearPrompts: { [Instance]: boolean } = {}
+local gearPromptSignal: RBXScriptConnection? = nil
+local function bindGearShopPrompt(prompt: Instance)
+	if boundGearPrompts[prompt] or not prompt:IsA("ProximityPrompt") then
+		return
+	end
+	boundGearPrompts[prompt] = true
+	prompt.Triggered:Connect(function(player)
+		PlotService.Callbacks.OpenShop(player)
+	end)
+end
+
 local function buildShop()
 	local shopModel = Instance.new("Model")
 	shopModel.Name = "EggShop"
@@ -963419,6 +965748,19 @@ local function buildShop()
 	end
 
 	shopModel:PivotTo(SHOP_FRAME * CFrame.new(SHOP_ORIGIN):Inverse() * shopModel:GetPivot())
+
+	-- A Studio-authored Gear Shop (Workspace.GearShopWorld: stall + Blacksmith NPC, tagged GearShopStand)
+	-- replaces this code-made stall. It is never rebuilt or moved by code, so the user's edits stick.
+	if CollectionService:GetTagged("GearShopStand")[1] then
+		shopModel:Destroy()
+	end
+	for _, prompt in CollectionService:GetTagged("GearShopPrompt") do
+		bindGearShopPrompt(prompt)
+	end
+	if not gearPromptSignal then
+		gearPromptSignal = CollectionService:GetInstanceAddedSignal("GearShopPrompt"):Connect(bindGearShopPrompt)
+	end
+
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "CenterSpawn"
 	spawn.Anchored = true
@@ -964281,7 +966623,7 @@ return PlotService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="24">
+      <Item class="ModuleScript" referent="28">
         <Properties>
           <string name="Name">RewardService</string>
           <string name="Source"><![CDATA[--!strict
@@ -964413,7 +966755,7 @@ return RewardService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="25">
+      <Item class="ModuleScript" referent="29">
         <Properties>
           <string name="Name">StealService</string>
           <string name="Source"><![CDATA[--!strict
@@ -964672,7 +967014,7 @@ return StealService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="26">
+      <Item class="ModuleScript" referent="30">
         <Properties>
           <string name="Name">TerrainService</string>
           <string name="Source"><![CDATA[--!strict
@@ -964858,7 +967200,7 @@ return TerrainService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="27">
+      <Item class="ModuleScript" referent="31">
         <Properties>
           <string name="Name">TradeService</string>
           <string name="Source"><![CDATA[--!strict
@@ -965106,7 +967448,7 @@ return TradeService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="28">
+      <Item class="ModuleScript" referent="32">
         <Properties>
           <string name="Name">ZoneService</string>
           <string name="Source"><![CDATA[--!strict
@@ -965940,15 +968282,15 @@ return ZoneService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="29">
+  <Item class="StarterPlayer" referent="33">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="30">
+    <Item class="StarterPlayerScripts" referent="34">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="31">
+      <Item class="LocalScript" referent="35">
         <Properties>
           <string name="Name">Client</string>
           <string name="Source"><![CDATA[--!strict
@@ -965974,10 +968316,17 @@ local CombatFx = require(script.CombatFx)
 local Settings = require(script.Settings)
 local MonsterInventory = require(script.MonsterInventory)
 local Effects = require(script.Effects)
+local CashCounterFormatter = require(script.CashCounterFormatter)
+local OfflineEarnings = require(script.OfflineEarnings)
+local HalloweenUI = require(script.HalloweenUI)
+local CandyCounter = require(script.CandyCounter)
+local HalloweenDecor = require(script.HalloweenDecor)
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
 local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
+CashCounterFormatter.Start(player:WaitForChild("PlayerGui"))
+local offlineEarnings = OfflineEarnings.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
 
 local state: any = nil
 local openMonsterId: string? = nil
@@ -965991,6 +968340,9 @@ end, function()
 end)
 
 Settings.Init(ui)
+task.spawn(CandyCounter.Init, player:WaitForChild("PlayerGui"), remotes) -- own thread so a missing GUI can't stall startup
+HalloweenUI.Init(ui, remotes)
+task.spawn(HalloweenDecor.Init) -- idle bob/blink for the Studio-authored Halloween decorations (client-local, own thread)
 
 -- تحديث الواجهة ---------------------------------------------------------------------
 
@@ -966117,12 +968469,14 @@ inventory = MonsterInventory.Init(ui, remotes, function() return state end, func
 	UI.Open(ui, ui.MonsterFrame)
 	refreshMonsterPanel()
 end)
-ui.InventoryButton.Activated:Connect(function() inventory.Open() end)
+-- The authored golden-paw launcher (or the built-in button as a fallback) opens the inventory.
+Features.SetInventoryOpener(function() inventory.Open() end)
 
 -- الأحداث -------------------------------------------------------------------------------
 
 remotes.StateUpdate.OnClientEvent:Connect(function(newState)
 	state = newState
+	offlineEarnings.Update(newState)
 	refresh()
 end)
 
@@ -966140,10 +968494,6 @@ remotes.OpenMonster.OnClientEvent:Connect(function(monsterId: string)
 	sellConfirmUntil = 0
 	UI.Open(ui, ui.MonsterFrame)
 	refresh()
-end)
-
-ui.ShopButton.Activated:Connect(function()
-	UI.Toggle(ui, ui.ShopFrame)
 end)
 
 for eggType, eggButton in ui.EggButtons do
@@ -966266,7 +968616,534 @@ end)
 UI.Toast(ui, "Welcome to Raise a Monster! Hatch your egg, hunt monsters with your bat and carry them home 🏃", "info")
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="32">
+        <Item class="ModuleScript" referent="36">
+          <Properties>
+            <string name="Name">AuthoredLaunchers</string>
+            <string name="Source"><![CDATA[--!strict
+-- Bind the exact Studio-authored launchers without changing their artwork.
+local AuthoredLaunchers = {}
+type Descriptor = { Gui: string, Path: { string } }
+local definitions: { [string]: Descriptor } = {
+	Shop = { Gui = "ShopGui", Path = { "shop" } },
+	Rewards = { Gui = "ShopGui", Path = { "gifts" } },
+	Trade = { Gui = "ShopGui", Path = { "trade" } },
+	Inventory = { Gui = "inv", Path = { "Group 1" } },
+}
+local active: { [Instance]: () -> () } = {}
+
+function AuthoredLaunchers.Start(playerGui: Instance, fallback: { [string]: GuiButton }, actions: { [string]: () -> () }): () -> ()
+	if active[playerGui] then active[playerGui]() end
+	local stopped, pending = false, false
+	local bound: { [GuiButton]: RBXScriptConnection } = {}
+	local watched: { [Instance]: { RBXScriptConnection } } = {}
+	local hidden: { [GuiObject]: { Visible: boolean, Connection: RBXScriptConnection } } = {}
+	local connections: { RBXScriptConnection } = {}
+	local refresh: () -> ()
+	local function schedule()
+		if stopped or pending then return end
+		pending = true
+		task.defer(function() pending = false; if not stopped then refresh() end end)
+	end
+	local function watch(instance: Instance, properties: { string })
+		if watched[instance] then return end
+		local list = {}
+		for _, property in properties do table.insert(list, instance:GetPropertyChangedSignal(property):Connect(schedule)) end
+		watched[instance] = list
+	end
+	local function visible(instance: Instance): boolean
+		local current: Instance? = instance
+		while current and current ~= playerGui do
+			if current:IsA("GuiObject") then
+				local old = hidden[current :: GuiObject]
+				if not (if old then old.Visible else (current :: GuiObject).Visible) then return false end
+			elseif current:IsA("ScreenGui") and not (current :: ScreenGui).Enabled then return false end
+			current = current.Parent
+		end
+		return current == playerGui
+	end
+	refresh = function()
+		local wanted: { [GuiButton]: boolean } = {}
+		local suppress: { [GuiObject]: boolean } = {}
+		for key, backup in fallback do
+			local action = actions[key]
+			if not action then continue end
+			local selected: GuiButton = backup
+			local descriptor = definitions[key]
+			if descriptor then
+				local candidates: { GuiButton } = {}
+				for _, gui in playerGui:GetChildren() do
+					if not gui:IsA("ScreenGui") then continue end
+					watch(gui, { "Name", "Enabled" })
+					if gui.Name ~= descriptor.Gui then continue end
+					local target: Instance? = gui
+					for _, name in descriptor.Path do
+						if not target then break end
+						local match: Instance? = nil
+						local count = 0
+						for _, child in target:GetChildren() do
+							if child:IsA("GuiObject") then watch(child, { "Name", "Visible" }) end
+							if child.Name == name then match = child; count += 1 end
+						end
+						target = if count == 1 then match else nil
+					end
+					if target and target:IsA("GuiButton") and visible(target) then
+						table.insert(candidates, target :: GuiButton)
+					end
+				end
+				if #candidates == 1 then selected = candidates[1] end
+			end
+			if selected ~= backup then suppress[backup] = true end
+			wanted[selected] = true
+			if not bound[selected] then
+				local target = selected
+				bound[target] = target.Activated:Connect(function()
+					if stopped or not target:IsDescendantOf(playerGui) or not visible(target) then return end
+					action()
+				end)
+			end
+		end
+		for button, connection in bound do if not wanted[button] then connection:Disconnect(); bound[button] = nil end end
+		for object, record in hidden do
+			if suppress[object] then continue end
+			record.Connection:Disconnect(); hidden[object] = nil; object.Visible = record.Visible
+		end
+		for object in suppress do
+			if hidden[object] then continue end
+			hidden[object] = { Visible = object.Visible, Connection = object:GetPropertyChangedSignal("Visible"):Connect(function() if object.Visible then object.Visible = false end end) }
+			object.Visible = false
+		end
+		for instance, list in watched do
+			if instance:IsDescendantOf(playerGui) then continue end
+			for _, connection in list do connection:Disconnect() end; watched[instance] = nil
+		end
+	end
+	table.insert(connections, playerGui.DescendantAdded:Connect(schedule))
+	table.insert(connections, playerGui.DescendantRemoving:Connect(schedule))
+	refresh()
+	local function stop()
+		if stopped then return end; stopped = true
+		for _, connection in connections do connection:Disconnect() end
+		for _, connection in bound do connection:Disconnect() end
+		for _, list in watched do for _, connection in list do connection:Disconnect() end end
+		for object, record in hidden do record.Connection:Disconnect(); object.Visible = record.Visible end
+		if active[playerGui] == stop then active[playerGui] = nil end
+	end
+	active[playerGui] = stop
+	return stop
+end
+
+return AuthoredLaunchers
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="37">
+          <Properties>
+            <string name="Name">CandyCounter</string>
+            <string name="Source"><![CDATA[--!nonstrict
+-- Drives the Studio-authored "CandyCounter" ScreenGui (StarterGui, a smaller copy of CashCounter that sits
+-- just above it). The GUI itself is authored in Studio so it is visible in Edit mode with a placeholder "0";
+-- this module only finds it, shows the player's Candy in the same compact format as the cash counter and plays
+-- the same pop / flip / floating "+X" FX when Candy goes up. It never creates the GUI when it exists.
+-- Candy comes from the HalloweenState remote (server authoritative); the counter hides when the event is off.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local CompactMoney = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CompactMoney"))
+
+local CandyCounter = {}
+
+local GAIN_COLOR = Color3.fromRGB(255, 245, 140)
+local LOSS_COLOR = Color3.fromRGB(255, 70, 70)
+local GLINT = Color3.fromRGB(255, 225, 235)
+local FX_SCALE = 0.7 -- the counter is ~65% of the cash counter, so its FX travel less
+
+local QUAD_OUT = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local BACK_OUT = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local rng = Random.new()
+
+local function easeOutBack(x: number): number
+	local c1 = 1.70158
+	local c3 = c1 + 1
+	return 1 + c3 * (x - 1) ^ 3 + c1 * (x - 1) ^ 2
+end
+
+function CandyCounter.Init(playerGui: Instance, remotes: { [string]: RemoteEvent }): () -> ()
+	local gui = playerGui:WaitForChild("CandyCounter", 15)
+	if not gui or not gui:IsA("ScreenGui") then
+		warn("[CandyCounter] StarterGui.CandyCounter is missing; the Candy counter is disabled")
+		return function() end
+	end
+	local icon = gui:WaitForChild("CandyIcon") :: GuiObject
+	local label = gui:WaitForChild("TextLabel") :: TextLabel
+	local stroke = label:WaitForChild("UIStroke") :: UIStroke
+
+	local BASE_COLOR = label.TextColor3
+	local BASE_THICKNESS = stroke.Thickness
+	local BASE_ICON_SIZE = icon.Size
+
+	-- hidden until the server says whether the event is running (avoids a flash when it is off)
+	gui.Enabled = false
+
+	local fx = gui:FindFirstChild("FX") or Instance.new("Frame")
+	fx.Name = "FX"
+	fx.BackgroundTransparency = 1
+	fx.Size = UDim2.fromScale(1, 1)
+	fx.Active = false
+	fx.ZIndex = 10
+	fx.Parent = gui
+
+	local textScale = label:FindFirstChild("PopScale") or Instance.new("UIScale")
+	textScale.Name = "PopScale"
+	textScale.Parent = label
+
+	local tweens: { [string]: Tween } = {}
+	local function play(key: string, inst: Instance, info: TweenInfo, goal: { [string]: any })
+		if tweens[key] then
+			tweens[key]:Cancel()
+		end
+		local tween = TweenService:Create(inst, info, goal)
+		tweens[key] = tween
+		tween:Play()
+	end
+
+	local function swell(amount: number)
+		textScale.Scale = amount
+		play("textPop", textScale, BACK_OUT, { Scale = 1 })
+	end
+
+	local function flash(color: Color3)
+		label.TextColor3 = color
+		play("color", label, QUAD_OUT, { TextColor3 = BASE_COLOR })
+		stroke.Thickness = BASE_THICKNESS + 2
+		play("stroke", stroke, QUAD_OUT, { Thickness = BASE_THICKNESS })
+	end
+
+	-- icon flip: squash to a sliver, then spring back open
+	local flipping = false
+	local function iconFlip()
+		if flipping then
+			return
+		end
+		flipping = true
+		local squash = TweenService:Create(icon, TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.In),
+			{ Size = UDim2.fromOffset(4, BASE_ICON_SIZE.Y.Offset) })
+		squash.Completed:Once(function()
+			local open = TweenService:Create(icon, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+				{ Size = BASE_ICON_SIZE })
+			open.Completed:Once(function()
+				flipping = false
+			end)
+			open:Play()
+		end)
+		squash:Play()
+	end
+
+	local activeFloaters, activeSweets, activeSparkles = 0, 0, 0
+
+	local function sparkle(pos: Vector2, color: Color3, size: number, drift: Vector2, life: number)
+		if activeSparkles >= 40 then
+			return
+		end
+		activeSparkles += 1
+		local frame = Instance.new("Frame")
+		frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		frame.BorderSizePixel = 0
+		frame.BackgroundColor3 = color
+		frame.Size = UDim2.fromOffset(size, size)
+		frame.Position = UDim2.fromOffset(pos.X, pos.Y)
+		frame.Rotation = 45
+		frame.ZIndex = 11
+		frame.Parent = fx
+		local tween = TweenService:Create(frame, TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.fromOffset(pos.X + drift.X, pos.Y + drift.Y),
+			Size = UDim2.fromOffset(1, 1),
+			BackgroundTransparency = 1,
+			Rotation = 45 + rng:NextNumber(-180, 180),
+		})
+		tween.Completed:Once(function()
+			frame:Destroy()
+			activeSparkles -= 1
+		end)
+		tween:Play()
+	end
+
+	-- "+X" bursts out of the number, arcs up and over, then falls with a sparkle trail
+	local function floater(text: string, color: Color3)
+		if activeFloaters >= 6 then
+			return
+		end
+		activeFloaters += 1
+		local lp = label.AbsolutePosition - fx.AbsolutePosition
+		local ls = label.AbsoluteSize
+		local p0 = Vector2.new(lp.X + ls.X + 10, lp.Y + ls.Y / 2)
+		local jitterX = rng:NextNumber(-8, 8)
+		local p1 = p0 + Vector2.new(55 + jitterX, -75) * FX_SCALE
+		local p2 = p0 + Vector2.new(115 + jitterX, -25) * FX_SCALE
+		local p3 = p0 + Vector2.new(105 + jitterX, 120) * FX_SCALE
+
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.AnchorPoint = Vector2.new(0.5, 0.5)
+		t.Size = UDim2.fromOffset(160, 40)
+		t.Position = UDim2.fromOffset(p0.X, p0.Y)
+		t.FontFace = label.FontFace
+		t.Text = text
+		t.TextSize = 26
+		t.TextColor3 = Color3.new(1, 1, 1)
+		t.ZIndex = 12
+		local grad = Instance.new("UIGradient")
+		grad.Rotation = 90
+		grad.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+			ColorSequenceKeypoint.new(0.5, color),
+			ColorSequenceKeypoint.new(1, color:Lerp(Color3.new(0, 0, 0), 0.4)),
+		})
+		grad.Parent = t
+		local st = Instance.new("UIStroke")
+		st.Thickness = 2.5
+		st.Color = Color3.new(0, 0, 0)
+		st.Parent = t
+		local sc = Instance.new("UIScale")
+		sc.Scale = 0.2
+		sc.Parent = t
+		t.Parent = fx
+
+		for i = 1, 6 do
+			local a = (i / 6) * math.pi * 2 + rng:NextNumber(-0.3, 0.3)
+			local d = rng:NextNumber(20, 42)
+			sparkle(p0, i % 2 == 0 and Color3.new(1, 1, 1) or color, rng:NextInteger(5, 8),
+				Vector2.new(math.cos(a) * d, math.sin(a) * d), 0.45)
+		end
+
+		local DURATION = 1.15
+		local elapsed, trailClock = 0, 0
+		local conn
+		conn = RunService.RenderStepped:Connect(function(dt)
+			elapsed += dt
+			local u = math.min(1, elapsed / DURATION)
+			local inv = 1 - u
+			local pos = p0 * (inv ^ 3) + p1 * (3 * inv * inv * u) + p2 * (3 * inv * u * u) + p3 * (u ^ 3)
+			t.Position = UDim2.fromOffset(pos.X, pos.Y)
+			local tan = (p1 - p0) * (3 * inv * inv) + (p2 - p1) * (6 * inv * u) + (p3 - p2) * (3 * u * u)
+			t.Rotation = math.clamp(math.deg(math.atan2(tan.Y, tan.X)) * 0.35, -30, 30)
+			local s
+			if u < 0.15 then
+				s = 0.2 + (1.4 - 0.2) * easeOutBack(u / 0.15)
+			elseif u < 0.3 then
+				s = 1.4 + (1 - 1.4) * ((u - 0.15) / 0.15)
+			else
+				s = 1 + (0.55 - 1) * ((u - 0.3) / 0.7)
+			end
+			sc.Scale = s
+			if u > 0.6 then
+				local f = (u - 0.6) / 0.4
+				t.TextTransparency = f
+				st.Transparency = f
+			end
+			trailClock += dt
+			if trailClock > 0.04 and u < 0.9 then
+				trailClock = 0
+				sparkle(pos + Vector2.new(rng:NextNumber(-6, 6), rng:NextNumber(-4, 4)),
+					rng:NextInteger(1, 3) == 1 and Color3.new(1, 1, 1) or color,
+					rng:NextInteger(3, 6), Vector2.new(rng:NextNumber(-8, 8), rng:NextNumber(8, 20)), 0.4)
+			end
+			if u >= 1 then
+				conn:Disconnect()
+				t:Destroy()
+				activeFloaters -= 1
+			end
+		end)
+	end
+
+	-- little candies pop up and to the right, then fall
+	local function candyBurst(count: number)
+		local origin = icon.AbsolutePosition - fx.AbsolutePosition + icon.AbsoluteSize / 2
+		for _ = 1, count do
+			if activeSweets >= 14 then
+				return
+			end
+			activeSweets += 1
+			local c = Instance.new("TextLabel")
+			local size = rng:NextInteger(14, 20)
+			c.BackgroundTransparency = 1
+			c.Text = "🍬"
+			c.TextScaled = true
+			c.AnchorPoint = Vector2.new(0.5, 0.5)
+			c.Size = UDim2.fromOffset(size, size)
+			c.Position = UDim2.fromOffset(origin.X, origin.Y)
+			c.Rotation = rng:NextNumber(0, 360)
+			c.ZIndex = 11
+			c.Parent = fx
+			local angle = rng:NextNumber(-1.4, -0.2)
+			local dist = rng:NextNumber(35, 80)
+			local target = UDim2.fromOffset(origin.X + math.cos(angle) * dist, origin.Y + math.sin(angle) * dist)
+			local up = TweenService:Create(c, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Position = target, Rotation = c.Rotation + rng:NextNumber(-220, 220) })
+			up:Play()
+			up.Completed:Once(function()
+				local down = TweenService:Create(c, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+					{ Position = target + UDim2.fromOffset(0, 30), TextTransparency = 1, Size = UDim2.fromOffset(4, 4) })
+				down:Play()
+				down.Completed:Once(function()
+					c:Destroy()
+					activeSweets -= 1
+				end)
+			end)
+		end
+	end
+
+	-- number + state ---------------------------------------------------------------------------------------
+	local displayed = 0
+	local target = 0
+	local last = 0
+	local first = true
+	label.Text = CompactMoney.Format(0)
+
+	local renderConn = RunService.RenderStepped:Connect(function(dt)
+		if displayed ~= target then
+			displayed += (target - displayed) * math.min(1, dt * 9)
+			if math.abs(target - displayed) < 0.5 then
+				displayed = target
+			end
+			label.Text = CompactMoney.Format(math.floor(displayed + 0.5))
+		end
+		-- idle: a slow pink glint pulsing across the candy
+		local glow = (math.sin(os.clock() * 2.5) + 1) / 2
+		if icon:IsA("TextLabel") then
+			icon.TextColor3 = Color3.new(1, 1, 1):Lerp(GLINT, glow * 0.35)
+		end
+	end)
+
+	local function onState(state: any)
+		if type(state) ~= "table" then
+			return
+		end
+		gui.Enabled = state.Enabled == true
+		local value = if type(state.Candy) == "number" then math.max(0, math.floor(state.Candy)) else 0
+		if first then
+			-- first sync after joining: show it, no celebration
+			first = false
+			displayed, target, last = value, value, value
+			label.Text = CompactMoney.Format(value)
+			return
+		end
+		local diff = value - last
+		last = value
+		target = value
+		if diff > 0 then
+			swell(1.15 + math.min(0.3, math.log10(diff + 1) * 0.07))
+			flash(GAIN_COLOR)
+			iconFlip()
+			floater("+" .. CompactMoney.Format(diff), BASE_COLOR)
+			candyBurst(diff >= 100 and 5 or 3)
+		elseif diff < 0 then
+			flash(LOSS_COLOR)
+			floater(CompactMoney.Format(diff), LOSS_COLOR)
+		end
+	end
+
+	local stateConn = remotes.HalloweenState.OnClientEvent:Connect(onState)
+	return function()
+		stateConn:Disconnect()
+		renderConn:Disconnect()
+	end
+end
+
+return CandyCounter
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="38">
+          <Properties>
+            <string name="Name">CashCounterFormatter</string>
+            <string name="Source"><![CDATA[--!strict
+-- Preserve the Studio-authored CashCounter and shorten only its numeric text.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CompactMoney = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CompactMoney"))
+
+local CashCounterFormatter = {}
+local active: { [Instance]: () -> () } = {}
+
+local function formatText(text: string): string?
+	local raw = text:match("^%s*(.-)%s*$") :: string
+	local integer = raw:match("^[+-]?(%d[%d,]*)%.?%d*$")
+	if not integer then return nil end
+	if integer:find(",", 1, true) then
+		local first = true
+		for group in (integer .. ","):gmatch("(.-),") do
+			if not group:match("^%d+$") or (first and #group > 3) or (not first and #group ~= 3) then return nil end
+			first = false
+		end
+	end
+	local value = tonumber((raw:gsub(",", "")))
+	if not value or value ~= value or math.abs(value) == math.huge then return nil end
+	local formatted = CompactMoney.Format(value)
+	return if raw:sub(1, 1) == "+" then "+" .. formatted else formatted
+end
+
+function CashCounterFormatter.Start(playerGui: Instance): () -> ()
+	if active[playerGui] then active[playerGui]() end
+	local tracked: { [Instance]: { Connections: { RBXScriptConnection }, Labels: { [Instance]: RBXScriptConnection } } } = {}
+	local function unwatchGui(gui: Instance)
+		local record = tracked[gui]
+		if not record then return end
+		tracked[gui] = nil
+		for _, connection in record.Connections do connection:Disconnect() end
+		for _, connection in record.Labels do connection:Disconnect() end
+	end
+	local function watchGui(gui: Instance)
+		if gui.Name ~= "CashCounter" or not gui:IsA("ScreenGui") or tracked[gui] then return end
+		local record = { Connections = {}, Labels = {} }
+		tracked[gui] = record
+		local function watchLabel(instance: Instance)
+			if not (instance:IsA("TextLabel") or instance:IsA("TextButton")) or record.Labels[instance] then return end
+			local label = instance :: TextLabel
+			local updating = false
+			local function update()
+				if updating then return end
+				local formatted = formatText(label.Text)
+				if not formatted or label.Text == formatted then return end
+				updating = true
+				label.Text = formatted
+				updating = false
+			end
+			record.Labels[instance] = label:GetPropertyChangedSignal("Text"):Connect(update)
+			update()
+		end
+		table.insert(record.Connections, gui.DescendantAdded:Connect(watchLabel))
+		table.insert(record.Connections, gui.DescendantRemoving:Connect(function(instance)
+			local connection = record.Labels[instance]
+			if connection then connection:Disconnect(); record.Labels[instance] = nil end
+		end))
+		for _, instance in gui:GetDescendants() do watchLabel(instance) end
+	end
+
+	local connections = {
+		playerGui.ChildAdded:Connect(watchGui),
+		playerGui.ChildRemoved:Connect(unwatchGui),
+	}
+	for _, gui in playerGui:GetChildren() do watchGui(gui) end
+	local stopped = false
+	local function stop()
+		if stopped then return end
+		stopped = true
+		for _, connection in connections do connection:Disconnect() end
+		for gui in tracked do unwatchGui(gui) end
+		if active[playerGui] == stop then active[playerGui] = nil end
+	end
+	active[playerGui] = stop
+	return stop
+end
+
+return CashCounterFormatter
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="39">
           <Properties>
             <string name="Name">CombatFx</string>
             <string name="Source"><![CDATA[--!strict
@@ -966615,7 +969492,7 @@ return CombatFx
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="33">
+        <Item class="ModuleScript" referent="40">
           <Properties>
             <string name="Name">Effects</string>
             <string name="Source"><![CDATA[--!strict
@@ -966835,7 +969712,7 @@ return Effects
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="34">
+        <Item class="ModuleScript" referent="41">
           <Properties>
             <string name="Name">Features</string>
             <string name="Source"><![CDATA[--!strict
@@ -966864,6 +969741,7 @@ local getOpenMonster: () -> string?
 -- عناصر بتتحدث مع كل StateUpdate
 local statusLabel: TextLabel
 local rewardsButton: TextButton
+local launcherActions: { [string]: () -> () } = {}
 local dailyInfo: TextLabel
 local dailyClaim: TextButton
 local spinGo: TextButton
@@ -967156,6 +970034,7 @@ local function buildShopExtras()
 		frame.Parent = parent
 		UI.Corner(frame, 12)
 		UI.Stroke(frame, COLORS.Yellow, 2)
+		if UI.Card then UI.Card(frame, COLORS.Yellow) end
 		local title = UI.Label(frame, name, UDim2.new(1, -12, 0, 36), UDim2.fromOffset(6, 150), 20)
 		title.TextColor3 = COLORS.Text
 		if icon:sub(1, 7) == "Weapon:" then
@@ -967306,9 +970185,9 @@ local function buildRewards()
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.82
 	scale.Parent = frame
-	rewardsButton.Activated:Connect(function()
+	launcherActions.Rewards = function()
 		UI.Toggle(ui, frame)
-	end)
+	end
 
 	local dailyTitle = UI.Label(frame, "🎁 Daily Reward", UDim2.fromOffset(360, 30), UDim2.fromOffset(16, 60), 24)
 	dailyTitle.TextColor3 = COLORS.Yellow
@@ -967556,16 +970435,15 @@ end
 -- الـ Trading -----------------------------------------------------------------------------------
 
 local function buildTrade()
-	local tradeButton = ui.NavigationButtons.Trade
 	local picker = newPanel("TradePicker", UDim2.fromOffset(380, 400), "🤝 Trade with...", COLORS.Green)
 	local playerList = makeList(picker, UDim2.new(1, -32, 1, -76), UDim2.fromOffset(16, 60))
-	tradeButton.Activated:Connect(function()
+	launcherActions.Trade = function()
 		fillPlayers(playerList, function(other)
 			remotes.TradeRequest:FireServer(other.UserId)
 			picker.Visible = false
 		end)
 		UI.Toggle(ui, picker)
-	end)
+	end
 
 	-- شباك الـ Trade نفسه
 	local window = newPanel("Trade", UDim2.fromOffset(640, 470), "🤝 Trade", COLORS.Green)
@@ -967847,11 +970725,20 @@ function Features.Refresh()
 	end
 end
 
+-- The inventory lives in another module; once it exists, the launcher (authored golden paw, or the
+-- built-in button as a fallback) is bound to it.
+local startLaunchers: (() -> ())? = nil
+function Features.SetInventoryOpener(open: () -> ())
+	launcherActions.Inventory = open
+	if startLaunchers then startLaunchers() end
+end
+
 function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stateGetter: () -> any, openMonsterGetter: () -> string?)
 	ui = newUi
 	remotes = allRemotes
 	getState = stateGetter
 	getOpenMonster = openMonsterGetter
+	launcherActions = { Shop = function() UI.Open(ui, ui.GearFrame) end }
 
 	buildBanner()
 	buildPopup()
@@ -967862,6 +970749,14 @@ function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stat
 	buildMiniGames()
 	buildTrade()
 	buildArena()
+	startLaunchers = function()
+		local AuthoredLaunchers = require(script.Parent.AuthoredLaunchers)
+		AuthoredLaunchers.Start(ui.Gui.Parent, {
+			Shop = ui.ShopButton, Rewards = rewardsButton, Trade = ui.NavigationButtons.Trade,
+			Inventory = ui.InventoryButton,
+		}, launcherActions)
+	end
+	startLaunchers()
 
 	remotes.Announce.OnClientEvent:Connect(function(text: string, color: Color3?)
 		announce(text, color)
@@ -967888,7 +970783,7 @@ return Features
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="42">
           <Properties>
             <string name="Name">GearAnimate</string>
             <string name="Source"><![CDATA[--!strict
@@ -968327,7 +971222,7 @@ return GearAnimate
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="36">
+        <Item class="ModuleScript" referent="43">
           <Properties>
             <string name="Name">GuiTheme</string>
             <string name="Source"><![CDATA[--!strict
@@ -968468,6 +971363,110 @@ function GuiTheme.Gloss(parent: GuiObject)
 	gradient.Parent = parent
 end
 
+local function decoration(parent: GuiObject, name: string, color: Color3, size: UDim2, position: UDim2): Frame
+	local frame = Instance.new("Frame")
+	frame.Name = name
+	frame.BackgroundColor3 = color
+	frame.BorderSizePixel = 0
+	frame.Size, frame.Position = size, position
+	frame.ZIndex = parent.ZIndex
+	frame.Active, frame.Selectable = false, false
+	frame.Parent = parent
+	return frame
+end
+
+-- Extra dressing for modal panels: an accent title band, pixel corner brackets, a bottom accent line
+-- and a light sheen that sweeps the band each time the panel opens. Everything is decoration (never
+-- active) and lives in one "Ornament" folder-like frame so it can't affect layout or input.
+function GuiTheme.Dress(panel: Frame, accent: Color3)
+	if panel:FindFirstChild("Ornament") then return end
+	local colors = GuiTheme.Colors
+	local ornament = decoration(panel, "Ornament", Color3.new(1, 1, 1), UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0))
+	ornament.BackgroundTransparency = 1
+	ornament.ClipsDescendants = false
+
+	-- Bright, glossy title band (reference: the Store header): light accent at the top fading to a deeper
+	-- accent at the bottom, with a pale highlight stripe across the upper third.
+	local band = decoration(ornament, "TitleBand", accent, UDim2.new(1, -8, 0, 54), UDim2.fromOffset(4, 4))
+	band.ClipsDescendants = true
+	local bandGradient = Instance.new("UIGradient")
+	bandGradient.Rotation = 90
+	bandGradient.Color = ColorSequence.new(accent:Lerp(Color3.new(1, 1, 1), 0.35), accent:Lerp(colors.Panel, 0.35))
+	bandGradient.Parent = band
+	local highlight = decoration(band, "Highlight", Color3.new(1, 1, 1), UDim2.new(1, -8, 0, 8), UDim2.fromOffset(4, 4))
+	highlight.BackgroundTransparency = 0.78
+	local highlightCorner = Instance.new("UICorner"); highlightCorner.CornerRadius = UDim.new(0, 4); highlightCorner.Parent = highlight
+	local bandCorner = Instance.new("UICorner"); bandCorner.CornerRadius = UDim.new(0, 2); bandCorner.Parent = band
+	local bandLine = decoration(ornament, "TitleLine", accent, UDim2.new(1, -8, 0, 3), UDim2.fromOffset(4, 58))
+	local bandShadow = decoration(ornament, "TitleLineShadow", Color3.fromRGB(12, 16, 31), UDim2.new(1, -8, 0, 2), UDim2.fromOffset(4, 61))
+
+	local brackets: { Frame } = {}
+	local function bracket(anchorX: number, anchorY: number)
+		local sx, sy = if anchorX == 0 then 1 else -1, if anchorY == 0 then 1 else -1
+		local ox, oy = if anchorX == 0 then 7 else -7, if anchorY == 0 then 67 else -7
+		local horizontal = decoration(ornament, "BracketH", accent, UDim2.fromOffset(16, 3), UDim2.new(anchorX, ox + (if sx < 0 then -16 else 0), anchorY, oy + (if sy < 0 then -3 else 0)))
+		local vertical = decoration(ornament, "BracketV", accent, UDim2.fromOffset(3, 16), UDim2.new(anchorX, ox + (if sx < 0 then -3 else 0), anchorY, oy + (if sy < 0 then -16 else 0)))
+		table.insert(brackets, horizontal)
+		table.insert(brackets, vertical)
+	end
+	bracket(0, 1)
+	bracket(1, 1)
+	-- the top brackets sit under the band, so only the bottom pair is drawn plus studs under the band
+	for _, x in { 12, -16 } do
+		local stud = decoration(ornament, "Stud", accent:Lerp(Color3.new(1, 1, 1), 0.35), UDim2.fromOffset(4, 4), UDim2.new(if x > 0 then 0 else 1, x, 0, 66))
+		table.insert(brackets, stud)
+	end
+
+	local sheen = decoration(band, "Sheen", Color3.new(1, 1, 1), UDim2.new(0, 36, 2, 0), UDim2.new(-0.2, 0, -0.5, 0))
+	sheen.BackgroundTransparency = 0.82
+	sheen.Rotation = 18
+	sheen.Visible = false
+
+	local parts: { GuiObject } = { band, highlight, bandLine, bandShadow, sheen }
+	for _, part in brackets do table.insert(parts, part) end
+	local function syncZ()
+		ornament.ZIndex = panel.ZIndex
+		for _, part in parts do part.ZIndex = panel.ZIndex end
+	end
+	syncZ()
+	local zConnection = panel:GetPropertyChangedSignal("ZIndex"):Connect(syncZ)
+	local sheenTween: Tween? = nil
+	local visibleConnection = panel:GetPropertyChangedSignal("Visible"):Connect(function()
+		if not panel.Visible then return end
+		if sheenTween then sheenTween:Cancel() end
+		sheen.Position = UDim2.new(-0.2, 0, -0.5, 0)
+		sheen.Visible = true
+		sheenTween = TweenService:Create(sheen, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(1.1, 0, -0.5, 0) })
+		sheenTween.Completed:Once(function() sheen.Visible = false end)
+		sheenTween:Play()
+	end)
+	panel.Destroying:Connect(function()
+		zConnection:Disconnect()
+		visibleConnection:Disconnect()
+		if sheenTween then sheenTween:Cancel() end
+	end)
+end
+
+-- Item card dressing: accent strip on the left, a soft inner glow stroke and a hover lift.
+function GuiTheme.Card(card: GuiObject, accent: Color3)
+	if card:FindFirstChild("CardAccent") then return end
+	local strip = decoration(card, "CardAccent", accent, UDim2.new(0, 4, 1, -8), UDim2.fromOffset(4, 4))
+	strip.ZIndex = card.ZIndex
+	local glow = Instance.new("UIStroke")
+	glow.Name = "CardGlow"
+	glow.Color = accent
+	glow.Thickness = 1
+	glow.Transparency = 0.55
+	glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	glow.Parent = card
+	card.MouseEnter:Connect(function()
+		TweenService:Create(glow, TweenInfo.new(0.12), { Transparency = 0, Thickness = 2 }):Play()
+	end)
+	card.MouseLeave:Connect(function()
+		TweenService:Create(glow, TweenInfo.new(0.16), { Transparency = 0.55, Thickness = 1 }):Play()
+	end)
+end
+
 function GuiTheme.ButtonFeedback(button: TextButton, border: UIStroke)
 	button.Active = true
 	button.Selectable = true
@@ -968573,7 +971572,750 @@ return GuiTheme
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="37">
+        <Item class="ModuleScript" referent="44">
+          <Properties>
+            <string name="Name">HalloweenDecor</string>
+            <string name="Source"><![CDATA[--!nonstrict
+-- Idle life for the Studio-authored Halloween decorations (Workspace.HalloweenWorld). Everything is purely
+-- visual and LOCAL to each client (no replication cost, no server writes):
+--   * HalloweenSpider / HalloweenFloat models bob (and slowly turn) around where they currently are. If a model
+--     is moved by anything else its new place becomes the new base, so this never fights the designer's edits.
+--   * HalloweenEyes blink now and then.
+--   * The Pumpkin Merchant (tag HalloweenMerchant) breathes and looks around via his R6 Motor6D transforms.
+-- Nothing runs in Edit mode, so the authored layout is always exactly what the designer placed.
+
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+
+local HalloweenDecor = {}
+
+local RANGE = 220 -- only animate decorations this close to the camera
+local STEP = 1 / 20
+
+type Floater = { Base: CFrame, Last: CFrame, Phase: number, Bob: number, Spin: number, Speed: number }
+local floaters: { [Model]: Floater } = {}
+local blinkers: { [Model]: { Parts: { BasePart }, NextAt: number, OpenAt: number } } = {}
+local merchants: { [Model]: { Root: Motor6D?, Neck: Motor6D?, Arm: Motor6D?, Phase: number } } = {}
+local rng = Random.new()
+
+local function registerFloater(model: Instance)
+	if not model:IsA("Model") or floaters[model] then
+		return
+	end
+	local pivot = model:GetPivot()
+	floaters[model] = {
+		Base = pivot,
+		Last = pivot,
+		Phase = model:GetAttribute("Phase") or 0,
+		Bob = model:GetAttribute("Bob") or 0.3,
+		Spin = model:GetAttribute("Spin") or 0.12,
+		Speed = model:GetAttribute("Speed") or 1.4,
+	}
+end
+
+local function registerEyes(model: Instance)
+	if not model:IsA("Model") or blinkers[model] then
+		return
+	end
+	local parts = {}
+	for _, child in model:GetChildren() do
+		if child:IsA("BasePart") then
+			table.insert(parts, child)
+		end
+	end
+	blinkers[model] = { Parts = parts, NextAt = os.clock() + rng:NextNumber(1, 6), OpenAt = 0 }
+end
+
+local function registerMerchant(model: Instance)
+	if not model:IsA("Model") or merchants[model] then
+		return
+	end
+	local torso = model:FindFirstChild("Torso")
+	local root = model:FindFirstChild("HumanoidRootPart")
+	merchants[model] = {
+		Root = root and root:FindFirstChild("RootJoint"),
+		Neck = torso and torso:FindFirstChild("Neck"),
+		Arm = torso and torso:FindFirstChild("Left Shoulder"),
+		Phase = rng:NextNumber(0, 6),
+	}
+end
+
+local function unregister(instance: Instance)
+	floaters[instance :: Model] = nil
+	blinkers[instance :: Model] = nil
+	merchants[instance :: Model] = nil
+end
+
+function HalloweenDecor.Init()
+	for _, tag in { "HalloweenSpider", "HalloweenFloat" } do
+		CollectionService:GetInstanceAddedSignal(tag):Connect(registerFloater)
+		CollectionService:GetInstanceRemovedSignal(tag):Connect(unregister)
+		for _, model in CollectionService:GetTagged(tag) do
+			registerFloater(model)
+		end
+	end
+	CollectionService:GetInstanceAddedSignal("HalloweenEyes"):Connect(registerEyes)
+	CollectionService:GetInstanceRemovedSignal("HalloweenEyes"):Connect(unregister)
+	for _, model in CollectionService:GetTagged("HalloweenEyes") do
+		registerEyes(model)
+	end
+	CollectionService:GetInstanceAddedSignal("HalloweenMerchant"):Connect(registerMerchant)
+	CollectionService:GetInstanceRemovedSignal("HalloweenMerchant"):Connect(unregister)
+	for _, model in CollectionService:GetTagged("HalloweenMerchant") do
+		registerMerchant(model)
+	end
+
+	local accumulator = 0
+	RunService.Heartbeat:Connect(function(dt)
+		accumulator += dt
+		if accumulator < STEP then
+			return
+		end
+		accumulator = 0
+		local camera = workspace.CurrentCamera
+		if not camera then
+			return
+		end
+		local eye = camera.CFrame.Position
+		local now = os.clock()
+
+		for model, state in floaters do
+			if not model:IsDescendantOf(workspace) then
+				floaters[model] = nil
+				continue
+			end
+			local current = model:GetPivot()
+			-- something else moved it: that is the new base, we only ever add our own small offset
+			if (current.Position - state.Last.Position).Magnitude > 0.02 then
+				state.Base = current
+			end
+			if (state.Base.Position - eye).Magnitude > RANGE then
+				state.Last = current
+				continue
+			end
+			local lift = math.sin(now * state.Speed + state.Phase) * state.Bob
+			local turn = math.sin(now * 0.55 + state.Phase * 1.7) * state.Spin
+			local rotation = state.Base - state.Base.Position
+			local nextPivot = CFrame.new(state.Base.Position + Vector3.new(0, lift, 0)) * rotation * CFrame.Angles(0, turn, 0)
+			model:PivotTo(nextPivot)
+			state.Last = nextPivot
+		end
+
+		for model, state in blinkers do
+			if not model:IsDescendantOf(workspace) then
+				blinkers[model] = nil
+				continue
+			end
+			if state.OpenAt > 0 and now >= state.OpenAt then
+				state.OpenAt = 0
+				for _, part in state.Parts do part.Transparency = 0 end
+			elseif state.OpenAt == 0 and now >= state.NextAt then
+				state.OpenAt = now + 0.18
+				state.NextAt = now + rng:NextNumber(2.5, 7)
+				for _, part in state.Parts do part.Transparency = 1 end
+			end
+		end
+
+		for model, state in merchants do
+			if not model:IsDescendantOf(workspace) then
+				merchants[model] = nil
+				continue
+			end
+			local pivot = model:GetPivot().Position
+			if (pivot - eye).Magnitude > 120 then
+				continue
+			end
+			local t = now + state.Phase
+			-- R6 joint frames: joint Z is world up for RootJoint/Neck, and the swing axis for the shoulders
+			if state.Root then
+				state.Root.Transform = CFrame.new(0, 0, math.sin(t * 1.6) * 0.06)
+			end
+			if state.Neck then
+				state.Neck.Transform = CFrame.Angles(0, 0, math.sin(t * 0.45) * 0.45)
+			end
+			if state.Arm then
+				state.Arm.Transform = CFrame.Angles(0, 0, math.sin(t * 1.1) * 0.09)
+			end
+		end
+	end)
+end
+
+return HalloweenDecor
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="45">
+          <Properties>
+            <string name="Name">HalloweenUI</string>
+            <string name="Source"><![CDATA[--!strict
+-- Halloween event client: event timers, the Pumpkin Merchant shop panel and the pumpkin hint arrow.
+-- The server owns every rule; this module only displays state and sends item ids.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local HalloweenLogic = require(ReplicatedStorage.Shared.HalloweenLogic)
+local CompactMoney = require(ReplicatedStorage.Shared.CompactMoney)
+local UI = require(script.Parent.UI)
+
+local settings = Config.Halloween
+local COLORS = UI.Colors
+local ARROWS = { "⬆", "↗", "➡", "↘", "⬇", "↙", "⬅", "↖" }
+local BAND_TEXT = { "very close!", "getting warmer", "far away" }
+
+local HalloweenUI = {}
+
+local function clock(seconds: number): string
+	seconds = math.max(0, math.floor(seconds))
+	return string.format("%d:%02d", seconds // 60, seconds % 60)
+end
+
+local function sortedItems(): { { Id: string, Item: Config.HalloweenItem } }
+	local list = {}
+	for id, item in settings.Items do
+		table.insert(list, { Id = id, Item = item })
+	end
+	table.sort(list, function(a, b)
+		return a.Item.Order < b.Item.Order
+	end)
+	return list
+end
+
+function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
+	local player = Players.LocalPlayer
+	local state: any = nil
+	local stateAt = os.clock()
+	local hint: any = nil
+	local hintAt = 0
+
+	-- Event timers (top centre; the Candy amount lives in the authored CandyCounter GUI, see CandyCounter.luau) ---------------------------------------
+	local pill = Instance.new("Frame")
+	pill.Name = "HalloweenCandy"
+	pill.AnchorPoint = Vector2.new(0.5, 0)
+	pill.Position = UDim2.new(0.5, 0, 0, 58)
+	pill.Size = UDim2.fromOffset(300, 28)
+	pill.BackgroundColor3 = COLORS.Panel
+	pill.Visible = false
+	pill.Parent = ui.Gui
+	UI.Corner(pill, 10)
+	UI.Stroke(pill, Color3.fromRGB(255, 140, 40), 2)
+	local timerLabel = UI.Label(pill, "", UDim2.new(1, -12, 0, 24), UDim2.fromOffset(8, 2), 14)
+	timerLabel.TextXAlignment = Enum.TextXAlignment.Center
+	timerLabel.TextColor3 = COLORS.SubText
+
+	-- Pumpkin hint ----------------------------------------------------------------------------------
+	local hintLabel = Instance.new("TextLabel")
+	hintLabel.Name = "PumpkinHint"
+	hintLabel.AnchorPoint = Vector2.new(0.5, 0)
+	hintLabel.Position = UDim2.new(0.5, 0, 0, 92)
+	hintLabel.Size = UDim2.fromOffset(330, 40)
+	hintLabel.BackgroundColor3 = COLORS.Panel
+	hintLabel.BackgroundTransparency = 0.15
+	hintLabel.Font = Enum.Font.FredokaOne
+	hintLabel.TextSize = 20
+	hintLabel.TextColor3 = Color3.fromRGB(255, 190, 80)
+	hintLabel.Visible = false
+	hintLabel.Parent = ui.Gui
+	UI.Corner(hintLabel, 10)
+	UI.Stroke(hintLabel, Color3.fromRGB(255, 140, 40), 2)
+
+	-- Shop panel -------------------------------------------------------------------------------------
+	local PURPLE = Color3.fromRGB(176, 96, 255)
+	local CANDY = Color3.fromRGB(255, 170, 60)
+	local CATEGORIES = {
+		{ Name = "Boosts", Icon = "⚡", Kinds = { Boost = true } },
+		{ Name = "Cosmetics", Icon = "🎩", Kinds = { Hat = true, Trail = true, Aura = true, Title = true } },
+		{ Name = "Eggs", Icon = "🥚", Kinds = { Egg = true } },
+		{ Name = "Monsters", Icon = "👹", Kinds = { Monster = true } },
+	}
+	local ICONS = {
+		Boost = "⚡", Hat = "🎩", Trail = "👻", Aura = "✨", Title = "🏷️", Egg = "🥚",
+		HalloweenGhostSlime = "👻", HalloweenSkeletonImp = "💀", HalloweenPumpkinKing = "🎃",
+	}
+	local GREETINGS = {
+		"Boo! Got any Candy for me?",
+		"Hehehe… treats for tricks!",
+		"Pick something spooky, traveler.",
+		"The Pumpkin King is hungry for Candy…",
+	}
+
+	local frame, title = UI.Panel(ui.Gui, "HalloweenShop", UDim2.fromOffset(720, 540), "🎃 Pumpkin Merchant", PURPLE)
+	table.insert(ui.Panels, frame)
+	-- Draw the shop above the other HUD frames (the paw icon frame etc.) without touching them.
+	frame.ZIndex = 100
+	-- Other ScreenGuis (e.g. the golden-paw "inv" button) share DisplayOrder 0 and are created later, so they
+	-- would draw over this panel. Lift our whole ScreenGui above them only while the shop is open
+	-- (still below OfflineEarnings 30 / Settings 50).
+	local baseDisplayOrder = ui.Gui.DisplayOrder
+	frame.BackgroundColor3 = Color3.fromRGB(30, 18, 52)
+	-- The panel's ornament (title band, brackets) follows the panel's ZIndex, so lift the title and close
+	-- button above it.
+	title.ZIndex = 102
+	local closeButton = frame:FindFirstChild("CloseButton")
+	if closeButton and closeButton:IsA("GuiObject") then
+		closeButton.ZIndex = 102
+	end
+
+	-- Cobweb corners and a hanging spider (pure decoration, never active).
+	local decor = Instance.new("Frame")
+	decor.Name = "SpookyDecor"
+	decor.BackgroundTransparency = 1
+	decor.Size = UDim2.fromScale(1, 1)
+	decor.Active = false
+	decor.ClipsDescendants = true
+	decor.ZIndex = 100
+	decor.Parent = frame
+	local function web(anchorX: number, anchorY: number)
+		local root = Instance.new("Frame")
+		root.Name = "Cobweb"
+		root.BackgroundTransparency = 1
+		root.AnchorPoint = Vector2.new(anchorX, anchorY)
+		root.Position = UDim2.fromScale(anchorX, anchorY)
+		root.Size = UDim2.fromOffset(120, 120)
+		root.Active = false
+		root.ZIndex = 100
+		root.Parent = decor
+		local function line(length: number, rotation: number, thickness: number)
+			local l = Instance.new("Frame")
+			l.BackgroundColor3 = Color3.fromRGB(235, 230, 255)
+			l.BackgroundTransparency = 0.72
+			l.BorderSizePixel = 0
+			l.AnchorPoint = Vector2.new(0, 0.5)
+			l.Position = UDim2.fromScale(anchorX, anchorY)
+			l.Size = UDim2.fromOffset(length, thickness)
+			l.Rotation = rotation
+			l.Active = false
+			l.ZIndex = 100
+			l.Parent = root
+			return l
+		end
+		-- spokes toward the panel centre, then three cross-threads
+		local base = (if anchorX == 0 then 0 else 180) + (if anchorY == 0 then 0 else -0)
+		local flip = if (anchorX == 0) == (anchorY == 0) then 1 else -1
+		for _, angle in { 10, 35, 55, 80 } do
+			line(112, base + angle * flip * (if anchorX == 0 then 1 else -1), 1.5)
+		end
+		for _, ring in { 30, 58, 88 } do
+			for step = 1, 3 do
+				local a1, a2 = math.rad(10 + (step - 1) * 25 + 5), math.rad(10 + step * 25 + 5)
+				local mid = (a1 + a2) / 2
+				local cx = (if anchorX == 0 then 1 else -1) * math.cos(mid) * ring
+				local cy = (if anchorY == 0 then 1 else -1) * math.sin(mid) * ring
+				local seg = Instance.new("Frame")
+				seg.BackgroundColor3 = Color3.fromRGB(235, 230, 255)
+				seg.BackgroundTransparency = 0.78
+				seg.BorderSizePixel = 0
+				seg.AnchorPoint = Vector2.new(0.5, 0.5)
+				seg.Position = UDim2.new(anchorX, cx, anchorY, cy)
+				seg.Size = UDim2.fromOffset(ring * 0.46, 1.5)
+				seg.Rotation = math.deg(mid) * (if (anchorX == 0) == (anchorY == 0) then 1 else -1) + 90
+				seg.Active = false
+				seg.ZIndex = 100
+				seg.Parent = root
+			end
+		end
+	end
+	web(0, 1)
+	web(1, 1)
+
+	local thread = Instance.new("Frame")
+	thread.Name = "SpiderThread"
+	thread.BackgroundColor3 = Color3.fromRGB(235, 230, 255)
+	thread.BackgroundTransparency = 0.35
+	thread.BorderSizePixel = 0
+	thread.AnchorPoint = Vector2.new(0.5, 0)
+	thread.Position = UDim2.new(1, -118, 0, 0)
+	thread.Size = UDim2.fromOffset(2, 58)
+	thread.Active = false
+	thread.ZIndex = 101
+	thread.Parent = frame
+	local spider = Instance.new("TextLabel")
+	spider.Name = "Spider"
+	spider.BackgroundTransparency = 1
+	spider.AnchorPoint = Vector2.new(0.5, 0)
+	spider.Position = UDim2.fromScale(0.5, 1)
+	spider.Size = UDim2.fromOffset(34, 30)
+	spider.Text = "🕷️"
+	spider.TextSize = 26
+	spider.Font = Enum.Font.GothamBold
+	spider.Active = false
+	spider.ZIndex = 101
+	spider.Parent = thread
+	local spiderTween: Tween? = nil
+	frame:GetPropertyChangedSignal("Visible"):Connect(function()
+		ui.Gui.DisplayOrder = if frame.Visible then math.max(baseDisplayOrder, 10) else baseDisplayOrder
+		if spiderTween then
+			spiderTween:Cancel()
+			spiderTween = nil
+		end
+		if frame.Visible then
+			thread.Size = UDim2.fromOffset(2, 40)
+			spiderTween = game:GetService("TweenService"):Create(thread, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Size = UDim2.fromOffset(2, 66) })
+			spiderTween:Play()
+		end
+	end)
+
+	-- Merchant header: portrait, speech bubble, Candy balance.
+	local header = Instance.new("Frame")
+	header.Name = "MerchantHeader"
+	header.Position = UDim2.fromOffset(14, 72)
+	header.Size = UDim2.new(1, -28, 0, 88)
+	header.BackgroundColor3 = Color3.fromRGB(45, 26, 78)
+	header.Parent = frame
+	UI.Corner(header, 8)
+	UI.Stroke(header, PURPLE, 2)
+	local portrait = Instance.new("ViewportFrame")
+	portrait.Name = "Portrait"
+	portrait.Position = UDim2.fromOffset(6, 6)
+	portrait.Size = UDim2.fromOffset(76, 76)
+	portrait.BackgroundColor3 = Color3.fromRGB(26, 14, 44)
+	portrait.Ambient = Color3.fromRGB(170, 140, 210)
+	portrait.LightColor = Color3.fromRGB(255, 220, 170)
+	portrait.Parent = header
+	UI.Corner(portrait, 6)
+	UI.Stroke(portrait, CANDY, 2)
+	local portraitFallback = UI.Label(portrait, "🎃", UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 40)
+	local portraitBuilt = false
+	local function buildPortrait()
+		if portraitBuilt then
+			return
+		end
+		local merchant = game:GetService("CollectionService"):GetTagged("HalloweenMerchant")[1]
+		if not merchant or not merchant:IsA("Model") then
+			return
+		end
+		local ok = pcall(function()
+			local copy = merchant:Clone()
+			for _, d in copy:GetDescendants() do
+				if d:IsA("BaseScript") or d:IsA("ProximityPrompt") or d:IsA("BillboardGui") then
+					d:Destroy()
+				end
+			end
+			copy.Parent = portrait
+			local head = copy:FindFirstChild("Head") :: BasePart?
+			if not head then
+				return
+			end
+			local camera = Instance.new("Camera")
+			local forward = head.CFrame.LookVector
+			camera.CFrame = CFrame.lookAt(head.Position + forward * 4.4 + Vector3.new(0, 0.4, 0), head.Position + Vector3.new(0, 0.1, 0))
+			camera.FieldOfView = 38
+			camera.Parent = portrait
+			portrait.CurrentCamera = camera
+			portraitFallback.Visible = false
+			portraitBuilt = true
+		end)
+		if not ok then
+			portraitFallback.Visible = true
+		end
+	end
+	local speech = Instance.new("Frame")
+	speech.Name = "Speech"
+	speech.Position = UDim2.fromOffset(92, 10)
+	speech.Size = UDim2.new(1, -300, 0, 68)
+	speech.BackgroundColor3 = Color3.fromRGB(255, 248, 230)
+	speech.Parent = header
+	UI.Corner(speech, 10)
+	UI.Stroke(speech, Color3.fromRGB(12, 16, 31), 2)
+	local speechText = UI.Label(speech, GREETINGS[1], UDim2.new(1, -16, 1, -8), UDim2.fromOffset(8, 4), 18)
+	speechText.Name = "SpeechText"
+	speechText.TextColor3 = Color3.fromRGB(60, 30, 20)
+	speechText.TextXAlignment = Enum.TextXAlignment.Left
+	local pointer = Instance.new("Frame")
+	pointer.Name = "SpeechPointer"
+	pointer.BackgroundColor3 = speech.BackgroundColor3
+	pointer.AnchorPoint = Vector2.new(0.5, 0.5)
+	pointer.Position = UDim2.fromOffset(0, 34)
+	pointer.Size = UDim2.fromOffset(14, 14)
+	pointer.Rotation = 45
+	pointer.BorderSizePixel = 0
+	pointer.Parent = speech
+	local candyPill = Instance.new("Frame")
+	candyPill.Name = "CandyPill"
+	candyPill.AnchorPoint = Vector2.new(1, 0.5)
+	candyPill.Position = UDim2.new(1, -8, 0.5, 0)
+	candyPill.Size = UDim2.fromOffset(190, 66)
+	candyPill.BackgroundColor3 = Color3.fromRGB(60, 34, 20)
+	candyPill.Parent = header
+	UI.Corner(candyPill, 8)
+	UI.Stroke(candyPill, CANDY, 3)
+	local candyCaption = UI.Label(candyPill, "YOUR CANDY", UDim2.new(1, -12, 0, 18), UDim2.fromOffset(6, 5), 13)
+	candyCaption.TextColor3 = Color3.fromRGB(255, 205, 140)
+	local balance = UI.Label(candyPill, "", UDim2.new(1, -12, 0, 34), UDim2.fromOffset(6, 24), 28)
+	balance.Name = "Balance"
+	balance.TextColor3 = CANDY
+	balance.TextStrokeColor3 = Color3.fromRGB(12, 16, 31)
+	balance.TextStrokeTransparency = 0.2
+	local convertNote = UI.Label(frame, "", UDim2.new(1, -28, 0, 16), UDim2.fromOffset(14, 163), 13)
+	convertNote.Name = "ConvertNote"
+	convertNote.TextXAlignment = Enum.TextXAlignment.Left
+	convertNote.TextColor3 = COLORS.SubText
+	convertNote.TextTruncate = Enum.TextTruncate.AtEnd
+
+	-- Category tabs
+	local tabBar = Instance.new("Frame")
+	tabBar.Name = "Tabs"
+	tabBar.BackgroundTransparency = 1
+	tabBar.Position = UDim2.fromOffset(14, 184)
+	tabBar.Size = UDim2.new(1, -28, 0, 36)
+	tabBar.Parent = frame
+	local tabLayout = Instance.new("UIListLayout")
+	tabLayout.FillDirection = Enum.FillDirection.Horizontal
+	tabLayout.Padding = UDim.new(0, 8)
+	tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	tabLayout.Parent = tabBar
+	local activeCategory = 1
+	local tabs: { TextButton } = {}
+
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = "Items"
+	scroll.Position = UDim2.fromOffset(12, 228)
+	scroll.Size = UDim2.new(1, -24, 1, -240)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 8
+	scroll.ScrollBarImageColor3 = PURPLE
+	scroll.CanvasSize = UDim2.fromOffset(0, 0)
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+	scroll.Parent = frame
+	local grid = Instance.new("UIGridLayout")
+	grid.CellPadding = UDim2.fromOffset(10, 10)
+	grid.CellSize = UDim2.new(1 / 3, -10, 0, 218)
+	grid.SortOrder = Enum.SortOrder.LayoutOrder
+	grid.Parent = scroll
+	local gridPadding = Instance.new("UIPadding")
+	gridPadding.PaddingRight = UDim.new(0, 12)
+	gridPadding.PaddingBottom = UDim.new(0, 6)
+	gridPadding.Parent = scroll
+
+	local GuiTheme = (require(script.Parent.GuiTheme) :: any)
+	local cards: { [string]: { Frame: Frame, Desc: TextLabel, Button: TextButton, Tag: TextLabel } } = {}
+	for index, entry in sortedItems() do
+		local item = entry.Item
+		local premium = item.Unique == true
+		local card = Instance.new("Frame")
+		card.Name = entry.Id
+		card.LayoutOrder = index
+		card.BackgroundColor3 = if premium then Color3.fromRGB(70, 36, 24) else COLORS.PanelLight
+		card.Parent = scroll
+		UI.Corner(card, 8)
+		UI.Stroke(card, item.Color, if premium then 3 else 2)
+		if GuiTheme.Card then
+			GuiTheme.Card(card, item.Color)
+		end
+		local art = Instance.new("Frame")
+		art.Name = "Art"
+		art.Position = UDim2.fromOffset(10, 10)
+		art.Size = UDim2.new(1, -20, 0, 72)
+		art.BackgroundColor3 = item.Color:Lerp(Color3.fromRGB(20, 12, 36), 0.78)
+		art.Parent = card
+		UI.Corner(art, 6)
+		local artGradient = Instance.new("UIGradient")
+		artGradient.Rotation = 90
+		artGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 175))
+		artGradient.Parent = art
+		local icon = UI.Label(art, ICONS[item.Species or ""] or ICONS[item.Kind] or "🎃", UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 44)
+		icon.Name = "Icon"
+		local tag = UI.Label(card, "", UDim2.fromOffset(112, 18), UDim2.new(1, -118, 0, 14), 12)
+		tag.Name = "Tag"
+		tag.BackgroundColor3 = if premium then Color3.fromRGB(255, 170, 40) else Color3.fromRGB(80, 220, 110)
+		tag.BackgroundTransparency = 0
+		tag.TextColor3 = Color3.fromRGB(20, 12, 8)
+		tag.Visible = premium
+		tag.Text = if premium then "ONE PER PLAYER" else ""
+		tag.ZIndex = 3
+		UI.Corner(tag, 4)
+		local name = UI.Label(card, item.Name, UDim2.new(1, -16, 0, 22), UDim2.fromOffset(8, 86), 19)
+		name.TextColor3 = item.Color
+		name.TextStrokeColor3 = Color3.fromRGB(12, 16, 31)
+		name.TextStrokeTransparency = 0.35
+		local desc = UI.Label(card, item.Description, UDim2.new(1, -16, 0, 44), UDim2.fromOffset(8, 108), 13)
+		desc.TextYAlignment = Enum.TextYAlignment.Top
+		desc.TextColor3 = COLORS.SubText
+		desc.TextTruncate = Enum.TextTruncate.AtEnd
+		local buy = UI.Button(card, "Buy", COLORS.Green, UDim2.new(1, -20, 0, 40), UDim2.new(0, 10, 1, -50))
+		buy.TextSize = 18
+		cards[entry.Id] = { Frame = card, Desc = desc, Button = buy, Tag = tag }
+		buy.Activated:Connect(function()
+			local item2 = settings.Items[entry.Id]
+			local owned = state and state.Owned and state.Owned[entry.Id]
+			if owned and (item2.Kind == "Hat" or item2.Kind == "Trail" or item2.Kind == "Aura" or item2.Kind == "Title") then
+				local equipped = state.Equipped and state.Equipped[item2.Kind] == entry.Id
+				remotes.HalloweenEquip:FireServer(entry.Id, not equipped)
+			else
+				remotes.HalloweenBuy:FireServer(entry.Id)
+			end
+		end)
+	end
+
+	local function applyCategory()
+		local category = CATEGORIES[activeCategory]
+		for id, card in cards do
+			card.Frame.Visible = category.Kinds[settings.Items[id].Kind] == true
+		end
+		for index, tab in tabs do
+			local on = index == activeCategory
+			tab.BackgroundColor3 = if on then PURPLE else Color3.fromRGB(58, 40, 92)
+			tab.TextColor3 = if on then Color3.new(1, 1, 1) else COLORS.SubText
+		end
+		scroll.CanvasPosition = Vector2.new(0, 0)
+	end
+	for index, category in CATEGORIES do
+		local tab = UI.Button(tabBar, category.Icon .. "  " .. category.Name, Color3.fromRGB(58, 40, 92), UDim2.new(0.25, -8, 1, 0), UDim2.fromOffset(0, 0))
+		tab.LayoutOrder = index
+		tab.TextSize = 17
+		tabs[index] = tab
+		tab.Activated:Connect(function()
+			activeCategory = index
+			applyCategory()
+		end)
+	end
+	applyCategory()
+
+	local function refreshShop()
+		if not state then
+			return
+		end
+		balance.Text = "🍬 " .. CompactMoney.Format(state.Candy)
+		convertNote.Text = string.format("Leftover Candy turns into %d coins each when the event ends", state.ConvertRate or settings.CandyToCoinRate)
+		for id, card in cards do
+			local item = settings.Items[id]
+			local owned = state.Owned and state.Owned[id] == true
+			local cosmetic = item.Kind == "Hat" or item.Kind == "Trail" or item.Kind == "Aura" or item.Kind == "Title"
+			if cosmetic and owned then
+				local equipped = state.Equipped and state.Equipped[item.Kind] == id
+				card.Button.Text = if equipped then "Unequip" else "Equip"
+				card.Button.BackgroundColor3 = if equipped then COLORS.Orange else COLORS.Blue
+				card.Tag.Visible = true
+				card.Tag.Text = if equipped then "EQUIPPED" else "OWNED"
+				card.Tag.BackgroundColor3 = if equipped then Color3.fromRGB(80, 220, 110) else Color3.fromRGB(150, 160, 200)
+			elseif item.Unique and owned then
+				card.Button.Text = "Owned"
+				card.Button.BackgroundColor3 = COLORS.Gray
+				card.Tag.Visible = true
+				card.Tag.Text = "YOURS!"
+				card.Tag.BackgroundColor3 = Color3.fromRGB(255, 170, 40)
+			else
+				local affordable = state.Candy >= item.Cost
+				card.Button.Text = if affordable then "Buy  🍬 " .. CompactMoney.Format(item.Cost) else "Need  🍬 " .. CompactMoney.Format(item.Cost)
+				card.Button.BackgroundColor3 = if affordable then COLORS.Green else COLORS.Gray
+				card.Tag.Visible = item.Unique == true
+				card.Tag.Text = if item.Unique then "ONE PER PLAYER" else ""
+				card.Tag.BackgroundColor3 = Color3.fromRGB(255, 170, 40)
+			end
+		end
+	end
+
+	local function refreshPill()
+		if not state or not state.Enabled then
+			pill.Visible = false
+			hintLabel.Visible = false
+			return
+		end
+		pill.Visible = true
+		local elapsed = os.clock() - stateAt
+		local parts = {}
+		local boost = (state.BoostLeft or 0) - elapsed
+		if boost > 0 then
+			table.insert(parts, "2x cash " .. clock(boost))
+		end
+		if (state.InvadersAlive or 0) > 0 then
+			table.insert(parts, "👹 " .. state.InvadersAlive .. " Mothers!")
+		else
+			table.insert(parts, "Invasion " .. clock((state.NextInvasionIn or 0) - elapsed))
+		end
+		if (state.HuntRemaining or 0) > 0 then
+			table.insert(parts, "🎃 " .. state.HuntRemaining .. " left")
+		else
+			table.insert(parts, "Hunt " .. clock((state.NextPumpkinsIn or 0) - elapsed))
+		end
+		timerLabel.Text = table.concat(parts, " · ")
+	end
+
+	local function refreshHint()
+		local current = hint
+		if not current or not state or not state.Enabled or os.clock() - hintAt > (current.EndsIn or 0) + 2 then
+			hintLabel.Visible = false
+			return
+		end
+		local camera = workspace.CurrentCamera
+		if not camera then
+			hintLabel.Visible = false
+			return
+		end
+		-- sector 0 = world +X, counter-clockwise; show it relative to where the camera is looking
+		local dx, dz = HalloweenLogic.SectorDirection(current.Sector)
+		local look = camera.CFrame.LookVector
+		local right = camera.CFrame.RightVector
+		local forward = Vector2.new(look.X, look.Z)
+		local side = Vector2.new(right.X, right.Z)
+		if forward.Magnitude < 0.01 then
+			forward = Vector2.new(0, -1)
+			side = Vector2.new(1, 0)
+		end
+		forward, side = forward.Unit, side.Unit
+		local target = Vector2.new(dx, dz)
+		local angle = math.atan2(target:Dot(side), target:Dot(forward))
+		local index = math.floor(angle / (math.pi / 4) + 0.5) % 8
+		hintLabel.Text = string.format("%s Pumpkin %s · %d left", ARROWS[index + 1], BAND_TEXT[current.Band] or "", current.Remaining or 0)
+		hintLabel.Visible = true
+	end
+
+	local function onState(newState: any)
+		state = newState
+		stateAt = os.clock()
+		refreshShop()
+		refreshPill()
+	end
+
+	remotes.HalloweenState.OnClientEvent:Connect(onState)
+	remotes.HalloweenHint.OnClientEvent:Connect(function(newHint: any)
+		hint = if type(newHint) == "table" then newHint else nil
+		hintAt = os.clock()
+		refreshHint()
+	end)
+	remotes.HalloweenOpenShop.OnClientEvent:Connect(function()
+		UI.Open(ui, frame)
+		buildPortrait()
+		speechText.Text = GREETINGS[math.random(1, #GREETINGS)]
+		refreshShop()
+		remotes.HalloweenSync:FireServer()
+	end)
+
+	-- Timers tick locally; the hint arrow follows the camera; the shop closes when you walk away.
+	local accumulator = 0
+	RunService.Heartbeat:Connect(function(dt)
+		accumulator += dt
+		if accumulator < 0.25 then
+			return
+		end
+		accumulator = 0
+		refreshPill()
+		refreshHint()
+		if frame.Visible then
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			-- the merchant is Studio-authored (Workspace.HalloweenWorld) and may have been moved: find him by tag
+			local merchant = game:GetService("CollectionService"):GetTagged("HalloweenMerchant")[1]
+			local anchor = merchant and (merchant:FindFirstChild("Torso") or merchant:FindFirstChild("HumanoidRootPart"))
+			if not root or not anchor or not anchor:IsA("BasePart") or not root:IsA("BasePart")
+				or (root.Position - anchor.Position).Magnitude > settings.Merchant.ShopDistance * 1.3 then
+				frame.Visible = false
+			end
+		end
+	end)
+	title.TextSize = 28
+	remotes.HalloweenSync:FireServer()
+end
+
+return HalloweenUI
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="46">
           <Properties>
             <string name="Name">MonsterAnimate</string>
             <string name="Source"><![CDATA[--[[
@@ -968630,7 +972372,7 @@ return MonsterAnimate
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="38">
+        <Item class="ModuleScript" referent="47">
           <Properties>
             <string name="Name">MonsterInventory</string>
             <string name="Source"><![CDATA[--!strict
@@ -968897,7 +972639,268 @@ return MonsterInventory
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="39">
+        <Item class="ModuleScript" referent="48">
+          <Properties>
+            <string name="Name">OfflineEarnings</string>
+            <string name="Source"><![CDATA[--!strict
+-- A historical receipt for server-calculated offline income. Never claims coins.
+local TweenService = game:GetService("TweenService")
+
+local GuiTheme = require(script.Parent.GuiTheme)
+local COLORS = GuiTheme.Colors
+
+export type Controller = {
+	Update: (state: any) -> (),
+	Destroy: () -> (),
+}
+
+local OfflineEarnings = {}
+
+local function nonNegative(value: any): number
+	if type(value) ~= "number" or value ~= value or math.abs(value) == math.huge then
+		return 0
+	end
+	return math.max(0, value)
+end
+
+local function exactCoins(value: number): string
+	local digits = string.format("%.0f", math.floor(value))
+	local grouped = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	local result = grouped:gsub("^,", "")
+	return result
+end
+
+local function awayTime(seconds: number): string
+	local minutes = math.floor(seconds / 60)
+	if minutes < 1 then return "less than a minute" end
+	local days = math.floor(minutes / 1440)
+	local hours = math.floor(minutes / 60) % 24
+	local remainder = minutes % 60
+	if days > 0 then return string.format("%dd %dh %dm", days, hours, remainder) end
+	if hours > 0 then return string.format("%dh %dm", hours, remainder) end
+	return string.format("%dm", remainder)
+end
+
+local function label(parent: Instance, name: string, text: string, fontSize: number, color: Color3): TextLabel
+	local item = Instance.new("TextLabel")
+	item.Name = name
+	item.BackgroundTransparency = 1
+	item.Font = Enum.Font.FredokaOne
+	item.TextSize = fontSize
+	item.Text = text
+	item.TextColor3 = color
+	item.TextXAlignment = Enum.TextXAlignment.Left
+	item.ZIndex = 2
+	item.Parent = parent
+	return item
+end
+
+local function surface(parent: Instance, name: string, color: Color3, accent: Color3): Frame
+	local frame = Instance.new("Frame")
+	frame.Name = name
+	frame.BackgroundColor3 = color
+	frame.BorderSizePixel = 0
+	frame:SetAttribute("PixelAccent", accent)
+	frame.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = frame
+	local border = Instance.new("UIStroke")
+	border.Color = Color3.fromRGB(12, 16, 31)
+	border.Thickness = 2
+	border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	border.Parent = frame
+	GuiTheme.Gloss(frame)
+	return frame
+end
+
+function OfflineEarnings.Create(playerGui: PlayerGui): Controller
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "OfflineEarnings"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = false
+	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 30
+	gui.Parent = playerGui
+
+	local bounds = Instance.new("Frame")
+	bounds.Name = "SafeBounds"
+	bounds.BackgroundTransparency = 1
+	bounds.Size = UDim2.fromScale(1, 1)
+	bounds.Parent = gui
+
+	local seenIds: { [string]: boolean } = {}
+	local currentCard: Frame? = nil
+	local stopCard: (() -> ())? = nil
+	local destroyed = false
+	local controller = {} :: Controller
+
+	local function dismiss()
+		if stopCard then stopCard(); stopCard = nil end
+		if currentCard then currentCard:Destroy(); currentCard = nil end
+	end
+
+	function controller.Update(state: any)
+		if destroyed or type(state) ~= "table" then return end
+		local receipt = state.OfflineEarnings
+		if type(receipt) ~= "table" or type(receipt.Id) ~= "string" or receipt.Id == "" then return end
+		if seenIds[receipt.Id] then return end
+		local earned = math.floor(nonNegative(receipt.CoinsEarned))
+		local grown = math.floor(nonNegative(receipt.MonstersGrown))
+		local seconds = nonNegative(receipt.SecondsAway)
+		if seconds <= 0 or (earned < 1 and grown < 1) then return end
+		seenIds[receipt.Id] = true
+		dismiss()
+
+		local pending = math.floor(nonNegative(receipt.CollectiblePending))
+		local card = surface(bounds, "OfflineReceipt", COLORS.Panel, COLORS.Yellow)
+		currentCard = card
+		card.AnchorPoint = Vector2.new(0.5, 0.5)
+		card:SetAttribute("ReceiptId", receipt.Id)
+		card:SetAttribute("CoinsEarned", earned)
+		card:SetAttribute("CollectibleOnArrival", pending)
+		local scale = Instance.new("UIScale")
+		scale.Parent = card
+
+		local title = label(card, "Title", "Welcome back!", 26, COLORS.Text)
+		local away = label(card, "AwayDuration", "Away for " .. awayTime(seconds), 14, COLORS.SubText)
+		local badge = label(card, "Status", "OFFLINE", 11, COLORS.Green)
+		badge.TextXAlignment = Enum.TextXAlignment.Right
+
+		local hero = surface(card, "Earnings", COLORS.PanelLight, COLORS.Yellow)
+		hero.ZIndex = 2
+		local coin = GuiTheme.Icon(hero, "Coins", UDim2.fromOffset(58, 58), UDim2.fromOffset(12, 19))
+		coin.ZIndex = 3
+		local caption = label(hero, "EarningsCaption", "YOUR MONSTERS EARNED", 11, COLORS.SubText)
+		caption.ZIndex = 3
+		local amount = label(hero, "EarnedAmount", "+0", 38, COLORS.Yellow)
+		amount.ZIndex = 3
+		amount.TextScaled = true
+		amount:SetAttribute("ExactAmount", exactCoins(earned))
+		local amountLimit = Instance.new("UITextSizeConstraint")
+		amountLimit.MinTextSize = 14
+		amountLimit.MaxTextSize = 38
+		amountLimit.Parent = amount
+		local unit = label(hero, "Currency", "coins while you were away", 12, COLORS.Text)
+		unit.ZIndex = 3
+
+		local pendingCaption = label(card, "PendingCaption", "READY TO COLLECT ON ARRIVAL", 11, COLORS.SubText)
+		local pendingAmount = label(card, "PendingAmount", exactCoins(pending) .. " coins", 20, COLORS.Text)
+		pendingAmount.TextScaled = true
+		local pendingLimit = Instance.new("UITextSizeConstraint")
+		pendingLimit.MinTextSize = 12
+		pendingLimit.MaxTextSize = 20
+		pendingLimit.Parent = pendingAmount
+		local growth = if grown > 0 then string.format("%d monster%s grew. ", grown, if grown == 1 then "" else "s") else ""
+		local details = label(card, "CollectionHint", growth .. "Collect at your stands. Auto-collect may have banked it.", 13, COLORS.SubText)
+		details.TextWrapped = true
+		details.TextYAlignment = Enum.TextYAlignment.Top
+
+		local close = Instance.new("TextButton")
+		close.Name = "Dismiss"
+		close.Text = "Got it"
+		close.Font = Enum.Font.FredokaOne
+		close.TextSize = 20
+		close.TextColor3 = Color3.fromRGB(16, 42, 24)
+		close.BackgroundColor3 = COLORS.Green
+		close.BorderSizePixel = 0
+		close.ZIndex = 2
+		close:SetAttribute("AccessibleName", "Dismiss offline earnings receipt")
+		close.Parent = card
+		local closeCorner = Instance.new("UICorner")
+		closeCorner.CornerRadius = UDim.new(0, 4)
+		closeCorner.Parent = close
+		local closeBorder = Instance.new("UIStroke")
+		closeBorder.Color = Color3.fromRGB(12, 16, 31)
+		closeBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		closeBorder.Thickness = 2
+		closeBorder.Parent = close
+		GuiTheme.Gloss(close)
+		GuiTheme.ButtonFeedback(close, closeBorder)
+
+		local function layout()
+			local viewport = bounds.AbsoluteSize
+			local compact = viewport.Y < 390
+			local height = if compact then 306 else 354
+			scale.Scale = math.min(1, math.max(1, viewport.Y - 24) / height)
+			local width = math.min(380, math.max(1, viewport.X - 32) / scale.Scale)
+			card.Size = UDim2.fromOffset(width, height)
+			card.Position = UDim2.fromScale(0.5, 0.5)
+			title.Position = UDim2.fromOffset(20, if compact then 12 else 18)
+			title.Size = UDim2.new(1, -116, 0, 30)
+			title.TextSize = if width < 330 then 23 else 26
+			away.Position = UDim2.fromOffset(20, if compact then 42 else 50)
+			away.Size = UDim2.new(1, -40, 0, 18)
+			badge.Position = UDim2.new(1, -86, 0, if compact then 20 else 28)
+			badge.Size = UDim2.fromOffset(66, 16)
+			hero.Position = UDim2.fromOffset(16, if compact then 66 else 80)
+			hero.Size = UDim2.new(1, -32, 0, if compact then 84 else 100)
+			coin.Position = UDim2.fromOffset(12, if compact then 12 else 20)
+			coin.Size = UDim2.fromOffset(54, 54)
+			caption.Position = UDim2.fromOffset(78, if compact then 8 else 13)
+			caption.Size = UDim2.new(1, -90, 0, 16)
+			amount.Position = UDim2.fromOffset(78, if compact then 23 else 32)
+			amount.Size = UDim2.new(1, -90, 0, if compact then 32 else 38)
+			unit.Position = UDim2.fromOffset(78, if compact then 58 else 74)
+			unit.Size = UDim2.new(1, -90, 0, 17)
+			unit.TextSize = if width < 330 then 11 else 12
+			pendingCaption.Position = UDim2.fromOffset(20, if compact then 162 else 194)
+			pendingCaption.Size = UDim2.new(1, -40, 0, 16)
+			pendingAmount.Position = UDim2.fromOffset(20, if compact then 181 else 214)
+			pendingAmount.Size = UDim2.new(1, -40, 0, 24)
+			details.Position = UDim2.fromOffset(20, if compact then 211 else 248)
+			details.Size = UDim2.new(1, -40, 0, if compact then 30 else 36)
+			details.TextSize = if compact then 12 else 13
+			close.Position = UDim2.new(0, 16, 1, -58)
+			close.Size = UDim2.new(1, -32, 0, 44)
+		end
+		local layoutConnection = bounds:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout)
+		layout()
+
+		local counter = Instance.new("NumberValue")
+		local counterConnection = counter.Changed:Connect(function(value: number)
+			amount.Text = "+" .. exactCoins(math.min(earned, value))
+		end)
+		local countTween = TweenService:Create(counter, TweenInfo.new(0.9, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Value = earned })
+		local completedConnection: RBXScriptConnection? = nil
+		completedConnection = countTween.Completed:Connect(function(playback)
+			if playback == Enum.PlaybackState.Completed then amount.Text = "+" .. exactCoins(earned) end
+			counterConnection:Disconnect()
+			if completedConnection then completedConnection:Disconnect(); completedConnection = nil end
+			counter:Destroy()
+		end)
+		local closeConnection = close.Activated:Connect(dismiss)
+		stopCard = function()
+			layoutConnection:Disconnect()
+			closeConnection:Disconnect()
+			if completedConnection then completedConnection:Disconnect(); completedConnection = nil end
+			counterConnection:Disconnect()
+			countTween:Cancel()
+			counter:Destroy()
+		end
+		countTween:Play()
+	end
+
+	function controller.Destroy()
+		if destroyed then return end
+		destroyed = true
+		dismiss()
+		gui:Destroy()
+	end
+	gui.Destroying:Connect(function()
+		destroyed = true
+		dismiss()
+	end)
+
+	return controller
+end
+
+return OfflineEarnings
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="49">
           <Properties>
             <string name="Name">Settings</string>
             <string name="Source"><![CDATA[--!strict
@@ -969249,7 +973252,7 @@ return Settings
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="40">
+        <Item class="ModuleScript" referent="50">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[--!strict
@@ -969375,12 +973378,25 @@ local function panel(parent: Instance, name: string, size: UDim2, title: string,
 	corner(f, 16)
 	stroke(f, COLORS.Yellow, 3)
 	GuiTheme.Gloss(f)
+	-- Optional dressing (stubbed GuiTheme modules in the layout tests don't provide it).
+	local dress = (GuiTheme :: any).Dress
+	if dress then
+		-- White-ish titles (plain "SHOP" etc.) get the blue family accent so the band stays vivid.
+		local _, saturation = titleColor:ToHSV()
+		dress(f, if saturation < 0.3 then COLORS.Blue else titleColor)
+	end
 
 	local titleLabel = label(f, title, UDim2.new(1, -60, 0, 44), UDim2.fromOffset(16, 6), 30)
 	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	titleLabel.TextColor3 = titleColor
+	if dress then
+		-- White, heavily outlined title on the bright band.
+		titleLabel.TextColor3 = Color3.new(1, 1, 1)
+		titleLabel.TextStrokeColor3 = Color3.fromRGB(12, 16, 31)
+		titleLabel.TextStrokeTransparency = 0
+	end
 
-	local close = button(f, "X", COLORS.Panel, UDim2.fromOffset(44, 44), UDim2.new(1, -52, 0, 6))
+	local close = button(f, "X", if dress then COLORS.Red else COLORS.Panel, UDim2.fromOffset(44, 44), UDim2.new(1, -52, 0, 6))
 	close.Name = "CloseButton"
 	local closeCorner = close:FindFirstChildOfClass("UICorner")
 	if closeCorner then closeCorner.CornerRadius = UDim.new(1, 0) end
@@ -969793,6 +973809,7 @@ UI.Stroke = stroke
 UI.Label = label
 UI.Button = button
 UI.Panel = panel
+UI.Card = (GuiTheme :: any).Card -- optional dressing (nil when a test stubs GuiTheme)
 UI.Bar = bar
 UI.DecorateButton = GuiTheme.DecorateButton
 UI.Icon = GuiTheme.Icon
