@@ -168,7 +168,8 @@ inventory = MonsterInventory.Init(ui, remotes, function() return state end, func
 	UI.Open(ui, ui.MonsterFrame)
 	refreshMonsterPanel()
 end)
-ui.InventoryButton.Activated:Connect(function() inventory.Open() end)
+-- The authored golden-paw launcher (or the built-in button as a fallback) opens the inventory.
+Features.SetInventoryOpener(function() inventory.Open() end)
 
 -- الأحداث -------------------------------------------------------------------------------
 
@@ -191,10 +192,6 @@ remotes.OpenMonster.OnClientEvent:Connect(function(monsterId: string)
 	sellConfirmUntil = 0
 	UI.Open(ui, ui.MonsterFrame)
 	refresh()
-end)
-
-ui.ShopButton.Activated:Connect(function()
-	UI.Toggle(ui, ui.ShopFrame)
 end)
 
 for eggType, eggButton in ui.EggButtons do
