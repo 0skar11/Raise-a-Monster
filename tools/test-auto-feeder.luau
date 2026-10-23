@@ -80,8 +80,8 @@ local function harness(studio, passId, ownsPass)
 	}
 	local follower = {Init = function() end, CleanupPlayer = function() end}
 	local modules = {Config = config, MonsterMath = mathModule, DataService = data,
-		PlotService = plotService, CharacterService = {}, FollowerService = follower, CombatService = {}}
-	local market = {PromptGamePassPurchaseFinished = signal(), Prompts = {}}
+		PlotService = plotService, CharacterService = {}, FollowerService = follower, CombatService = {GiveWeapons = function() end}}
+	local market = {PromptGamePassPurchaseFinished = signal(), PromptProductPurchaseFinished = signal(), Prompts = {}}
 	market.UserOwnsGamePassAsync = function(_, _, id)
 		assert(id ~= 0, 'An invalid pass ID reached Marketplace ownership verification')
 		return ownsPass == true and id == config.Gamepasses.AutoFeeder.Id

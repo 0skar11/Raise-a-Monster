@@ -222,7 +222,8 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 	end
 	if best then
 		local crit = math.random() < Config.Combat.CritChance
-		local damage = math.floor(MonsterService.GetAttackDamage(player) * damageMultiplier * (if crit then Config.Combat.CritMultiplier else 1))
+		local passMultiplier = if MonsterService.HasPass(player, "DoubleDamage") then Config.DoubleDamageMultiplier else 1
+		local damage = math.floor(MonsterService.GetAttackDamage(player) * damageMultiplier * passMultiplier * (if crit then Config.Combat.CritMultiplier else 1))
 		local hitPosition = best.Part.Position
 		best.OnHit(player, damage)
 		playSound(best.Part, Config.Combat.Sounds.Hit, if crit then 1 else 0.8)
@@ -255,7 +256,8 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 		local victimRoot = getRoot(victim)
 		if victimHumanoid and victimRoot then
 			tags[victim] = { Attacker = player, Time = now }
-			local damage = math.floor((pvpDamage + MonsterService.GetFollowerDamageBonus(player) * Config.Followers.PvpDamageScale) * damageMultiplier)
+			local passMultiplier = if MonsterService.HasPass(player, "DoubleDamage") then Config.DoubleDamageMultiplier else 1
+			local damage = math.floor((pvpDamage + MonsterService.GetFollowerDamageBonus(player) * Config.Followers.PvpDamageScale) * damageMultiplier * passMultiplier)
 			victimHumanoid:TakeDamage(damage)
 			playSound(victimRoot, Config.Combat.Sounds.Hit, 0.8)
 			spawnHitVfx(victimRoot.Position)

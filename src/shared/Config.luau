@@ -655,6 +655,7 @@ Config.Gamepasses = {
 	ExtraSlots = { Id = 2036429020, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
 	AutoFeeder = { Id = 2037406772, Name = "Auto-Feeder", Description = "Feeds hungry monsters using your coins and grants normal feeding XP", Price = 99, Order = 5 },
 	AutoMinigame = { Id = 2044616622, Name = "Auto Minigame", Description = "Automatically plays with your placed monsters and earns normal game XP", Price = 99, Order = 6 },
+	DoubleDamage = { Id = 2052905177, Name = "x2 Damage", Description = "Double your player weapon damage against monsters, bosses and players", Price = 299, Order = 7 },
 	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
 	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
 	ForestSword = { Id = 0, Name = "Forest Sword", Description = "A nature-forged sword", Price = 149, Order = 11 },
@@ -677,6 +678,7 @@ Config.Products = {
 
 Config.VIPCoinMultiplier = 2
 Config.CoinBoostMultiplier = 1.5
+Config.DoubleDamageMultiplier = 2
 Config.ExtraSlotsAmount = 2
 Config.VIPSword = { DamageMultiplier = 90, ExtraReach = 3 }
 Config.WeaponStats = {
