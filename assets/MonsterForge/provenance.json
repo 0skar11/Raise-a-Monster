@@ -6,6 +6,12 @@
   "atlasSource": "C:\\Users\\ywsf5\\.codex\\generated_images\\01a16a55-8f16-77a0-b34d-73aff630879a\\exec-bc01cc71-bf79-4fbf-8db2-51168e2d237c.png",
   "postprocess": "Deterministic atlas extraction and alpha-preserving fit/padding only, no chroma key",
   "review": "unscored; parent/human checkpoint pending",
+  "robloxUpload": {
+    "date": "2026-10-23",
+    "method": "Studio MCP upload_image",
+    "manifest": "assets/MonsterForge/upload-manifest.json",
+    "nativeStudioQa": "pending"
+  },
   "drift": [
     "Damage art has one crossed pair; approved card has two flanking pairs. Can be reused twice by layout.",
     "Glass capsule interiors stylized cyan; convincing real translucency unverified."

@@ -6,18 +6,18 @@ Shipping artwork is in `assets/plates/`. Exact generation prompts are embedded i
 
 ## Roblox activation
 
-Roblox image IDs are not assigned yet. Studio disconnected during this task and Creator Dashboard could not be reached (DNS error). The zero image IDs in `MonsterForge.Assets` are deliberate pending values, not uploaded assets. The native shop remains functional, but its complete illustrated finish requires this activation before visual acceptance.
+The seven decorative images were uploaded through Studio MCP on 2026-10-23, and their returned image IDs are assigned in `MonsterForge.Assets`. `upload-manifest.json` records the portable file-to-ID mapping. All seven images loaded successfully in Studio. Desktop and landscape phone captures, scrolling and native control sizes were checked; see `docs/monster-forge/runtime-qa.md`. Real Robux purchases and cloud place publication were not performed.
 
-When Studio is connected to the intended Raise a Monster place, serve `assets/plates/` over a local HTTP server and upload these seven files with the Studio MCP `upload_image` tool. Fill only the corresponding entries in `MonsterForge.Assets`, then synchronize the source and playtest desktop and landscape mobile. This step does not require a new design or a change to economy logic.
+Synchronize the source to the intended Raise a Monster place, then playtest desktop and landscape mobile to verify image loading, cropping and native interactions. Upload completion does not establish runtime visual acceptance or place publication.
 
-| File | Client entry |
-| --- | --- |
-| forge-shell.png | Shell |
-| damage-art.png | Passes.DoubleDamage |
-| vip-art.png | Passes.VIP |
-| collect-art.png | Passes.AutoCollect |
-| slots-art.png | Passes.ExtraSlots |
-| feeder-art.png | Passes.AutoFeeder |
-| minigame-art.png | Passes.AutoMinigame |
+| File | Client entry | Roblox image ID |
+| --- | --- | --- |
+| forge-shell.png | Shell | 107413501937236 |
+| damage-art.png | Passes.DoubleDamage | 107172821558895 |
+| vip-art.png | Passes.VIP | 114721435821486 |
+| collect-art.png | Passes.AutoCollect | 96489741894811 |
+| slots-art.png | Passes.ExtraSlots | 107348462504183 |
+| feeder-art.png | Passes.AutoFeeder | 97133893417228 |
+| minigame-art.png | Passes.AutoMinigame | 136084988913737 |
 
 `Pedestal` is optional: selected weapon previews already use a native pedestal. The board background and labels are presentation context, not shipping assets.

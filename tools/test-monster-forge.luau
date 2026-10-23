@@ -4,6 +4,21 @@ local h=create()
 local checks=0
 local function check(ok,message) assert(ok,message); checks+=1 end
 local function called(name,key) local call=h.Last(); return call and call.Name==name and call.Args[1]==key end
+local function unmodulatedCards()
+	for _,card in h.UI.GearScroll:GetChildren() do
+		if card:IsA("Frame") and card.Name:sub(-4)=="Card" and card.BackgroundColor3~=h.Roblox.Color3.new(1,1,1) then return false end
+	end
+	return true
+end
+local function hasGradient(key,top,bottom)
+	local gradient=h.Card(key):FindFirstChildOfClass("UIGradient")
+	local points=if gradient then gradient.Color.Keypoints else {}
+	return gradient and gradient.Rotation==90 and #points==2 and points[1].Value==h.Roblox.Color3.fromRGB(table.unpack(top)) and points[2].Value==h.Roblox.Color3.fromRGB(table.unpack(bottom))
+end
+check(unmodulatedCards(),"White card bases preserve gradient colors without multiplying them into black")
+check(hasGradient("Bat",{24,37,45},{7,15,20}),"Ordinary cards retain the intended dark blue gradient")
+check(hasGradient("DoubleDamage",{74,10,10},{25,8,9}),"Featured damage card retains its red gradient")
+check(hasGradient("VIP",{70,39,10},{24,16,8}),"Featured VIP card retains its warm gold gradient")
 check(h.Card("Bat").Preview:FindFirstChild("WeaponPreview")~=nil,"Weapon cards use actual native 3D preview class")
 check(h.Detail().Stats.Primary.Text=="x40\nweapon damage" and h.Detail().Stats.Secondary.Text=="+2.5\nreach","Hero uses actual configured weapon stats")
 check(h.Card("IronSword").Price.Text=="EQUIPPED" and h.Card("Bat").Price.Text=="OWNED","Equipped and owned states remain distinct")
@@ -23,6 +38,7 @@ h.State.SpeedAccessories.ShadowCloak=true; h.Refresh(); check(h.Card("ShadowCloa
 h.Tab("Gamepasses"); h.Card("AutoFeeder").BuyButton.Activated:Fire(); check(called("BuyPass","AutoFeeder"),"Permanent pass keeps server purchase flow")
 h.State.Passes.AutoFeeder=true; h.Flush(); h.Refresh(); count=#h.Calls; h.Card("AutoFeeder").BuyButton.Activated:Fire()
 check(h.Card("AutoFeeder").BuyButton.Text=="OWNED" and not h.Card("AutoFeeder").BuyButton.Active and #h.Calls==count,"Confirmed pass ownership prevents duplicate purchases")
+check(unmodulatedCards(),"Ownership and category refresh preserve the unmodulated card background")
 h.Tab("Coins & Growth"); h.Card("Coins1000").BuyButton.Activated:Fire(); check(called("BuyProduct","Coins1000"),"Coin pack retains product purchase route")
 h.Flush(); h.Card("Coins1000").BuyButton.Activated:Fire(); check(called("BuyProduct","Coins1000"),"Coin packs remain repeatable")
 count=#h.Calls; h.Card("InstantHatch").BuyButton.Activated:Fire(); check(#h.Calls==count and h.Card("InstantHatch").BuyButton.Text=="COMING SOON" and not h.Card("InstantHatch").BuyButton.Active,"Unconfigured live offers stay unavailable")

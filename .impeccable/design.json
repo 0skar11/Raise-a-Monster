@@ -53,15 +53,16 @@
       "studioRuntimeVerified": false,
       "visuallyAccepted": false,
       "fullCompFidelityVerified": false,
-      "decorativeAssetsPublished": false,
-      "pendingDecorativeFiles": 7,
-      "reason": "Studio disconnected; Creator Dashboard DNS failed; user explicitly deferred Studio QA."
+      "decorativeAssetsPublished": true,
+      "pendingDecorativeFiles": 0,
+      "decorativeAssetsUploadedAt": "2026-10-23",
+      "uploadManifest": "assets/MonsterForge/upload-manifest.json",
+      "reason": "Seven images uploaded, assigned and observed loaded in Studio. Desktop and landscape phone QA recorded in docs/monster-forge/runtime-qa.md; real purchases and cloud publication unverified."
     },
     "notCanonized": [
       "Selected-item eyebrow",
       "Frame-built glyph icons",
       "GothamBlack system display faces",
-      "Seven local decorative raster files with zero runtime asset IDs",
       "Damage-art composition drift and unverified capsule translucency recorded in provenance"
     ]
   },
@@ -74,10 +75,10 @@
   ],
   "narrative": {
     "northStar": "Monster Forge",
-    "overview": "The implemented shop uses midnight stone, bronze framing and warm ivory text to hold a dense catalog of native Roblox controls and actual game models. Gold marks purchase actions; cyan outlines the selected gear card. This document is scoped to the Monster Forge shop, not the rest of Raise a Monster.\n\nThis is a source-derived record of the current implementation, not visual acceptance. Sources are `src/client/MonsterForge.luau`, shop sizing and preview helpers in `src/client/UI.luau`, `PRODUCT.md`, `docs/monster-forge/brief.md`, and `assets/MonsterForge/README.md` and `provenance.json`. The approved comp establishes direction; the code establishes the values recorded here. Studio runtime, complete comp fidelity and Roblox asset publication remain unverified.",
+    "overview": "The implemented shop uses midnight stone, bronze framing and warm ivory text to hold a dense catalog of native Roblox controls and actual game models. Gold marks purchase actions; cyan outlines the selected gear card. This document is scoped to the Monster Forge shop, not the rest of Raise a Monster.\n\nThis records the current source and bounded native Studio checks. Seven decorative images were uploaded, assigned and observed loaded in Studio on 2026-10-23. Desktop and landscape phone screenshots and scrolling were reviewed; see docs/monster-forge/runtime-qa.md. Complete illustration fidelity, real purchases and cloud place publication are not established by these checks.",
     "keyCharacteristics": ["Dense dark containers with warm metal edges.", "Native text and controls above decorative art.", "Actual 3D equipment previews.", "Native pixel sizing with scrolling and responsive reflow."],
     "rules": [{"name": "The State Accent Rule", "body": "Use the selected gear outline and selected category treatment to communicate the current selection independently of item artwork.", "section": "colors"}],
     "dos": ["**Do** preserve native labels, prices, states and actionable controls over decorative artwork.", "**Do** use actual equipment models for item previews.", "**Do** reflow and scroll the catalog using native pixel sizes.", "**Do** distinguish source delivery, asset activation and Studio visual acceptance."],
-    "donts": ["**Don't** bake control labels or prices into raster art.", "**Don't** treat pending zero asset IDs as uploaded Roblox artwork.", "**Don't** extend this shop-specific palette into unrelated screens without inspecting their incumbent system."]
+    "donts": ["**Don't** bake control labels or prices into raster art.", "**Don't** treat uploaded artwork as native Studio visual acceptance.", "**Don't** extend this shop-specific palette into unrelated screens without inspecting their incumbent system."]
   }
 }

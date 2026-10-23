@@ -64,7 +64,7 @@ components:
 
 The implemented shop uses midnight stone, bronze framing and warm ivory text to hold a dense catalog of native Roblox controls and actual game models. Gold marks purchase actions; cyan outlines the selected gear card. This document is scoped to the Monster Forge shop, not the rest of Raise a Monster.
 
-This is a source-derived record of the current implementation, not visual acceptance. Sources are `src/client/MonsterForge.luau`, shop sizing and preview helpers in `src/client/UI.luau`, `PRODUCT.md`, `docs/monster-forge/brief.md`, and `assets/MonsterForge/README.md` and `provenance.json`. The approved comp establishes direction; the code establishes the values recorded here. Studio runtime, complete comp fidelity and Roblox asset publication remain unverified.
+This records the current source and bounded native Studio checks. Sources are `src/client/MonsterForge.luau`, shop sizing and preview helpers in `src/client/UI.luau`, `PRODUCT.md`, `docs/monster-forge/brief.md`, and `assets/MonsterForge/README.md` and `provenance.json`. The approved comp establishes direction; the code establishes the values recorded here. Seven decorative images were uploaded, assigned runtime IDs and observed loaded in Studio on 2026-10-23. Desktop and landscape phone screenshots and scrolling were reviewed. Complete illustration fidelity, real purchases and cloud place publication are not established by these checks.
 
 **Key Characteristics:**
 - Dense dark containers with warm metal edges.
@@ -105,7 +105,7 @@ The shop is centered within the inset-adjusted viewport, capped at (1060 × 520 
 
 Compact mode begins when panel width is below (840px) or height below (420px). It uses the compact spacing token instead of regular spacing. Navigation width is (162px) normally, (126px) in compact mode and (86px) below (480px) panel width. Below that narrow threshold the decorative navigation icons and forge mark are hidden; category labels remain.
 
-Weapons, accessories and owned gear use a catalog plus selected-item detail. Detail moves into the same vertical scrolling content when available content width is below (370px) or height below (300px). The gear grid uses one to three columns; product cards use one to three columns. Gamepasses have two featured cards followed by smaller upgrades, with fewer columns in compact layouts. Navigation and content scroll independently. These rules are source-verified; device usability requires Studio checks.
+Weapons, accessories and owned gear use a catalog plus selected-item detail. Detail moves into the same vertical scrolling content when available content width is below (370px) or height below (300px). The gear grid uses one to three columns; product cards use one to three columns. Gamepasses have two featured cards followed by smaller upgrades, with fewer columns in compact layouts. Navigation and content scroll independently. Desktop and landscape phone checks are recorded in `docs/monster-forge/runtime-qa.md`.
 
 ## Elevation & Depth
 
@@ -145,7 +145,7 @@ The detail panel repeats the selected equipment model, two stat blocks, current 
 
 ### Don't:
 - **Don't** bake control labels or prices into raster art.
-- **Don't** treat pending zero asset IDs as uploaded Roblox artwork.
+- **Don't** treat uploaded artwork as native Studio visual acceptance.
 - **Don't** extend this shop-specific palette into unrelated screens without inspecting their incumbent system.
 
-Not canonized or repaired: the current selected-item eyebrow, Frame-built glyph icons and GothamBlack system display faces remain craft-floor defects, not future house rules. Seven decorative PNGs are local and their runtime IDs are zero, leaving the illustrated finish inactive; provenance also flags damage-art composition drift and unverified capsule translucency. Studio was disconnected and Dashboard DNS failed; the user deferred Studio QA. These gaps remain explicit because source documentation cannot establish visual acceptance or publication.
+Not canonized or repaired: the current selected-item eyebrow, Frame-built glyph icons and GothamBlack system display faces remain craft-floor defects, not future house rules. Seven decorative PNGs were uploaded and observed loaded in Studio on 2026-10-23; provenance still flags damage-art composition drift and unverified capsule translucency. Bounded native QA passed, with real purchases, complete illustration fidelity and cloud publication outside the verified scope.

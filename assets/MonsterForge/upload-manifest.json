@@ -1,0 +1,17 @@
+{
+  "uploadedAt": "2026-10-23",
+  "method": "Studio MCP upload_image",
+  "sourceDirectory": "assets/plates",
+  "clientModule": "src/client/MonsterForge.luau",
+  "nativeStudioQa": "pending",
+  "images": [
+    { "file": "forge-shell.png", "clientEntry": "Shell", "imageId": 107413501937236 },
+    { "file": "damage-art.png", "clientEntry": "Passes.DoubleDamage", "imageId": 107172821558895 },
+    { "file": "vip-art.png", "clientEntry": "Passes.VIP", "imageId": 114721435821486 },
+    { "file": "collect-art.png", "clientEntry": "Passes.AutoCollect", "imageId": 96489741894811 },
+    { "file": "slots-art.png", "clientEntry": "Passes.ExtraSlots", "imageId": 107348462504183 },
+    { "file": "feeder-art.png", "clientEntry": "Passes.AutoFeeder", "imageId": 97133893417228 },
+    { "file": "minigame-art.png", "clientEntry": "Passes.AutoMinigame", "imageId": 136084988913737 }
+  ],
+  "optionalNativePedestal": true
+}

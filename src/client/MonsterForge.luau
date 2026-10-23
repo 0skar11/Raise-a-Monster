@@ -7,10 +7,10 @@ local UI = require(script.Parent.UI)
 
 local MonsterForge = {}
 MonsterForge.Assets = {
-	Shell = 0,
+	Shell = 107413501937236,
 	ShellSlice = Rect.new(64, 144, 1799, 780),
 	Pedestal = 0,
-	Passes = { DoubleDamage = 0, VIP = 0, AutoCollect = 0, ExtraSlots = 0, AutoFeeder = 0, AutoMinigame = 0 },
+	Passes = { DoubleDamage = 107172821558895, VIP = 114721435821486, AutoCollect = 96489741894811, ExtraSlots = 107348462504183, AutoFeeder = 97133893417228, AutoMinigame = 136084988913737 },
 	PassCrops = {
 		DoubleDamage = Rect.new(279, 12, 680, 358), VIP = Rect.new(216, 12, 623, 348),
 		AutoCollect = Rect.new(135, 13, 505, 364), ExtraSlots = Rect.new(77, 23, 659, 376),
@@ -238,10 +238,17 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	local refresh: () -> () = function() end
 	local layout: () -> () = function() end
 	local function add(offer: any)
-		local card = frame(scroll, offer.Key .. "Card", C.Ink)
+		-- UIGradient multiplies this color; white preserves its intended palette.
+		local card = frame(scroll, offer.Key .. "Card", Color3.new(1, 1, 1))
 		round(card, 5)
 		local outline = border(card, C.Edge, 1)
-		shade(card, C.Raised, C.Ink)
+		if offer.Featured and offer.Key == "DoubleDamage" then
+			shade(card, Color3.fromRGB(74, 10, 10), Color3.fromRGB(25, 8, 9))
+		elseif offer.Featured and offer.Key == "VIP" then
+			shade(card, Color3.fromRGB(70, 39, 10), Color3.fromRGB(24, 16, 8))
+		else
+			shade(card, C.Raised, C.Ink)
+		end
 		local preview = frame(card, "Preview", C.Ink)
 		preview.BackgroundTransparency = 1
 		if offer.Kind == "Weapon" then UI.WeaponPreview(preview, offer.Template)
