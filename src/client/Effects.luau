@@ -18,8 +18,6 @@ local POP = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 local sfx: { [string]: Sound } = {}
 local lastCoins: number? = nil
-local musicOn = true
-local music: Sound? = nil
 
 local function assetId(id: number): string
 	return "rbxassetid://" .. tostring(id)
@@ -121,10 +119,10 @@ local function startMusic()
 	end
 	local sound = Instance.new("Sound")
 	sound.Name = "MapMusic"
+	sound:SetAttribute("RaiseAMonsterMusic", true)
 	sound.Volume = AUDIO.MusicVolume
 	sound.Looped = #ids == 1
 	sound.Parent = SoundService
-	music = sound
 	local index = 1
 	sound.SoundId = assetId(ids[index])
 	sound.Ended:Connect(function()
@@ -133,22 +131,6 @@ local function startMusic()
 		sound:Play()
 	end)
 	sound:Play()
-end
-
--- زرار صغير يقفل ويفتح المزيكا (في المكان الفاضي في شبكة الأزرار على الشمال)
-local function buildMusicButton(ui: UI.UI)
-	if not music then
-		return
-	end
-	local toggle = UI.Button(ui.Gui, "🎵\nMusic", UI.Colors.Blue, UDim2.fromOffset(84, 84), UDim2.new(0, 104, 0.5, -46))
-	toggle.TextSize = 18
-	toggle.Activated:Connect(function()
-		musicOn = not musicOn
-		local sound = music :: Sound
-		sound.Volume = if musicOn then AUDIO.MusicVolume else 0
-		toggle.Text = if musicOn then "🎵\nMusic" else "🔇\nMuted"
-		toggle.BackgroundColor3 = if musicOn then UI.Colors.Blue else UI.Colors.Gray
-	end)
 end
 
 -- الفلوس: بتنط ويطلع صوت لما تزيد بس
@@ -183,7 +165,6 @@ function Effects.Start(ui: UI.UI)
 		end
 	end
 	startMusic()
-	buildMusicButton(ui)
 
 	-- كل الزراير، حتى اللي بتتعمل بعدين (كروت الشوب، الـ Trade...)
 	for _, object in ui.Gui:GetDescendants() do

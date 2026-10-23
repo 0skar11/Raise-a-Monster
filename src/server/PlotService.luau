@@ -245,7 +245,8 @@ local function buildShop()
 
 	-- A Studio-authored Gear Shop (Workspace.GearShopWorld: stall + Blacksmith NPC, tagged GearShopStand)
 	-- replaces this code-made stall. It is never rebuilt or moved by code, so the user's edits stick.
-	if CollectionService:GetTagged("GearShopStand")[1] then
+	-- (also when the authored GearShopWorld folder exists but its stall was deleted: deleted stays deleted)
+	if CollectionService:GetTagged("GearShopStand")[1] or workspace:FindFirstChild("GearShopWorld") then
 		shopModel:Destroy()
 	end
 	for _, prompt in CollectionService:GetTagged("GearShopPrompt") do

@@ -16,6 +16,7 @@ local EVENT_NAMES = {
 	"SellMonster", -- (monsterId)
 	"PlaceMonster", -- (monsterId, unlockedSlot), swaps safely with current occupant
 	"BenchMonster", -- (monsterId), retains ownership and stops plot income
+	"PlaceEgg", -- (eggId, unlockedSlot), puts a waiting bench egg in a free slot and starts its hatch timer
 	"AutoPlaceMonsters", -- (), ranks owned available monsters by actual production
 	"ToggleFollower", -- (monsterId), server validates adult ownership and limit
 	"BuyUpgrade", -- (upgradeName)

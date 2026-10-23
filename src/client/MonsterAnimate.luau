@@ -15,11 +15,39 @@ local MAX_DIST = 300
 local CYCLE = { "Idle", "Walk", "Attack" }
 
 function MonsterAnimate.Start()
-	local camera = workspace.CurrentCamera
 	local ctrls = {}
+	local function build(m)
+		local controller = MonsterAnimator.new(m)
+		controller.tracks = {}
+		local animations = m:FindFirstChild("Animations")
+		local animator = m:FindFirstChildWhichIsA("Animator", true)
+		if animations and animator then
+			for _, animation in animations:GetChildren() do
+				if animation:IsA("Animation") and table.find(CYCLE, animation.Name) and animation.AnimationId ~= "" then
+					local ok, track = pcall(function() return animator:LoadAnimation(animation) end)
+					if ok then
+						track.Looped = animation.Name ~= "Attack"
+						controller.tracks[animation.Name] = track
+					else
+						warn("[MonsterAnimate] Could not load", m.Name, animation.Name, track)
+					end
+				end
+			end
+		end
+		ctrls[m] = controller
+	end
 	local function add(m)
 		if m:IsA("Model") and m:IsDescendantOf(workspace) then
-			ctrls[m] = MonsterAnimator.new(m)
+			build(m)
+			-- A monster that appears at runtime (a follower, a spawned mother) can reach the client before all its
+			-- joints have replicated; a controller built from a half-loaded model animates nothing. Rebuild it while
+			-- joints are still arriving (first seconds only).
+			local connection
+			connection = m.DescendantAdded:Connect(function(descendant)
+				if descendant:IsA("Motor6D") and ctrls[m] then build(m) end
+				if not m.Parent and connection then connection:Disconnect() end
+			end)
+			task.delay(4, function() if connection then connection:Disconnect() end end)
 		end
 	end
 	for _, m in ipairs(CollectionService:GetTagged("Monster")) do
@@ -31,6 +59,8 @@ function MonsterAnimate.Start()
 	end)
 
 	RunService.RenderStepped:Connect(function(dt)
+		local camera = workspace.CurrentCamera
+		if not camera then return end
 		local now = os.clock()
 		local camPos = camera.CFrame.Position
 		for m, c in pairs(ctrls) do
@@ -42,7 +72,14 @@ function MonsterAnimate.Start()
 					local off = m:GetAttribute("AnimSeed") or 0
 					c.override = CYCLE[math.floor((now + off) / 4) % 3 + 1]
 				end
-				MonsterAnimator.step(c, dt)
+				local state = c.override or m:GetAttribute("AnimState") or "Idle"
+				local track = c.tracks[state]
+				if c.activeTrack ~= track then
+					if c.activeTrack then c.activeTrack:Stop(0.15) end
+					c.activeTrack = track
+					if track then track:Play(0.15) end
+				end
+				if not track then MonsterAnimator.step(c, dt) end
 			end
 		end
 	end)

@@ -14,6 +14,7 @@ local Build = require(script.Parent.Build)
 local MonsterService = require(script.Parent.MonsterService)
 local CombatService = require(script.Parent.CombatService)
 local CarryService = require(script.Parent.CarryService)
+local MonsterAttack = require(script.Parent.MonsterAttack)
 
 local EventService = {}
 
@@ -154,13 +155,12 @@ function EventService.SpawnBoss()
 	updateBossBar(current)
 	MonsterService.Announce("💀 A BIG BOSS appeared in Zone 1! Everyone team up to defeat it and win a SECRET EGG!", Color3.fromRGB(200, 120, 255))
 
-	-- بيضرب كل اللي جنبه
+	-- M1 بتاعه: زلزال حواليه بيتعلّم على الأرض قبلها، لو حد قريب منه
 	task.spawn(function()
+		local style = Config.MotherAttacks.Styles.Boss
 		while not current.Dead do
-			task.wait(settings.AttackInterval)
-			if current.Dead then
-				break
-			end
+			task.wait(0.2)
+			local victim: BasePart? = nil
 			for _, player in Players:GetPlayers() do
 				local character = player.Character
 				local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -168,9 +168,25 @@ function EventService.SpawnBoss()
 				if root and humanoid and humanoid.Health > 0 then
 					local flat = Vector3.new(root.Position.X - part.Position.X, 0, root.Position.Z - part.Position.Z)
 					if flat.Magnitude <= settings.AttackRange then
-						humanoid:TakeDamage(settings.Damage)
+						victim = root
+						break
 					end
 				end
+			end
+			if victim and not current.Dead then
+				local windup = MonsterAttack.Start({
+					Model = nil,
+					Root = part,
+					BodyRadius = settings.Size / 2,
+					Target = victim,
+					Style = style,
+					Element = "Void",
+					Damage = settings.Damage,
+					IsValid = function()
+						return not current.Dead
+					end,
+				})
+				task.wait(windup + style.Cooldown)
 			end
 		end
 	end)

@@ -273,6 +273,15 @@ end
 local function adoptAuthoredGate(index: number, zone: Config.Zone, folder: Folder): boolean
 	local template = authoredGateTemplate()
 	if not template then
+		if workspace:FindFirstChild("ZoneGates") then
+			-- The authored gate folder exists but the gate was deleted on purpose: no gate comes back, only the
+			-- walls with the normal road-wide opening.
+			local x = zoneStartX(index)
+			local opening = ROAD_WIDTH / 2 + 2
+			buildGateWall(folder, x, -ZONE_HALF_Z, -opening)
+			buildGateWall(folder, x, opening, ZONE_HALF_Z)
+			return true
+		end
 		return false
 	end
 	local templateIndex = template:GetAttribute("ZoneIndex")
@@ -848,6 +857,23 @@ local function chaseStep(dt: number)
 		local goal: Vector3? = nil
 		local stopDistance = 0.5
 		local aggro = nest.Aggro
+		if not aggro then
+			-- Nobody hit her yet: she still notices a player who walks close to her nest.
+			local bestDistance = Config.Combat.MotherNoticeRange
+			for _, candidate in Players:GetPlayers() do
+				local candidateRoot = candidate.Character and candidate.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local candidateHumanoid = candidate.Character and candidate.Character:FindFirstChildOfClass("Humanoid")
+				if candidateRoot and candidateHumanoid and candidateHumanoid.Health > 0 then
+					local fromMother = Vector3.new(candidateRoot.Position.X - pivot.Position.X, 0, candidateRoot.Position.Z - pivot.Position.Z).Magnitude
+					local fromHome = Vector3.new(candidateRoot.Position.X - home.X, 0, candidateRoot.Position.Z - home.Z).Magnitude
+					if fromMother < bestDistance and fromHome <= Config.Combat.MotherLeashRange then
+						bestDistance = fromMother
+						aggro = candidate
+						nest.Aggro = candidate
+					end
+				end
+			end
+		end
 		if aggro then
 			local character = aggro.Parent and aggro.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?

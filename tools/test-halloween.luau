@@ -260,7 +260,7 @@ check(server:find("HalloweenService.Init(remotes)", 1, true) and server:find("Mo
 check(server:find("HalloweenService.SetupPlayer(player)", 1, true) and server:find("HalloweenService.CleanupPlayer(player)", 1, true) and server:find("HalloweenService.OnCharacter(player)", 1, true), "Join, leave and respawn are handled")
 check(read("src/client/init.client.luau"):find("HalloweenUI.Init(ui, remotes)", 1, true), "Client starts the Halloween UI")
 local monsterService = read("src/server/MonsterService.luau")
-check(monsterService:find("multiplier * eventMultiplier", 1, true) and not monsterService:find("GetCoinMultiplier(player) * eventMultiplier", 1, true), "Candy Boost affects live income but is not saved as the offline multiplier")
+check(monsterService:find("multiplier * eventMultiplier", 1, true) and monsterService:find("data.IncomeMultiplier = multiplier\r?\n"), "Candy Boost affects live income but is not saved as the offline multiplier")
 check(service:find("settings.Enabled ~= true", 1, true) and service:find("EndsAt", 1, true) and service:find("restoreAtmosphere()", 1, true), "Event is gated by the config flag and restores the lighting when it ends")
 check(service:find("nearMerchant(player)", 1, true) and service:find("PickupDistance", 1, true) and service:find("PickupDebounce", 1, true), "Server re-checks shop and pumpkin distance and debounces pickups")
 check(not service:find("OnServerEvent:Connect%(function%(player, ?[%w_]+, ?[%w_]+, ?[%w_]+%)"), "No remote handler trusts extra client arguments")
@@ -315,4 +315,14 @@ do
 	check(decor:find("state.Base = current", 1, true) and not decor:find("FireServer", 1, true), "Decor idle motion re-bases on external moves and never talks to the server")
 	check(read("src/client/init.client.luau"):find("task.spawn(HalloweenDecor.Init)", 1, true), "Client starts the decor animations on their own thread")
 end
+-- The shop monsters have real rigged models (MonsterModels region 6 "Halloween") and never spawn in the wild.
+for index, species in { "HalloweenGhostSlime", "HalloweenSkeletonImp", "HalloweenPumpkinKing" } do
+	local definition = Config.Species[species]
+	check(definition and definition.Model and definition.Model.Region == 6 and definition.Model.Index == index and definition.EventOnly == true, species .. " has a rigged model and is event-only")
+end
+check(service:find("species.Model and not species.EventOnly", 1, true), "Event-only monsters are never picked for Mother Invasions")
+local rigs = read("src/server/MonsterModels.luau")
+check(rigs:find('name = "Halloween"', 1, true) and rigs:find('rarity = "Mythic"', 1, true) and rigs:find("def.rarity or RARITY_ORDER", 1, true), "MonsterModels defines the Halloween region with explicit rarities")
+check(rigs:find("build it from code, once, on demand", 1, true), "Regions missing from the saved Studio rigs are built on demand")
+
 print(string.format("PASS: %d Halloween checks (config, rules, rewards, shop, persistence/migration, wiring)", checks))

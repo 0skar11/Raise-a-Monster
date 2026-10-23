@@ -1,4 +1,4 @@
-"""Generate assets/TravelBar.rbxmx: the pixel-style HOME / SHOP / ARENA bar.
+"""Generate assets/TravelBar.rbxmx: the primary HOME / SHOP / ARENA bar.
 Run: python tools/build-travel-bar.py
 The bar lives in StarterGui so it is visible in Studio edit mode without Play.
 """
@@ -8,9 +8,9 @@ root = Path(__file__).resolve().parent.parent
 refs = iter(range(1000))
 BUTTONS = [
     # name, text, fill, glow, x, y, w, h
-    ("HomeButton", "HOME", (206, 32, 48), (255, 84, 84), 0, 4, 124, 38),
-    ("TeleportShopButton", "SHOP", (24, 160, 232), (70, 236, 255), 140, 0, 144, 46),
-    ("TeleportArenaButton", "ARENA", (48, 176, 48), (156, 255, 80), 300, 4, 124, 38),
+    ("HomeButton", "HOME", (190, 32, 48), (255, 100, 106), 0, 0, 136, 44),
+    ("TeleportShopButton", "SHOP", (0, 139, 190), (85, 225, 255), 144, 0, 136, 44),
+    ("TeleportArenaButton", "ARENA", (40, 146, 32), (135, 235, 92), 288, 0, 136, 44),
 ]
 
 
@@ -31,8 +31,8 @@ def color(name, rgb):
     return f'<Color3uint8 name="{name}">{u32(rgb)}</Color3uint8>'
 
 
-FONT = ('<Font name="FontFace"><Family><url>rbxasset://fonts/families/Arcade.json</url></Family>'
-        '<Weight>400</Weight><Style>Normal</Style></Font>')
+FONT = ('<Font name="FontFace"><Family><url>rbxasset://fonts/families/GothamSSm.json</url></Family>'
+        '<Weight>700</Weight><Style>Normal</Style></Font>')
 
 
 def stroke(rgb, thickness, transparency=0, mode=1):
@@ -45,30 +45,26 @@ def button(name, text, fill, glow, x, y, w, h):
     gradient = item("UIGradient", "Gloss",
                     '<ColorSequence name="Color">0 1 1 1 0 0.5 0.85 0.85 0.85 0 1 0.62 0.62 0.62 0 </ColorSequence>'
                     '<float name="Rotation">90</float>')
-    bevel = item("Frame", "Bevel",
-                 udim2("Size", 1, -8, 1, -8) + udim2("Position", 0, 4, 0, 4)
-                 + '<float name="BackgroundTransparency">1</float>' + '<int name="ZIndex">1</int>',
-                 stroke(light, 2, 0.15) + item("UICorner", "UICorner", '<UDim name="CornerRadius"><S>0</S><O>3</O></UDim>'))
     padding = item("UIPadding", "UIPadding", ''.join(
         f'<UDim name="Padding{s}"><S>0</S><O>{o}</O></UDim>' for s, o in
         (("Left", 8), ("Right", 8), ("Top", 5), ("Bottom", 5))))
-    limit = item("UITextSizeConstraint", "UITextSizeConstraint", '<int name="MaxTextSize">24</int><int name="MinTextSize">8</int>')
+    limit = item("UITextSizeConstraint", "UITextSizeConstraint", '<int name="MaxTextSize">20</int><int name="MinTextSize">14</int>')
     props = (udim2("Size", 0, w, 0, h) + udim2("Position", 0, x, 0, y) + color("BackgroundColor3", fill)
              + FONT + f'<string name="Text">{text}</string>' + color("TextColor3", (255, 255, 255))
              + '<bool name="TextScaled">true</bool><bool name="TextWrapped">false</bool>'
-             + color("TextStrokeColor3", (20, 20, 40)) + '<float name="TextStrokeTransparency">0</float>'
+             + '<float name="TextStrokeTransparency">1</float><int name="BorderSizePixel">0</int>'
              + '<bool name="AutoButtonColor">false</bool><int name="ZIndex">2</int>')
     return item("TextButton", name, props,
-                item("UICorner", "UICorner", '<UDim name="CornerRadius"><S>0</S><O>6</O></UDim>')
-                + stroke(glow, 3) + gradient + bevel + padding + limit)
+                item("UICorner", "UICorner", '<UDim name="CornerRadius"><S>0</S><O>8</O></UDim>')
+                + stroke(glow, 2) + gradient + padding + limit)
 
 
 bar = item("Frame", "Bar",
            '<Vector2 name="AnchorPoint"><X>0.5</X><Y>0</Y></Vector2>' + udim2("Position", 0.5, 0, 0, 8)
-           + udim2("Size", 0, 424, 0, 46) + '<float name="BackgroundTransparency">1</float>',
-           "".join(button(*b) for b in BUTTONS))
+           + udim2("Size", 0, 424, 0, 44) + '<float name="BackgroundTransparency">1</float>',
+           item("UIScale", "ResponsiveScale", '<float name="Scale">1</float>') + "".join(button(*b) for b in BUTTONS))
 gui = item("ScreenGui", "TravelBar",
            '<bool name="ResetOnSpawn">false</bool><bool name="IgnoreGuiInset">false</bool>'
-           '<token name="ZIndexBehavior">1</token>', bar)
+           '<token name="ZIndexBehavior">1</token><int name="DisplayOrder">10</int>', bar)
 (root / "assets" / "TravelBar.rbxmx").write_text(f'<roblox version="4">{gui}</roblox>', encoding="utf-8")
 print("Wrote assets/TravelBar.rbxmx")

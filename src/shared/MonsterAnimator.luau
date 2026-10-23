@@ -33,10 +33,22 @@ local function collect(model)
 	return joints
 end
 
+-- Creatures with no legs at all (slimes, serpents...) hop along instead of walking.
+local function isLegless(joints, rig)
+	if rig == "Bird" then return false end
+	for _, j in ipairs(joints) do
+		if j.role == "Leg" or j.role == "SpiderLeg" then return false end
+	end
+	return true
+end
+
 function MonsterAnimator.new(model)
+	local joints = collect(model)
+	local rig = model:GetAttribute("RigType") or "Quad"
 	return {
 		model = model,
-		joints = collect(model),
+		joints = joints,
+		hop = isLegless(joints, rig),
 		rig = model:GetAttribute("RigType") or "Quad",
 		scale = model:GetAttribute("Scale") or 1,
 		t = (model:GetAttribute("AnimSeed") or 0),
@@ -51,8 +63,35 @@ local function legSign(j)
 	return (j.front and 1 or -1) * j.side * -1
 end
 
+-- Hop cycle for legless bodies: crouch, spring up, stretch in the air, land and squash.
+local function hopPose(j, t)
+	local r, s, i = j.role, j.side, j.index
+	local rx, ry, rz, px, py, pz = 0, 0, 0, 0, 0, 0
+	local phase = (t * 3) % pi / pi -- 0 at take-off, 1 at landing
+	local air = sin(phase * pi) -- 0 on the ground, 1 at the apex
+	local crouch = 1 - air
+	if r == "Root" then py = 1.25 * air; rx = -0.22 * (0.5 - phase) * 2; pz = 0
+	elseif r == "Top" then py = -0.3 * crouch
+	elseif r == "Waist" then rx = 0.1 * (0.5 - phase) * 2
+	elseif r == "Neck" then rx = 0.18 * (phase - 0.5) * 2 + 0.05 * crouch
+	elseif r == "Head" then rx = 0.1 * crouch
+	elseif r == "Jaw" then rx = -0.08 - 0.18 * air
+	elseif r == "Ear" then rz = s * (0.1 + 0.3 * crouch); rx = 0.2 * (phase - 0.5)
+	elseif r == "Tail" then
+		if j.axis == "X" then rx = 0.25 * sin(phase * pi * 2 - i * 0.5) else ry = 0.3 * sin(t * 6 - i * 0.7) end
+	elseif r == "Spine" then ry = 0.25 * sin(t * 3 - i * 0.8); rx = 0.22 * sin(phase * pi - i * 0.6)
+	elseif r == "Arm" then rz = s * (0.1 + 0.5 * air)
+	elseif r == "Forearm" then rx = 0.3 * air
+	elseif r == "Wing" then rz = s * (0.1 + 0.6 * air)
+	elseif r == "Wing2" then rz = s * 0.4 * sin(phase * pi - 0.5)
+	elseif r == "Abdomen" then rx = 0.12 * (0.5 - phase)
+	end
+	return rx, ry, rz, px, py, pz
+end
+
 -- returns rx, ry, rz, px, py, pz (radians / studs at scale 1)
-local function pose(rig, state, j, t, combo)
+local function pose(rig, state, j, t, combo, hop)
+	if hop and state == "Walk" then return hopPose(j, t) end
 	local r, s, i = j.role, j.side, j.index
 	local rx, ry, rz, px, py, pz = 0, 0, 0, 0, 0, 0
 
@@ -81,40 +120,48 @@ local function pose(rig, state, j, t, combo)
 		end
 
 	elseif state == "Walk" then
+		-- Full-body gait: legs/arms swing in opposition, the torso counter-twists, the spine travels a wave,
+		-- head/neck stay stable against the bounce, and tail/ears/wings lag behind the body.
 		local w = 6
 		local ph = sin(t * w)
+		local lag = sin(t * w - 0.9) -- secondary parts follow the main swing a beat late
+		local bounce = sin(t * w * 2 - 1.2) -- two bounces per full stride
+		local pant = sin(t * w * 2.2)
 		if r == "Root" then
-			if rig == "Slime" then py = 1.1 * abs(sin(t * 3))
-			elseif rig == "Bird" then py = 1.4 + 0.35 * sin(t * 8); rx = -0.12
-			elseif rig == "Serpent" then ry = 0.1 * sin(t * 3)
-			elseif rig == "Biped" then py = 0.15 * abs(ph); rz = 0.05 * ph
-			else py = 0.1 * abs(ph) end
+			if rig == "Slime" then py = 1.1 * abs(sin(t * 3)); rz = 0.06 * sin(t * 3)
+			elseif rig == "Bird" then py = 1.4 + 0.35 * sin(t * 8); rx = -0.12; rz = 0.05 * sin(t * 4)
+			elseif rig == "Serpent" then ry = 0.1 * sin(t * 3); rz = 0.04 * sin(t * 3 + 1)
+			elseif rig == "Biped" then py = 0.08 + 0.1 * bounce; rz = 0.07 * ph; rx = -0.07 + 0.02 * bounce
+			else py = 0.07 + 0.07 * bounce; rz = 0.04 * ph; rx = -0.04 + 0.02 * bounce end
 		elseif r == "Leg" then
-			if rig == "Bird" then rx = -0.7
-			elseif rig == "Turtle" then ry = 0.45 * ph * legSign(j)
-			else rx = 0.55 * ph * legSign(j) end
-		elseif r == "Arm" then rx = -0.55 * ph * s
-		elseif r == "Forearm" then rx = 0.35 + 0.2 * ph * s
-		elseif r == "Waist" then ry = 0.08 * ph
-		elseif r == "Neck" or r == "Head" then rx = 0.06 * sin(t * w * 2)
-		elseif r == "Jaw" then rx = -0.08
-		elseif r == "Ear" then rz = s * 0.15 * sin(t * w * 2)
+			if rig == "Bird" then rx = -0.7 + 0.25 * sin(t * 8 + (if s > 0 then 0 else pi))
+			elseif rig == "Turtle" then ry = 0.45 * ph * legSign(j); rx = 0.12 * abs(ph)
+			else rx = 0.7 * ph * legSign(j) end
+		elseif r == "Arm" then
+			if rig == "Biped" then rx = -0.7 * ph * s; rz = s * 0.06
+			else rx = -0.55 * ph * s end
+		elseif r == "Forearm" then rx = 0.4 + 0.3 * lag * s
+		elseif r == "Waist" then ry = -0.14 * ph; rz = 0.04 * lag; rx = 0.03 * bounce -- chest twists against the hips
+		elseif r == "Neck" then ry = 0.1 * ph; rx = 0.07 * bounce -- head stays level while the body swings
+		elseif r == "Head" then rx = -0.05 * bounce; ry = 0.05 * lag
+		elseif r == "Jaw" then rx = -0.1 - 0.08 * max(0, pant)
+		elseif r == "Ear" then rz = s * 0.2 * lag; rx = 0.12 * bounce
 		elseif r == "Tail" then
-			if j.axis == "X" then rx = 0.12 * sin(t * w - i * 0.5) else ry = 0.35 * sin(t * w * 0.6 - i * 0.7) end
-		elseif r == "Spine" then ry = 0.45 * sin(t * 4 - i * 0.9)
+			if j.axis == "X" then rx = 0.14 * sin(t * w * 2 - i * 0.6) else ry = 0.4 * sin(t * w - i * 0.8) end
+		elseif r == "Spine" then ry = 0.4 * sin(t * w - i * 0.9); rz = 0.06 * sin(t * w * 2 - i * 0.7)
 		elseif r == "Wing" then
 			if rig == "Bird" then rz = s * (0.15 + 0.75 * sin(t * 8))
-			else rz = s * (0.2 + 0.25 * sin(t * w)) end
+			else rz = s * (0.2 + 0.25 * lag) end
 		elseif r == "Wing2" then
 			if rig == "Bird" then rz = s * 0.4 * sin(t * 8 - 0.8)
-			else rz = s * 0.2 * sin(t * w - 0.8) end
+			else rz = s * 0.25 * sin(t * w - 1.1) end
 		elseif r == "Top" then py = -0.25 * abs(sin(t * 3))
 		elseif r == "SpiderLeg" then
 			local g = ((i + (s > 0 and 1 or 0)) % 2 == 0) and 1 or -1
-			ry = s * 0.35 * ph * g
-			rz = s * 0.25 * max(0, ph * g)
+			ry = s * 0.38 * ph * g
+			rz = s * 0.28 * max(0, ph * g)
 		elseif r == "Claw" then ry = s * 0.15 * ph
-		elseif r == "Abdomen" then rx = 0.06 * ph
+		elseif r == "Abdomen" then rx = 0.08 * lag; rz = 0.04 * ph
 		end
 
 	elseif state == "Attack" and combo then
@@ -198,7 +245,7 @@ function MonsterAnimator.apply(ctrl)
 			local w = W[st]
 			if w > 0.001 then
 				local t = if st == "Attack" and ctrl.attackT then ctrl.attackT else ctrl.t
-				local rx, ry, rz, px, py, pz = pose(ctrl.rig, st, j, t, if st == "Attack" then ctrl.combo else nil)
+				local rx, ry, rz, px, py, pz = pose(ctrl.rig, st, j, t, if st == "Attack" then ctrl.combo else nil, ctrl.hop)
 				ax = ax + rx * w; ay = ay + ry * w; az = az + rz * w
 				bx = bx + px * w; by = by + py * w; bz = bz + pz * w
 			end
@@ -209,8 +256,10 @@ end
 
 function MonsterAnimator.step(ctrl, dt)
 	if ctrl.model:GetAttribute("Procedural") == false then return end
-	ctrl.t = ctrl.t + dt * ctrl.speed
 	local target = ctrl.override or ctrl.model:GetAttribute("AnimState") or "Idle"
+	-- Big monsters take slower, heavier steps; small ones patter faster.
+	local cadence = if target == "Walk" then math.clamp(1.3 / math.sqrt(max(0.5, ctrl.scale)), 0.6, 1.5) else 1
+	ctrl.t = ctrl.t + dt * ctrl.speed * cadence
 	-- Attack restarts on every swing; its strike peak (u = 0.75) lands when the windup ends.
 	if target == "Attack" then
 		if ctrl.lastTarget ~= "Attack" then ctrl.attackT = 0 end

@@ -202,14 +202,10 @@ local function onCarrierDied(player: Player)
 	end
 end
 
--- بيشيّل اللاعب حاجة على ضهره. بيرجع false لو مش هينفع (شايل حاجة أو قاعدته مليانة).
+-- بيشيّل اللاعب حاجة على ضهره؛ القاعدة المليانة بتحفظ التوصيل على البنش.
 function CarryService.StartCarry(player: Player, cargo: Cargo): boolean
 	if carries[player] then
 		MonsterService.Notify(player, "You are already carrying something! Take it home first.", "error")
-		return false
-	end
-	if not MonsterService.GetFreeSlot(player) then
-		MonsterService.Notify(player, "Your base is full! Sell a monster or buy a new slot.", "error")
 		return false
 	end
 	local character = player.Character

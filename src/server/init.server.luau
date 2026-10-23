@@ -20,6 +20,7 @@ local MonetizationService = require(script.MonetizationService)
 local EventService = require(script.EventService)
 local LeaderboardService = require(script.LeaderboardService)
 local RewardService = require(script.RewardService)
+local MonsterPortraits = require(script.MonsterPortraits)
 local TradeService = require(script.TradeService)
 local ArenaService = require(script.ArenaService)
 local HalloweenService = require(script.HalloweenService)
@@ -28,6 +29,7 @@ local remotes = Remotes.Get()
 
 -- Hooks (عشان MonsterService مايحتاجش يعمل require للخدمات اللي بتعتمد عليه)
 MonsterService.HasPass = MonetizationService.HasPass
+MonsterService.SyncPortraits = MonsterPortraits.Sync
 -- Halloween Candy Boost (inert unless Config.Halloween is running)
 MonsterService.GetEventMultiplier = HalloweenService.GetCashMultiplier
 MonsterService.ExtraState = function(player: Player): { [string]: any }
@@ -38,6 +40,7 @@ MonsterService.ExtraState = function(player: Player): { [string]: any }
 		DailyReadyIn = RewardService.DailyReadyIn(player),
 		SpinReadyIn = RewardService.SpinReadyIn(player),
 		DailyStreak = if profile then profile.Data.Daily.Streak else 0,
+		DailyNextDay = RewardService.NextDailyDay(player),
 		Carrying = CarryService.IsCarrying(player),
 		CanSave = profile ~= nil and profile.CanSave,
 		TemporarySession = profile ~= nil and profile.Temporary == true,

@@ -45,6 +45,8 @@ local function harness(studio, passId, ownsPass)
 		delay = function() end,
 	}
 	local config = luau.load(fs.readFile('src/shared/Config.luau'), {environment = environment()})()
+	-- Isolate feeding rewards; elapsed natural growth has its own regression suite.
+	config.AdultGrowthSeconds = math.huge
 	config.Gamepasses.AutoFeeder.Id = passId or 0
 	local mathModule = luau.load(fs.readFile('src/shared/MonsterMath.luau'), {environment = environment({
 		script = {Parent = {Config = 'Config'}}, require = function() return config end,

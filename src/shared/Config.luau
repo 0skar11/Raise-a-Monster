@@ -225,6 +225,7 @@ Config.Play = {
 
 -- المستويات والتطور -------------------------------------------------------------
 Config.MaxLevel = 60
+Config.AdultGrowthSeconds = 2 * 60 * 60 + 30 * 60 -- Natural Baby -> Adult growth, including offline time.
 Config.ProductionLevelBonusPerLevel = 0.05
 Config.SellLevelBonusPerLevel = 0.1
 
@@ -272,6 +273,7 @@ export type Species = {
 	Horns: boolean,
 	Placeholder: boolean?, -- شكل مؤقت (مكعب واسمه فوقه) لحد ما الـ Skin يجهز
 	Model: { Region: number, Index: number }?, -- الـ Rig المتحرك من MonsterModels (المنطقة ورقم الوحش)
+	EventOnly: boolean?, -- sold by an event shop: never a wild/Mother spawn
 }
 
 Config.Species = {
@@ -364,15 +366,17 @@ Config.Eggs = {
 		Order = 3,
 		Weights = { Ice_7 = 25, Ice_8 = 20, Volcano_7 = 18, Volcano_8 = 15, Ice_9 = 10, Volcano_9 = 7, Void_9 = 3, Ice_10 = 2 },
 	},
-	-- بيضة الحظ: Legendary أو Mythic بس، من Ice وVoid حصرياً.
+	-- Lucky Egg (49 Robux); the separate Secret roll keeps its 5x odds.
 	Lucky = {
 		DisplayName = "Lucky Egg",
 		Cost = 0,
 		HatchTime = 30,
 		Color = Color3.fromRGB(90, 230, 120),
 		Order = 4,
-		Weights = { Ice_9 = 40, Ice_10 = 10, Void_9 = 40, Void_10 = 10 },
-		AllowSecret = false,
+		-- A paid egg should hatch monsters that match its price: mostly Epic and Legendary, with only a small
+		-- Rare share. Expected production is about the same as a Mythic Egg (the Desert tier is far weaker than
+		-- Ice/Volcano/Void, so it is not in this pool). Rarity split: Rare 22%, Epic 50%, Legendary 24%, Mythic 4%.
+		Weights = { Ice_5 = 10, Volcano_5 = 12, Ice_7 = 18, Volcano_7 = 18, Volcano_8 = 10, Ice_9 = 12, Volcano_9 = 12, Void_7 = 4, Volcano_10 = 4 },
 	},
 	-- بيضة الـ Big Boss: بتفقس وحش Secret مضمون
 	Secret = {
@@ -385,7 +389,7 @@ Config.Eggs = {
 	},
 } :: { [string]: Egg }
 
-Config.LuckyEggSecretMultiplier = 0 -- حماية للمنطق القديم كمان: Lucky مفيهاش Secret
+Config.LuckyEggSecretMultiplier = 5
 
 -- البيض اللي بيتباع في المتجر، بالترتيب. فاضي دلوقتي (البيضة المجانية في الأول شغالة عادي).
 -- عشان ترجّع البيض: { "Basic", "Rare", "Mythic" }
@@ -636,14 +640,16 @@ Config.Security = {
 -- Gamepasses و Developer Products -----------------------------------------------------
 -- حط الـ Id بتاع كل واحد بعد ما تعمله من Creator Dashboard (بعد الـ Publish).
 -- لو الـ Id = 0: في Studio الزرار بيدّيهولك مجاناً عشان التجربة، وفي اللعبة الحقيقية بيقول "Coming soon".
+-- Auto Minigame requires a configured pass in Studio too.
 export type Gamepass = { Id: number, Name: string, Description: string, Price: number, Order: number, Hidden: boolean? }
 Config.Gamepasses = {
 	CoinBoost = { Id = 0, Name = "Coin Booster", Description = "Legacy income boost", Price = 99, Order = 0, Hidden = true },
-	VIP = { Id = 2036579024, Name = "VIP", Description = "x2 coins from all your monsters", Price = 299, Order = 1 },
-	VIPSword = { Id = 0, Name = "VIP Sword", Description = "A strong sword for the monster zones", Price = 199, Order = 2 },
+	VIP = { Id = 2036579024, Name = "VIP", Description = "x2 coins from all your monsters and the VIP Sword", Price = 299, Order = 1 },
+	VIPSword = { Id = 0, Name = "VIP Sword", Description = "Included with VIP", Price = 199, Order = 2, Hidden = true },
 	AutoCollect = { Id = 2038162860, Name = "Auto-Collect", Description = "Coins go to your wallet by themselves", Price = 149, Order = 3 },
 	ExtraSlots = { Id = 2036429020, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
 	AutoFeeder = { Id = 2037406772, Name = "Auto-Feeder", Description = "Feeds hungry monsters using your coins and grants normal feeding XP", Price = 99, Order = 5 },
+	AutoMinigame = { Id = 2044616622, Name = "Auto Minigame", Description = "Automatically plays with your placed monsters and earns normal game XP", Price = 99, Order = 6 },
 	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
 	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
 	ForestSword = { Id = 0, Name = "Forest Sword", Description = "A nature-forged sword", Price = 149, Order = 11 },
@@ -660,6 +666,8 @@ Config.Products = {
 	InstantHatch = { Id = 0, Name = "Instant Hatch", Description = "All your eggs hatch right now", Price = 25, Order = 1 },
 	LuckyEgg = { Id = 0, Name = "Lucky Egg", Description = "A rare egg with better odds", Price = 49, Order = 2 },
 	SpeedBoost = { Id = 0, Name = "Speed Boost", Description = "Run faster for 10 minutes", Price = 29, Order = 3 },
+	SkipToAdultOne = { Id = 3721310526, Name = "Grow Monster - One", Description = "Grow one selected current monster to Adult once", Price = 29, Order = 7 },
+	SkipToAdultAll = { Id = 3721310988, Name = "Grow Monsters - All", Description = "Grow your current eligible inventory to Adult once; future monsters are excluded", Price = 100, Order = 8 },
 } :: { [string]: Product }
 
 Config.VIPCoinMultiplier = 2
@@ -982,8 +990,8 @@ Config.Halloween = {
 
 -- Event-exclusive monsters. They are not in any egg pool and use the generated body (no rig yet).
 -- Defined after the accessory table above on purpose: they have no per-species accessories.
-Config.Species.HalloweenGhostSlime = { DisplayName = "Ghost Slime", Rarity = "Epic", BaseProduction = 45, SellValue = 1800, Color = Color3.fromRGB(205, 235, 255), Horns = false }
-Config.Species.HalloweenSkeletonImp = { DisplayName = "Skeleton Imp", Rarity = "Legendary", BaseProduction = 140, SellValue = 5600, Color = Color3.fromRGB(238, 234, 214), Horns = true }
-Config.Species.HalloweenPumpkinKing = { DisplayName = "Pumpkin King", Rarity = "Mythic", BaseProduction = 520, SellValue = 20800, Color = Color3.fromRGB(255, 125, 20), Horns = true }
+Config.Species.HalloweenGhostSlime = { DisplayName = "Ghost Slime", Rarity = "Epic", BaseProduction = 45, SellValue = 1800, Color = Color3.fromRGB(205, 235, 255), Horns = false, EventOnly = true, Model = { Region = 6, Index = 1 } }
+Config.Species.HalloweenSkeletonImp = { DisplayName = "Skeleton Imp", Rarity = "Legendary", BaseProduction = 140, SellValue = 5600, Color = Color3.fromRGB(238, 234, 214), Horns = true, EventOnly = true, Model = { Region = 6, Index = 2 } }
+Config.Species.HalloweenPumpkinKing = { DisplayName = "Pumpkin King", Rarity = "Mythic", BaseProduction = 520, SellValue = 20800, Color = Color3.fromRGB(255, 125, 20), Horns = true, EventOnly = true, Model = { Region = 6, Index = 3 } }
 
 return Config

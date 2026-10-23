@@ -133,7 +133,8 @@ local function tryStartSteal(thief: Player, owner: Player, monsterId: string)
 		MonsterService.Notify(thief, "This base is locked! 🔒", "error")
 		return
 	end
-	if not ownerProfile.Data.Monsters[monsterId] or MonsterService.IsCarried(owner, monsterId) then
+	local candidate = ownerProfile.Data.Monsters[monsterId]
+	if not candidate or candidate.Slot <= 0 or MonsterService.IsUnavailable(owner, monsterId) then
 		return
 	end
 	if Config.Steal.ProtectLastMonster and MonsterService.CountMonsters(owner) <= 1 then

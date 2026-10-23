@@ -120,12 +120,26 @@ check(monsters.AddEgg(p, eggType), "Full base accepts collected egg")
 local benchEgg
 for _, egg in profile.Data.Eggs do benchEgg = egg end
 check(benchEgg and benchEgg.Slot == 0, "Collected egg overflows safely")
-benchEgg.HatchAt = 0
+benchEgg.HatchAt = 0 -- even a stale timer must not hatch an egg that is only waiting on the bench
 local eggId = benchEgg.Id
 tick(1)
-check(profile.Data.Eggs[eggId] == nil and profile.Data.Monsters[eggId].Slot == 0, "Bench egg hatches without taking a plot slot")
-check(profile.Data.Stats.Hatched == 1, "Bench hatch retains normal hatch statistics")
+check(profile.Data.Eggs[eggId] ~= nil and profile.Data.Eggs[eggId].Slot == 0, "A waiting bench egg does not hatch by itself")
+check(not monsters.PlaceEgg(p, eggId, 1) or profile.Data.Eggs[eggId].Slot ~= 1, "A slot taken by a monster cannot take the egg")
+-- free a slot, then place the egg: its countdown starts only now
+local freedSlot, freedId
+for id, monster in profile.Data.Monsters do
+	if monster.Slot > 0 and not monsters.IsUnavailable(p, id) then freedSlot, freedId = monster.Slot, id break end
+end
+check(freedSlot ~= nil and monsters.BenchMonster(p, freedId), "A slot is freed for the egg")
+check(monsters.PlaceEgg(p, eggId, freedSlot), "A waiting egg can be placed in a free slot")
+check(profile.Data.Eggs[eggId].Slot == freedSlot and profile.Data.Eggs[eggId].HatchAt > 1700000000 + math.floor(clock), "Placing the egg starts its countdown")
+check(not monsters.PlaceEgg(p, eggId, freedSlot), "A hatching egg cannot be placed again")
+profile.Data.Eggs[eggId].HatchAt = 0
+tick(1)
+check(profile.Data.Eggs[eggId] == nil and profile.Data.Monsters[eggId].Slot == freedSlot, "The placed egg hatches in its slot")
+check(profile.Data.Stats.Hatched == 1, "Hatch retains normal hatch statistics")
 profile.Data.Monsters[eggId] = nil
+check(monsters.PlaceMonster(p, freedId, freedSlot), "The benched monster returns to its slot")
 profile.Data.Eggs = {}
 -- Actual production beats rarity ordering and includes current needs, stage and mutation.
 local speciesByIncome = {}
@@ -157,12 +171,12 @@ local assignments = {}
 for id, monster in profile.Data.Monsters do assignments[id] = monster.Slot end
 monsters.AutoPlace(p)
 for id, monster in profile.Data.Monsters do check(assignments[id] == monster.Slot, "Auto Place deterministic ties") end
--- Only placed monsters generate income, needs decay or passive XP.
+-- Bench monsters age naturally, but never generate income or consume needs.
 for id in profile.Data.Monsters do monsters.BenchMonster(p, id) end
 local xp, hunger = first.Xp, first.Hunger
 local pending = profile.Data.PendingCoins
 tick(1)
-check(profile.Data.PendingCoins == pending and first.Xp == xp and first.Hunger == hunger, "Bench has no passive income/XP/decay")
+check(profile.Data.PendingCoins == pending and first.Xp > xp and first.Hunger == hunger, "Bench ages without income or needs decay")
 monsters.PlaceMonster(p, "1", 1)
 first.Hunger, first.Happiness, first.Xp = 0, 0, 0
 pending = profile.Data.PendingCoins
@@ -222,4 +236,36 @@ local offerId = next(profile.Data.Monsters)
 remotes.TradeSetOffer.OnServerEvent:Fire(p, {offerId})
 remotes.TradeCancel.OnServerEvent:Fire(q)
 check(not monsters.IsUnavailable(p, offerId) and profile.Data.Monsters[offerId] ~= nil, "Cancel releases reservation without deleting")
+
+-- Save -> leave -> advance wall clock -> rejoin -> collect, using real services.
+profile.Data.Monsters = { offline = { Id = "offline", Species = "Grassland_1", Level = 1, Xp = 0,
+	Slot = 1, Hunger = 0, Happiness = 0, LastProgressAt = env.os.time() } }
+profile.Data.Eggs = {}
+profile.Data.IncomeMultiplier, profile.Data.IncomeUnlockedSlots = 1, config.BaseSlots
+profile.Data.PendingCoins = 0.25
+local expectedMonster = copy(profile.Data.Monsters.offline)
+local expectedOffline = mathModule.AdvanceProgress(expectedMonster, env.os.time() + 9000, true, 1)
+monsters.CleanupPlayer(p)
+data.Release(p)
+clock += 9000
+profile = data.Load(p)
+monsters.SetupPlayer(p)
+check(profile.Data.Monsters.offline.Level == 25, "Offline rejoin reaches Adult after 2h 30m")
+check(math.abs(profile.Data.PendingCoins - expectedOffline - 0.25) < 0.001, "Offline income joins existing uncollected balance")
+local summary = lastState[p].OfflineEarnings
+check(summary.SecondsAway == 9000 and math.abs(summary.CoinsEarned - expectedOffline) < 0.001 and summary.MonstersGrown == 1, "Join summary reports real offline earnings and elapsed seconds")
+pending = profile.Data.PendingCoins
+monsters.SetupPlayer(p)
+check(profile.Data.PendingCoins == pending and lastState[p].OfflineEarnings.Id == summary.Id, "Repeated setup cannot replay income or create another summary")
+local wallet = profile.Data.Coins
+monsters.Collect(p)
+check(profile.Data.Coins == wallet + math.floor(pending) and math.abs(profile.Data.PendingCoins - (pending % 1)) < 0.001, "Offline income is claimable through the normal collect path")
+monsters.Collect(p)
+check(profile.Data.Coins == wallet + math.floor(pending), "Repeated collection cannot replay offline income")
+check(data.Save(p), "Claimed income and consumed timestamps save together")
+monsters.CleanupPlayer(p)
+data.Release(p)
+profile = data.Load(p)
+monsters.SetupPlayer(p)
+check(profile.Data.Coins == wallet + math.floor(pending) and lastState[p].OfflineEarnings.CoinsEarned == 0, "Immediate saved rejoin does not award the same absence twice")
 print(string.format("PASS: monster inventory (%d checks)", checks))

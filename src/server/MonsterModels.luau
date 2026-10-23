@@ -966,6 +966,16 @@ local REGIONS = {
 			{ "Reality Titan", "biped", pal({ main = rgb(32, 22, 52), main2 = rgb(42, 28, 68), sec = rgb(152, 82, 232), acc = rgb(232, 182, 255), glow = rgb(192, 102, 255), mat = M.Slate, glowEyes = true }), { bulk = 1.35, horns = true, crystals = true, core = true, cracks = true, crown = true } },
 		},
 	},
+	{
+		name = "Halloween",
+		floor = { color = rgb(48, 30, 66), mat = M.Slate },
+		-- Event-only monsters (sold by the Pumpkin Merchant). `rarity` overrides the index-based rarity.
+		monsters = {
+			{ "Ghost Slime", "slime", pal({ main = rgb(228, 238, 255), main2 = rgb(204, 220, 246), sec = rgb(255, 255, 255), acc = rgb(176, 148, 255), acc2 = rgb(255, 170, 230), glow = rgb(196, 176, 255), mat = M.Glass }), { tr = 0.35 }, rarity = "Epic" },
+			{ "Skeleton Imp", "biped", pal({ main = rgb(240, 234, 212), main2 = rgb(224, 216, 190), sec = rgb(70, 54, 84), acc = rgb(255, 150, 40), acc2 = rgb(255, 205, 90), glow = rgb(255, 170, 60), glowEyes = true }), { horns = true, headMul = 1.5, bulk = 0.8, armMul = 0.95, cracks = true }, rarity = "Legendary" },
+			{ "Pumpkin King", "biped", pal({ main = rgb(255, 126, 24), main2 = rgb(232, 100, 14), sec = rgb(72, 112, 40), acc = rgb(255, 208, 72), acc2 = rgb(255, 236, 150), glow = rgb(255, 184, 52), glowEyes = true }), { crown = true, flames = true, headMul = 1.55, bulk = 1.3, armMul = 1.1, core = true }, rarity = "Mythic" },
+		},
+	},
 }
 
 local RIG_TYPE = { slime = "Slime", quad = "Quad", biped = "Biped", bird = "Bird", dragon = "Dragon", serpent = "Serpent", spider = "Spider", scorpion = "Scorpion", turtle = "Turtle" }
@@ -1020,7 +1030,7 @@ end
 
 local function buildMonster(def, regionName, idx, stage, parent)
 	local name, arch, c, f = def[1], def[2], def[3], def[4] or {}
-	local rarity = RARITY_ORDER[idx]
+	local rarity = def.rarity or RARITY_ORDER[idx]
 	local s = stage.scale * RARITY[rarity].scale
 	local model = Instance.new("Model")
 	model.Name = stage.name
@@ -1077,6 +1087,14 @@ function MonsterModels.Build()
 		return library
 	end
 	local existing = ServerStorage:FindFirstChild("MonsterModels")
+	-- Use the editable Studio rigs as templates, including saved animation changes.
+	local authored = workspace:FindFirstChild("AnimationRigs")
+	if authored and authored:FindFirstChild(REGIONS[1].name) then
+		if existing then existing:Destroy() end
+		authored.Name = "MonsterModels"
+		authored.Parent = ServerStorage
+		existing = authored
+	end
 	if existing and existing:FindFirstChild(REGIONS[1].name) then
 		library = existing
 		return existing
@@ -1114,8 +1132,23 @@ function MonsterModels.Get(regionIndex, monsterIndex, stage)
 		return nil
 	end
 	local folder = lib:FindFirstChild(region.name)
-	local monster = folder and folder:FindFirstChild(string.format("%02d_%s", monsterIndex, slug(def[1])))
-	local template = monster and monster:FindFirstChild(stage)
+	if not folder then
+		-- The saved Studio rigs (AnimationRigs) predate this region: build it from code, once, on demand.
+		folder = Instance.new("Folder")
+		folder.Name = region.name
+		folder.Parent = lib
+	end
+	local key = string.format("%02d_%s", monsterIndex, slug(def[1]))
+	local monster = folder:FindFirstChild(key)
+	if not monster then
+		monster = Instance.new("Folder")
+		monster.Name = key
+		for _, st in ipairs(STAGES) do
+			buildMonster(def, region.name, monsterIndex, st, monster)
+		end
+		monster.Parent = folder
+	end
+	local template = monster:FindFirstChild(stage)
 	return template and template:Clone() or nil
 end
 

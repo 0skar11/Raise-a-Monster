@@ -671,6 +671,12 @@ local function buildProps()
 	end
 	local world = ensureWorld()
 	local authored = world:FindFirstChild("Props")
+	if world:GetAttribute("AutoBuilt") ~= true then
+		-- A Studio-authored world: adopt whatever is left (possibly nothing). Decorations the designer deleted
+		-- stay deleted; the default set is only for a place that has no authored world at all.
+		propFolder = (if authored and authored:IsA("Folder") then authored else world) :: Folder
+		return
+	end
 	if authored and authored:IsA("Folder") and #authored:GetChildren() > 0 then
 		propFolder = authored -- adopt: the decorations already exist, leave them exactly as they are
 		return
@@ -847,6 +853,12 @@ end
 local function adoptMerchant()
 	local model = findMerchantModel()
 	if not model then
+		local authoredWorld = workspace:FindFirstChild("HalloweenWorld") or stashedWorld
+		if authoredWorld and authoredWorld:GetAttribute("AutoBuilt") ~= true then
+			-- the designer removed the merchant on purpose: he stays removed (no shop prompt either)
+			merchantModel = nil
+			return
+		end
 		buildDefaultMerchant()
 		model = findMerchantModel()
 	end
@@ -878,7 +890,7 @@ end
 local function speciesWeights(): { [string]: number }
 	local weights: { [string]: number } = {}
 	for key, species in Config.Species do
-		if species.Model then
+		if species.Model and not species.EventOnly then
 			weights[key] = Config.NestRarityWeights[species.Rarity] or 1
 		end
 	end

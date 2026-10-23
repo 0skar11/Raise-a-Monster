@@ -10,6 +10,8 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local UI = require(script.Parent.UI)
+local RewardsArcade = require(script.Parent.RewardsArcade)
+local TravelControls = require(script.Parent.TravelControls)
 
 local COLORS = UI.Colors
 local player = Players.LocalPlayer
@@ -25,9 +27,7 @@ local getOpenMonster: () -> string?
 local statusLabel: TextLabel
 local rewardsButton: TextButton
 local launcherActions: { [string]: () -> () } = {}
-local dailyInfo: TextLabel
-local dailyClaim: TextButton
-local spinGo: TextButton
+local rewardsController: any
 local passButtons: { [string]: TextButton } = {}
 local productButtons: { [string]: TextButton } = {}
 local speedAccessoryButtons: { [string]: TextButton } = {}
@@ -231,17 +231,9 @@ end
 -- تليبورت وأزرار جانبية -----------------------------------------------------------------------
 
 local function buildButtons()
-	local home = ui.HomeButton
-	home.Activated:Connect(function()
-		remotes.Teleport:FireServer("Home")
-	end)
-	local shop = ui.TeleportShopButton
-	shop.Activated:Connect(function()
-		remotes.Teleport:FireServer("Shop")
-	end)
-	ui.TeleportArenaButton.Activated:Connect(function()
-		remotes.Teleport:FireServer("Arena")
-	end)
+	TravelControls.Start(ui.Gui.Parent, {
+		HomeButton = ui.HomeButton, TeleportShopButton = ui.TeleportShopButton, TeleportArenaButton = ui.TeleportArenaButton,
+	}, function(destination) remotes.Teleport:FireServer(destination) end)
 
 	rewardsButton = ui.NavigationButtons.Rewards
 
@@ -264,6 +256,30 @@ end
 -- المتجر: الإكسسوارات والأسلحة بعملات اللعبة، ثم الـ Gamepasses والـ Boosts -----------------
 
 local refreshShopCatalog: () -> () = function() end
+local refreshAdultChooser: () -> () = function() end
+local refreshAdultSummary: () -> () = function() end
+local openAdultChooser: (() -> ())? = nil
+
+local function adultCandidates(): { any }
+	local adultLevel: number? = nil
+	for _, stage in Config.Stages do
+		if stage.Name == "Adult" then adultLevel = stage.MinLevel; break end
+	end
+	local state = getState()
+	local candidates = {}
+	if not state or not adultLevel then return candidates end
+	for _, monster in state.Monsters or {} do
+		if type(monster.Id) == "string" and monster.Id ~= "" and type(monster.Level) == "number"
+			and monster.Level < adultLevel and monster.Available == true and not monster.Carried and not monster.InTrade then
+			table.insert(candidates, monster)
+		end
+	end
+	table.sort(candidates, function(a, b)
+		local aProduction, bProduction = a.Production or 0, b.Production or 0
+		return if aProduction == bProduction then a.Id < b.Id else aProduction > bProduction
+	end)
+	return candidates
+end
 
 local function offerAvailable(id: number): boolean
 	return id ~= 0 or RunService:IsStudio()
@@ -284,10 +300,83 @@ end
 
 local function buyProduct(name: string)
 	local product = Config.Products[name]
-	if product and offerAvailable(product.Id) then remotes.BuyProduct:FireServer(name) end
+	if not product or not offerAvailable(product.Id) then return end
+	if name == "SkipToAdultOne" then
+		if openAdultChooser then openAdultChooser() end
+		return
+	elseif name == "SkipToAdultAll" and #adultCandidates() == 0 then
+		UI.Toast(ui, "No available monsters below Adult in your collection.", "warning")
+		return
+	end
+	remotes.BuyProduct:FireServer(name)
+end
+
+local function buildAdultChooser()
+	local frame = newPanel("SkipToAdultChooser", UDim2.fromOffset(500, 400), "SKIP TO ADULT", COLORS.Pink)
+	local title = frame:FindFirstChildWhichIsA("TextLabel")
+	if title then title.TextSize = 24 end
+	local scale = Instance.new("UIScale")
+	scale.Name = "NativeAdultChooserScale"
+	scale.Parent = frame
+	local shopScale = ui.GearFrame:FindFirstChild("NativeShopScale") :: UIScale?
+	local function fit()
+		frame.Size = UDim2.fromOffset(math.min(500, ui.GearFrame.Size.X.Offset), math.min(400, ui.GearFrame.Size.Y.Offset))
+		if shopScale then scale.Scale = shopScale.Scale end
+	end
+	ui.GearFrame:GetPropertyChangedSignal("Size"):Connect(fit)
+	if shopScale then shopScale:GetPropertyChangedSignal("Scale"):Connect(fit) end
+	fit()
+	local price = Config.Products.SkipToAdultOne and Config.Products.SkipToAdultOne.Price or 29
+	local info = UI.Label(frame, "Choose 1 current monster for R$ " .. tostring(price) .. ". Future monsters excluded.", UDim2.new(1, -32, 0, 44), UDim2.fromOffset(16, 54), 16)
+	info.Name = "Scope"
+	local list = makeList(frame, UDim2.new(1, -32, 1, -120), UDim2.fromOffset(16, 104))
+	list.Name = "Monsters"
+	local rowsSignature = ""
+	refreshAdultChooser = function()
+		if not frame.Visible then return end
+		local candidates = adultCandidates()
+		local parts = {}
+		for _, monster in candidates do
+			table.insert(parts, monster.Id .. ":" .. monsterText(monster))
+		end
+		local signature = table.concat(parts, "|")
+		if signature == rowsSignature then return end
+		rowsSignature = signature
+		clearList(list)
+		for index, monster in candidates do
+			local entry = UI.Button(list, monsterText(monster), COLORS.Panel, UDim2.new(1, 0, 0, 44), UDim2.new())
+			entry.Name = monster.Id
+			entry.LayoutOrder = index
+			entry.TextSize = 17
+			entry.Activated:Connect(function()
+				local product = Config.Products.SkipToAdultOne
+				if not product or not offerAvailable(product.Id) then return end
+				-- Recheck fresh state; the server validates again before prompting.
+				for _, candidate in adultCandidates() do
+					if candidate.Id == monster.Id then
+						remotes.BuyProduct:FireServer("SkipToAdultOne", candidate.Id)
+						UI.Open(ui, ui.GearFrame)
+						return
+					end
+				end
+				refreshAdultChooser()
+			end)
+		end
+		if #candidates == 0 then
+			local empty = UI.Label(list, "No available monsters below Adult in your collection.", UDim2.new(1, 0, 0, 60), UDim2.new(), 16)
+			empty.Name = "Empty"
+			empty.TextColor3 = COLORS.SubText
+		end
+	end
+	openAdultChooser = function()
+		rowsSignature = "refresh"
+		UI.Open(ui, frame)
+		refreshAdultChooser()
+	end
 end
 
 local function buildShopExtras()
+	buildAdultChooser()
 	local scroll = ui.GearScroll
 	local selected = "Weapons"
 	local cards: { { Frame: Frame, Category: string, Price: number, Owned: () -> boolean } } = {}
@@ -312,29 +401,48 @@ local function buildShopExtras()
 	local function card(parent: Instance, name: string, description: string, price: number, icon: string, onBuy: () -> (), currency: string): (Frame, TextButton)
 		local frame = Instance.new("Frame")
 		frame.Name = name .. "Card"
-		frame.Size = UDim2.fromOffset(196, 314)
+		frame.Size = UDim2.fromOffset(216, 260)
 		frame.BackgroundColor3 = COLORS.Panel
 		frame.Parent = parent
 		UI.Corner(frame, 12)
 		UI.Stroke(frame, COLORS.Yellow, 2)
 		if UI.Card then UI.Card(frame, COLORS.Yellow) end
-		local title = UI.Label(frame, name, UDim2.new(1, -12, 0, 36), UDim2.fromOffset(6, 150), 20)
+		local title = UI.Label(frame, name, UDim2.new(1, -20, 0, 36), UDim2.fromOffset(10, 92), 18)
+		title.Name = "Title"
 		title.TextColor3 = COLORS.Text
+		local preview = Instance.new("Frame")
+		preview.Name = "Preview"
+		-- a soft spotlight panel behind the item art
+		preview.BackgroundColor3 = Color3.fromRGB(46, 52, 118)
+		preview.BackgroundTransparency = 0.3
+		preview.Size = UDim2.new(1, -20, 0, 84)
+		preview.Position = UDim2.fromOffset(10, 4)
+		preview.Parent = frame
+		UI.Corner(preview, 8)
+		local spotlight = Instance.new("UIGradient")
+		spotlight.Rotation = 90
+		spotlight.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(150, 156, 205))
+		spotlight.Parent = preview
 		if icon:sub(1, 7) == "Weapon:" then
-			UI.WeaponPreview(frame, icon:sub(8))
+			UI.WeaponPreview(preview, icon:sub(8))
 		elseif icon:sub(1, 5) == "Gear:" then
-			UI.GearPreview(frame, icon:sub(6))
+			UI.GearPreview(preview, icon:sub(6))
 		else
-			UI.Icon(frame, icon, UDim2.fromOffset(128, 128), UDim2.new(0.5, -64, 0, 12))
+			UI.Icon(preview, icon, UDim2.fromOffset(80, 80), UDim2.new(0.5, -40, 0.5, -40))
 		end
-		local desc = UI.Label(frame, description, UDim2.new(1, -16, 0, 36), UDim2.fromOffset(8, 188), 14)
+		for _, child in preview:GetChildren() do
+			if child:IsA("ViewportFrame") then child.Position = UDim2.fromScale(0, 0); child.Size = UDim2.fromScale(1, 1) end
+		end
+		local desc = UI.Label(frame, description, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 130), 14)
+		desc.Name = "Description"
 		desc.TextColor3 = COLORS.SubText
 		local costText = if currency == "Coins " then MonsterMath.FormatNumber(price) .. " Coins" else currency .. MonsterMath.FormatNumber(price)
-		local cost = UI.Label(frame, costText, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 228), 20)
+		local cost = UI.Label(frame, costText, UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 176), 18)
 		cost.Name = "Price"
 		cost.TextColor3 = COLORS.Yellow
-		local buy = UI.Button(frame, "Buy", COLORS.Green, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 260))
-		buy.TextSize = 20
+		local buy = UI.Button(frame, "Buy", COLORS.Green, UDim2.new(1, -20, 0, 44), UDim2.fromOffset(10, 206))
+		buy.Name = "BuyButton"
+		buy.TextSize = 18
 		buy.Activated:Connect(onBuy)
 		return frame, buy
 	end
@@ -345,38 +453,54 @@ local function buildShopExtras()
 	end
 	local function layout()
 		-- The panel cancels the HUD scale. Cards keep their native text/touch size.
-		local width = if ui.GearFrame.Size.X.Offset > 0 then ui.GearFrame.Size.X.Offset else 860
-		local height = if ui.GearFrame.Size.Y.Offset > 0 then ui.GearFrame.Size.Y.Offset else 530
-		local compact = width < 700 or height < 440
-		tabScroll.Position = UDim2.fromOffset(if compact then 12 else 20, if compact then 58 else 30)
-		tabScroll.Size = UDim2.new(1, if compact then -24 else -40, 0, if compact then 48 else 56)
-		local tabWidth = if compact then 132 else math.floor((width - 72) / 5)
+		local width = if ui.GearFrame.Size.X.Offset > 0 then ui.GearFrame.Size.X.Offset else 740
+		local height = if ui.GearFrame.Size.Y.Offset > 0 then ui.GearFrame.Size.Y.Offset else 470
+		local padding = if width < 500 then 12 else 16
+		tabScroll.Position = UDim2.fromOffset(padding, 58)
+		tabScroll.Size = UDim2.new(1, -padding * 2, 0, 48)
+		local tabWidth = math.max(116, math.floor((width - padding * 2 - 32) / 5))
 		for index, category in { "Weapons", "Accessories", "Coin Packs", "Owned", "Perks" } do
 			local tab = tabs[category]
 			if tab then
-				tab.Size = UDim2.fromOffset(tabWidth, if compact then 44 else 52)
+				tab.Size = UDim2.fromOffset(tabWidth, 44)
 				tab.Position = UDim2.fromOffset((index - 1) * (tabWidth + 8), 0)
 				tab.Text = string.upper(category)
 			end
 		end
 		tabScroll.CanvasSize = UDim2.fromOffset(5 * (tabWidth + 8) - 8, 0)
-		scroll.Position = UDim2.fromOffset(if compact then 12 else 20, if compact then 122 else 102)
-		scroll.Size = UDim2.new(1, if compact then -24 else -40, 1, if compact then -134 else -118)
-		local availableWidth = width - (if compact then 24 else 40) - 10
-		local columns = math.clamp(math.floor((availableWidth + 10) / 194), 1, 3)
-		local cardWidth = math.floor((availableWidth - (columns - 1) * 10) / columns)
+		scroll.Position = UDim2.fromOffset(padding, 114)
+		scroll.Size = UDim2.new(1, -padding * 2, 1, -128)
+		local availableWidth = width - padding * 2 - 12
+		local horizontal = height < 340 and availableWidth >= 400
+		local columns = if horizontal then 1 else math.clamp(math.floor((availableWidth + 12) / 206), 1, 3)
+		local cardWidth = math.floor((availableWidth - (columns - 1) * 12) / columns)
+		local cardHeight = if horizontal then 164 else 260
 		local count = 0
 		for _, entry in cards do
 			local visible = entry.Category == selected or (selected == "Owned" and (entry.Category == "Weapons" or entry.Category == "Accessories") and entry.Owned())
 			entry.Frame.Visible = visible
 			if visible then
-				entry.Frame.Size = UDim2.fromOffset(cardWidth, 314)
-				entry.Frame.Position = UDim2.fromOffset((count % columns) * (cardWidth + 10), math.floor(count / columns) * 326 + 4)
+				local frame = entry.Frame
+				frame.Size = UDim2.fromOffset(cardWidth, cardHeight)
+				frame.Position = UDim2.fromOffset((count % columns) * (cardWidth + 12), math.floor(count / columns) * (cardHeight + 12) + 4)
+				local preview = frame:FindFirstChild("Preview") :: Frame
+				preview.Position = UDim2.fromOffset(10, if horizontal then 22 else 4)
+				preview.Size = if horizontal then UDim2.fromOffset(112, 112) else UDim2.new(1, -20, 0, 84)
+				local textX = if horizontal then 136 else 10
+				local function place(name: string, y: number, height: number)
+					local item = frame:FindFirstChild(name) :: GuiObject
+					item.Position = UDim2.fromOffset(textX, y)
+					item.Size = UDim2.new(1, -textX - 10, 0, height)
+				end
+				place("Title", if horizontal then 8 else 92, 36)
+				place("Description", if horizontal then 44 else 130, 44)
+				place("Price", if horizontal then 88 else 176, 22)
+				place("BuyButton", if horizontal then 112 else 206, 44)
 				count += 1
 			end
 		end
 		empty.Visible = count == 0
-		local bottom = math.max(84, math.ceil(count / columns) * 326 + 8)
+		local bottom = math.max(84, math.ceil(count / columns) * (cardHeight + 12) + 8)
 		if eggsButton then
 			eggsButton.Visible = selected == "Perks"
 			eggsButton.Position = UDim2.fromOffset(0, bottom)
@@ -394,7 +518,7 @@ local function buildShopExtras()
 	refreshShopCatalog = layout
 	local categories = { "Weapons", "Accessories", "Coin Packs", "Owned", "Perks" }
 	for index, category in categories do
-		local tab = UI.Button(tabScroll, string.upper(category), COLORS.Panel, UDim2.fromOffset(132, 52), UDim2.fromOffset((index - 1) * 140, 0))
+		local tab = UI.Button(tabScroll, string.upper(category), COLORS.Panel, UDim2.fromOffset(132, 44), UDim2.fromOffset((index - 1) * 140, 0))
 		tab.Name = category .. "Tab"
 		tab.TextSize = 16
 		tabs[category] = tab
@@ -431,7 +555,7 @@ local function buildShopExtras()
 	end
 	table.sort(passes, function(a, b) return a.Pass.Price < b.Pass.Price end)
 	for _, entry in passes do
-		local buy = catalog("Perks", entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, "Rebirth", function() buyPass(entry.Name) end, function() return ((getState() or {}).Passes or {})[entry.Name] == true end, "R$ ")
+		local buy = catalog("Perks", entry.Pass.Name, entry.Pass.Description, entry.Pass.Price, if entry.Name == "AutoMinigame" then "Play" else "Rebirth", function() buyPass(entry.Name) end, function() return ((getState() or {}).Passes or {})[entry.Name] == true end, "R$ ")
 		passButtons[entry.Name] = buy
 		refreshOffer(buy, entry.Pass.Id, false)
 	end
@@ -443,7 +567,15 @@ local function buildShopExtras()
 		local buy = catalog(if product.Coins then "Coin Packs" else "Perks", product.Name, product.Description, product.Price, if product.Coins then "Coins" else "Potion", function() buyProduct(entry.Name) end, nil, "R$ ")
 		productButtons[entry.Name] = buy
 		refreshOffer(buy, product.Id, false)
+		if entry.Name == "SkipToAdultAll" then
+			local description = buy.Parent:FindFirstChild("Description") :: TextLabel
+			refreshAdultSummary = function()
+				local count = #adultCandidates()
+				description.Text = tostring(count) .. " current " .. (if count == 1 then "monster" else "monsters") .. " below Adult. Future monsters excluded."
+			end
+		end
 	end
+	refreshAdultSummary()
 	local feeder = Config.Gamepasses.AutoFeeder
 	local buy = catalog("Perks", feeder.Name, feeder.Description, feeder.Price, "Pets", function() buyPass("AutoFeeder") end, function() return ((getState() or {}).Passes or {}).AutoFeeder == true end, "R$ ")
 	passButtons.AutoFeeder = buy
@@ -464,65 +596,16 @@ end
 -- الهدية اليومية وعجلة الحظ في شباك واحد: اليومية على الشمال والعجلة على اليمين ----------------
 
 local function buildRewards()
-	local frame = newPanel("Rewards", UDim2.fromOffset(820, 470), "🎁 Rewards", COLORS.Yellow)
-	local scale = Instance.new("UIScale")
-	scale.Scale = 0.82
-	scale.Parent = frame
-	launcherActions.Rewards = function()
-		UI.Toggle(ui, frame)
-	end
-
-	local dailyTitle = UI.Label(frame, "🎁 Daily Reward", UDim2.fromOffset(360, 30), UDim2.fromOffset(16, 60), 24)
-	dailyTitle.TextColor3 = COLORS.Yellow
-	dailyInfo = UI.Label(frame, "", UDim2.fromOffset(360, 110), UDim2.fromOffset(16, 110), 20)
-	dailyClaim = UI.Button(frame, "Claim", COLORS.Green, UDim2.fromOffset(360, 50), UDim2.fromOffset(16, 404))
-	dailyClaim.Activated:Connect(function()
-		remotes.ClaimDaily:FireServer()
-	end)
-
-	local divider = Instance.new("Frame")
-	divider.Size = UDim2.fromOffset(2, 390)
-	divider.Position = UDim2.fromOffset(392, 60)
-	divider.BackgroundColor3 = COLORS.PanelLight
-	divider.BorderSizePixel = 0
-	divider.Parent = frame
-
-	local spinTitle = UI.Label(frame, "🎡 Spin Wheel", UDim2.fromOffset(400, 30), UDim2.fromOffset(410, 60), 24)
-	spinTitle.TextColor3 = COLORS.Orange
-	local wheel = Instance.new("Frame")
-	wheel.AnchorPoint = Vector2.new(0.5, 0.5)
-	wheel.Position = UDim2.fromOffset(610, 250)
-	wheel.Size = UDim2.fromOffset(300, 300)
-	wheel.BackgroundColor3 = COLORS.PanelLight
-	wheel.Parent = frame
-	UI.Corner(wheel, 150)
-	UI.Stroke(wheel, COLORS.Orange, 4)
-	local prizes = Config.Spin.Prizes
-	local step = 360 / #prizes
-	for i, prize in prizes do
-		local angle = math.rad((i - 1) * step)
-		local chip = UI.Label(wheel, prize.Name, UDim2.fromOffset(104, 40), UDim2.new(0.5, math.sin(angle) * 100 - 52, 0.5, -math.cos(angle) * 100 - 20), 16)
-		chip.BackgroundTransparency = 0
-		chip.BackgroundColor3 = prize.Color
-		chip.TextColor3 = Color3.fromRGB(25, 25, 30)
-		chip.Rotation = (i - 1) * step
-		UI.Corner(chip, 10)
-	end
-	local pointer = UI.Label(frame, "▼", UDim2.fromOffset(40, 40), UDim2.fromOffset(590, 82), 34)
-	pointer.TextColor3 = COLORS.Red
-	pointer.ZIndex = 3
-	spinGo = UI.Button(frame, "SPIN!", COLORS.Green, UDim2.fromOffset(392, 50), UDim2.fromOffset(412, 404))
-	spinGo.Activated:Connect(function()
-		remotes.Spin:FireServer()
-	end)
-
+	local frame = newPanel("Rewards", UDim2.fromOffset(960, 720), "Rewards", COLORS.Yellow)
+	launcherActions.Rewards = function() UI.Toggle(ui, frame) end
+	rewardsController = RewardsArcade.Mount(frame, {
+		GetState = getState,
+		ClaimDaily = function() remotes.ClaimDaily:FireServer() end,
+		Spin = function() remotes.Spin:FireServer() end,
+	})
 	remotes.SpinResult.OnClientEvent:Connect(function(index: number)
 		UI.Open(ui, frame)
-		local current = wheel.Rotation % 360
-		wheel.Rotation = current
-		-- الجايزة رقم index لازم توقف تحت السهم اللي فوق
-		local target = 360 * 5 - (index - 1) * step
-		TweenService:Create(wheel, TweenInfo.new(4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Rotation = target }):Play()
+		rewardsController:ShowSpinResult(index)
 	end)
 end
 
@@ -936,6 +1019,8 @@ function Features.Refresh()
 	end
 
 	refreshShopCatalog()
+	refreshAdultChooser()
+	refreshAdultSummary()
 
 	-- الحالة تحت الفلوس: Speed Boost والحاجة اللي شايلها
 	local parts = {}
@@ -953,24 +1038,9 @@ function Features.Refresh()
 	end
 	statusLabel.Text = table.concat(parts, "   ")
 
-	-- الهدية اليومية
+	if rewardsController then rewardsController:Refresh(state) end
 	local dailyIn = state.DailyReadyIn or 0
-	local streak = state.DailyStreak or 0
-	local nextDay = math.min(streak + 1, Config.Daily.MaxStreak)
-	dailyInfo.Text = string.format(
-		"Day %d / %d\nNext reward: 💰 %s%s",
-		nextDay,
-		Config.Daily.MaxStreak,
-		MonsterMath.FormatNumber(Config.Daily.CoinsPerDay * nextDay),
-		if nextDay == Config.Daily.MaxStreak then " + " .. Config.Eggs[Config.Daily.Day7Egg].DisplayName else ""
-	)
-	dailyClaim.Text = if dailyIn > 0 then "Ready in " .. formatTime(dailyIn) else "Claim!"
-	dailyClaim.BackgroundColor3 = if dailyIn > 0 then COLORS.Gray else COLORS.Green
-
-	-- عجلة الحظ
 	local spinIn = state.SpinReadyIn or 0
-	spinGo.Text = if spinIn > 0 then "Free spin in " .. formatTime(spinIn) else "SPIN!"
-	spinGo.BackgroundColor3 = if spinIn > 0 then COLORS.Gray else COLORS.Green
 	rewardsButton.Text = if dailyIn > 0 and spinIn > 0 then "Rewards" else "Rewards!"
 
 	-- الـ Gamepasses

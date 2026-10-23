@@ -2,6 +2,11 @@
   "name": "Raise-a-Monster",
   "tree": {
     "$className": "DataModel",
+    "Workspace": {
+      "$ignoreUnknownInstances": true,
+      "StudioWorld": { "$path": "assets/StudioWorld.rbxmx" },
+      "AnimationRigs": { "$path": "assets/AnimationRigs.rbxmx" }
+    },
     "Lighting": {
       "$properties": {
         "Technology": "Future",
