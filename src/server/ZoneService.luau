@@ -835,6 +835,15 @@ local function updateGateTimers()
 	end
 end
 
+-- Where each zone Mother stands (used by the Halloween event so its Mothers appear in the same places).
+function ZoneService.GetNestCenters(): { Vector3 }
+	local centers: { Vector3 } = {}
+	for _, nest in nests do
+		table.insert(centers, nest.Center)
+	end
+	return centers
+end
+
 function ZoneService.CleanupPlayer(player: Player)
 	for _, nest in nests do
 		nest.Damagers[player] = nil

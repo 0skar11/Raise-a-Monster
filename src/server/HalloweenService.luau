@@ -26,6 +26,7 @@ local MonsterService = require(script.Parent.MonsterService)
 local CombatService = require(script.Parent.CombatService)
 local MonsterAttack = require(script.Parent.MonsterAttack)
 local MonsterModels = require(script.Parent.MonsterModels)
+local ZoneService = require(script.Parent.ZoneService)
 
 local settings = Config.Halloween
 local invasionSettings = settings.Invasion
@@ -1105,6 +1106,23 @@ local function spawnInvader(position: Vector3, level: number, species: string): 
 	return invader
 end
 
+-- Event Mothers appear exactly where the zone Mothers stand (one per nest, at random), as if the nests themselves
+-- were haunted. Only if there are no nests (e.g. a bare test place) do they fall back to the open plaza.
+local function pickNestSpots(count: number): { Vector3 }
+	local centers = ZoneService.GetNestCenters()
+	for index = #centers, 2, -1 do
+		local swap = rng:NextInteger(1, index)
+		centers[index], centers[swap] = centers[swap], centers[index]
+	end
+	local spots: { Vector3 } = {}
+	for index = 1, math.min(count, #centers) do
+		-- stand a few studs to the side so the event Mother does not overlap the zone's own Mother
+		local side = if rng:NextNumber() < 0.5 then -1 else 1
+		table.insert(spots, centers[index] + Vector3.new(0, 0, side * 16))
+	end
+	return spots
+end
+
 local function pickInvasionSpots(count: number): { Vector3 }
 	local area = invasionSettings.Area
 	local spots: { Vector3 } = {}
@@ -1142,7 +1160,8 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 	count = math.max(invasionSettings.MinCount, math.floor(count))
 	local weights = speciesWeights()
 	local spawned = 0
-	for _, spot in pickInvasionSpots(count) do
+	local nestSpots = pickNestSpots(count)
+	for _, spot in (if #nestSpots > 0 then nestSpots else pickInvasionSpots(count)) do
 		local level = rng:NextInteger(invasionSettings.MinLevel, invasionSettings.MaxLevel)
 		local species = HalloweenLogic.WeightedPick(weights, rng:NextNumber()) :: string?
 		if species and spawnInvader(spot, level, species) then
@@ -1151,7 +1170,7 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 	end
 	setNight("Invasion", spawned > 0)
 	if spawned > 0 then
-		announce(string.format("👹 MOTHER INVASION! %d Mother monsters are attacking the plaza! Defeat them for Candy!", spawned), Color3.fromRGB(255, 110, 40))
+		announce(string.format("👹 MOTHER INVASION! %d haunted Mothers have risen in the monster zones! Defeat them for Candy!", spawned), Color3.fromRGB(255, 110, 40))
 		pushAll()
 		task.delay(invasionSettings.Lifetime, function()
 			if invasionCounter ~= waveId or not active then
