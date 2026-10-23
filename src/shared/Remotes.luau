@@ -59,6 +59,9 @@ local EVENT_NAMES = {
 	"HalloweenBuy", -- (itemId)
 	"HalloweenEquip", -- (itemId, equip)
 	"HalloweenSync", -- () ask for a fresh HalloweenState
+	-- Admin panel (server checks Config.Admin.Usernames on every call; non-admins are ignored)
+	"AdminAction", -- ("Hello" | actionName, { Target: string?, Amount: number?, Name: string?, Text: string? })
+	"AdminAccess", -- (true, { actionNames }) only ever sent to an admin
 }
 
 local Remotes = {}

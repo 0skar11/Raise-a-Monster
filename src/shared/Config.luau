@@ -554,6 +554,12 @@ Config.Followers = {
 	VisualPadding = 1.2,
 }
 
+-- Roblox usernames allowed to open the admin panel (F4). Matched by name and by the UserId the name resolves to.
+Config.Admin = {
+	Usernames = { "DRG1YOUSSIF", "exoo96" } :: { string },
+	OpenKey = Enum.KeyCode.F4,
+}
+
 Config.Camera = {
 	MinZoom = 4, -- studs
 	MaxZoom = 40,
