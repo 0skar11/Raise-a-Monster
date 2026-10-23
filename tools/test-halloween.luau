@@ -321,13 +321,10 @@ for index, species in { "HalloweenGhostSlime", "HalloweenSkeletonImp", "Hallowee
 	check(definition and definition.Model and definition.Model.Region == 6 and definition.Model.Index == index and definition.EventOnly == true, species .. " has a rigged model and is event-only")
 end
 check(service:find("species.Model and not species.EventOnly", 1, true), "Event-only monsters are never picked for Mother Invasions")
-local invasionConfig = Config.Halloween.Invasion
-check(#invasionConfig.Mothers >= 3 and invasionConfig.CustomShare > 0 and invasionConfig.CustomShare < 1, "Invasions include custom Halloween Mothers")
-for _, mother in invasionConfig.Mothers do
-	local definition = Config.Species[mother.Species]
-	check(definition and definition.EventOnly and definition.Model and mother.Title ~= "" and mother.Weight > 0 and mother.Scale > 0 and mother.Health > 0, mother.Title .. " is a valid custom Mother")
-end
-check(service:find("invasionSettings.Mothers", 1, true) and service:find("custom.Health", 1, true), "Invasion spawns custom Mothers with their own HP and size")
+check(Config.Halloween.Invasion.Mothers == nil and not service:find("custom.Health", 1, true), "Invasions use the game's regular Mothers (no extra Halloween Mother types)")
+check(service:find("HauntedGlow", 1, true) and service:find("SpookyWisps", 1, true) and service:find("PumpkinEmbers", 1, true), "Invasion Mothers get Halloween effects")
+check(service:find("Color3.fromRGB(205, 62, 14)", 1, true), "Hunt pumpkins use the approved squat red-orange look")
+check(service:find('if regionInfo then regionInfo.Region else "Void"', 1, true) and Config.MotherAttacks.Elements.Void, "Event Mothers fall back to the Void element (Halloween region is not a zone region)")
 check(Config.Camera.MinZoom > 0 and Config.Camera.MaxZoom > Config.Camera.MinZoom, "Camera zoom limits are configured")
 check(read("src/client/init.client.luau"):find("CameraMaxZoomDistance", 1, true), "Client applies the camera zoom limit")
 local rigs = read("src/server/MonsterModels.luau")

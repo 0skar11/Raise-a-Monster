@@ -32,12 +32,10 @@ local invasionSettings = settings.Invasion
 local pumpkinSettings = settings.Pumpkins
 local makePart = Build.MakePart
 
-type CustomMother = { Species: string, Title: string, Weight: number, Scale: number, Health: number, Aura: Color3 }
-
 type Invader = {
 	Level: number,
 	Species: string,
-	Title: string, -- shown name: the custom Mother's title, else the species name
+	Title: string, -- shown name: the Mother's species name
 	Element: string,
 	Model: Model,
 	Root: BasePart,
@@ -941,15 +939,15 @@ local function settleInvader(invader: Invader, killerName: string)
 	end
 end
 
-local function spawnInvader(position: Vector3, level: number, species: string, custom: CustomMother?): Invader?
+local function spawnInvader(position: Vector3, level: number, species: string): Invader?
 	local info = Config.Species[species].Model
 	local template = info and MonsterModels.Get(info.Region, info.Index, "Adult")
 	if not info or not template or not invaderFolder then
 		return nil
 	end
 	local model: Model = template
-	local motherScale = Config.MotherScale * (if custom then custom.Scale else 1)
-	local title = if custom then custom.Title else Config.Species[species].DisplayName
+	local motherScale = Config.MotherScale
+	local title = Config.Species[species].DisplayName
 	model:ScaleTo(motherScale)
 	local pivotHeight = (model:GetAttribute("Scale") or 1) * motherScale
 	model:SetAttribute("PivotHeight", pivotHeight)
@@ -974,8 +972,10 @@ local function spawnInvader(position: Vector3, level: number, species: string, c
 	model:SetAttribute("ComboInterval", style.HitInterval)
 	local extents = model:GetExtentsSize()
 	local height = extents.Y - pivotHeight
-	local element = Config.RegionMonsters[info.Region].Region
-	local maxHealth = HalloweenLogic.HealthForLevel(invasionSettings, level) * (if custom then custom.Health else 1)
+	-- the event monsters live in the extra Halloween model region, which has no zone element: they use Void's
+	local regionInfo = Config.RegionMonsters[info.Region]
+	local element = if regionInfo then regionInfo.Region else "Void"
+	local maxHealth = HalloweenLogic.HealthForLevel(invasionSettings, level)
 
 	local gui, label = Build.MakeBillboard(root, UDim2.fromScale(16, 5.5), Vector3.new(0, height + 4, 0), 140)
 	gui.Name = "Info"
@@ -1012,11 +1012,51 @@ local function spawnInvader(position: Vector3, level: number, species: string, c
 	text.ZIndex = 2
 	text.Parent = bar
 	local glowFire = Instance.new("Fire")
-	glowFire.Color = if custom then custom.Aura else Color3.fromRGB(255, 130, 30)
+	glowFire.Color = Color3.fromRGB(255, 130, 30)
 	glowFire.SecondaryColor = Color3.fromRGB(120, 40, 160)
-	glowFire.Size = if custom then 8 else 6
+	glowFire.Size = 6
 	glowFire.Heat = 4
 	glowFire.Parent = root
+	-- Halloween dressing for the regular Mother: a haunted outline, a jack-o'-lantern glow, drifting wisps and embers
+	local haunt = Instance.new("Highlight")
+	haunt.Name = "HauntedGlow"
+	haunt.FillColor = Color3.fromRGB(255, 120, 30)
+	haunt.FillTransparency = 0.85
+	haunt.OutlineColor = Color3.fromRGB(170, 70, 255)
+	haunt.OutlineTransparency = 0.25
+	haunt.DepthMode = Enum.HighlightDepthMode.Occluded
+	haunt.Parent = model
+	local lantern = Instance.new("PointLight")
+	lantern.Color = Color3.fromRGB(255, 140, 40)
+	lantern.Range = 22
+	lantern.Brightness = 2
+	lantern.Shadows = false
+	lantern.Parent = root
+	local wisps = Instance.new("ParticleEmitter")
+	wisps.Name = "SpookyWisps"
+	wisps.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	wisps.Color = ColorSequence.new(Color3.fromRGB(170, 90, 255), Color3.fromRGB(60, 20, 90))
+	wisps.LightEmission = 0.6
+	wisps.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	wisps.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 5) })
+	wisps.Lifetime = NumberRange.new(2, 3.5)
+	wisps.Rate = 8
+	wisps.Speed = NumberRange.new(1, 3)
+	wisps.SpreadAngle = Vector2.new(180, 180)
+	wisps.Acceleration = Vector3.new(0, 3, 0)
+	wisps.Parent = root
+	local embers = Instance.new("ParticleEmitter")
+	embers.Name = "PumpkinEmbers"
+	embers.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	embers.Color = ColorSequence.new(Color3.fromRGB(255, 190, 60), Color3.fromRGB(255, 90, 20))
+	embers.LightEmission = 1
+	embers.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) })
+	embers.Lifetime = NumberRange.new(1, 2)
+	embers.Rate = 14
+	embers.Speed = NumberRange.new(2, 6)
+	embers.SpreadAngle = Vector2.new(180, 180)
+	embers.Acceleration = Vector3.new(0, 6, 0)
+	embers.Parent = root
 
 	local invader: Invader = {
 		Level = level,
@@ -1101,25 +1141,11 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 	local count = forcedCount or HalloweenLogic.RollInvasionCount(invasionSettings, rng:NextNumber())
 	count = math.max(invasionSettings.MinCount, math.floor(count))
 	local weights = speciesWeights()
-	local customWeights: { [string]: number } = {}
-	for index, mother in invasionSettings.Mothers do
-		customWeights[tostring(index)] = mother.Weight
-	end
 	local spawned = 0
 	for _, spot in pickInvasionSpots(count) do
 		local level = rng:NextInteger(invasionSettings.MinLevel, invasionSettings.MaxLevel)
-		local custom: CustomMother? = nil
-		local species: string?
-		if rng:NextNumber() < invasionSettings.CustomShare then
-			local picked = HalloweenLogic.WeightedPick(customWeights, rng:NextNumber()) :: string?
-			custom = picked and invasionSettings.Mothers[tonumber(picked) :: number]
-		end
-		if custom then
-			species = custom.Species
-		else
-			species = HalloweenLogic.WeightedPick(weights, rng:NextNumber()) :: string?
-		end
-		if species and spawnInvader(spot, level, species, custom) then
+		local species = HalloweenLogic.WeightedPick(weights, rng:NextNumber()) :: string?
+		if species and spawnInvader(spot, level, species) then
 			spawned += 1
 		end
 	end
@@ -1332,16 +1358,20 @@ end
 
 local function makePumpkinModel(position: Vector3, golden: boolean): Part
 	local size = if golden then 3.6 else 3
-	local color = if golden then Color3.fromRGB(255, 205, 50) else ORANGE
+	-- a squat, glossy red-orange pumpkin with a small dark-green square stem (the approved look)
+	local color = if golden then Color3.fromRGB(255, 205, 50) else Color3.fromRGB(205, 62, 14)
+	local height = size * 0.9
 	local body = makePart({
 		Name = if golden then "GoldenPumpkin" else "HuntPumpkin", Shape = Enum.PartType.Ball,
-		Size = Vector3.new(size * 1.15, size, size * 1.15), Position = position + Vector3.new(0, size / 2, 0),
+		Size = Vector3.new(size * 1.4, height, size * 1.3), Position = position + Vector3.new(0, height / 2, 0),
 		Color = color, Material = if golden then Enum.Material.Neon else Enum.Material.SmoothPlastic,
 		CanCollide = false, CanQuery = true, CanTouch = false, Parent = pumpkinFolder,
 	})
+	body.Reflectance = if golden then 0 else 0.08
 	local stem = makePart({
-		Name = "Stem", Size = Vector3.new(0.6, 0.9, 0.6), Position = position + Vector3.new(0, size + 0.15, 0),
-		Color = Color3.fromRGB(70, 105, 40), Material = Enum.Material.Wood, CanCollide = false, CanQuery = false, CanTouch = false, Parent = body,
+		Name = "Stem", Size = Vector3.new(size * 0.2, size * 0.2, size * 0.2),
+		CFrame = CFrame.new(position + Vector3.new(size * 0.05, height * 0.98, 0)) * CFrame.Angles(math.rad(8), math.rad(25), math.rad(-6)),
+		Color = Color3.fromRGB(28, 52, 24), Material = Enum.Material.SmoothPlastic, CanCollide = false, CanQuery = false, CanTouch = false, Parent = body,
 	})
 	stem.Anchored = true
 	local light = Instance.new("PointLight")

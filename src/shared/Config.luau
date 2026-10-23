@@ -495,7 +495,7 @@ Config.Zones = {
 		Decoration = "Crystals",
 		Species = { "Void_1", "Void_2", "Void_3", "Void_4", "Void_5", "Void_6", "Void_7", "Void_8", "Void_9", "Void_10" },
 		MotherHealth = 1000000,
-		MotherDamage = 90, -- ~2 hits kill even a fully geared player (100 HP + up to 350 from accessories)
+		MotherDamage = 72, -- was 90; trimmed 20%
 	},
 } :: { Zone }
 
@@ -932,14 +932,6 @@ Config.Halloween = {
 		ChaseSpeed = 14, -- slower than a player (25) so they can run away
 		NoticeRange = 34,
 		LeashRange = 90,
-		-- Event-only Mothers with their own name, size, HP and aura. CustomShare of each wave is picked from here
-		-- (by Weight); the rest are the game's regular Mothers.
-		CustomShare = 0.7,
-		Mothers = {
-			{ Species = "HalloweenGhostSlime", Title = "Phantom Mother", Weight = 40, Scale = 1.05, Health = 1, Aura = Color3.fromRGB(170, 210, 255) },
-			{ Species = "HalloweenSkeletonImp", Title = "Bone Queen", Weight = 35, Scale = 1.15, Health = 1.4, Aura = Color3.fromRGB(255, 200, 90) },
-			{ Species = "HalloweenPumpkinKing", Title = "Pumpkin Matriarch", Weight = 25, Scale = 1.3, Health = 2, Aura = Color3.fromRGB(255, 120, 20) },
-		} :: { { Species: string, Title: string, Weight: number, Scale: number, Health: number, Aura: Color3 } },
 	},
 	Pumpkins = {
 		Interval = 1800, -- Pumpkin Hunt every 30 minutes
