@@ -50,6 +50,7 @@ type Nest = {
 	NextAttackAt: number,
 	Engaged: boolean, -- فيه حد قريب منها دلوقتي
 	WindingUntil: number, -- واقفة بتجهّز الضربة لحد الوقت ده
+	EventHold: boolean?, -- a Halloween Mother stands here instead: no regular Mother until it is released
 }
 
 local ZoneService = {}
@@ -725,7 +726,9 @@ end
 
 local function resetAll()
 	for _, nest in nests do
-		spawnNest(nest)
+		if not nest.EventHold then
+			spawnNest(nest)
+		end
 	end
 	nextResetAt = os.clock() + Config.ZoneResetInterval
 end
@@ -835,13 +838,44 @@ local function updateGateTimers()
 	end
 end
 
--- Where each zone Mother stands (used by the Halloween event so its Mothers appear in the same places).
+-- Where each free zone Mother stands (used by the Halloween event so its Mothers appear in the same places).
 function ZoneService.GetNestCenters(): { Vector3 }
 	local centers: { Vector3 } = {}
 	for _, nest in nests do
-		table.insert(centers, nest.Center)
+		if not nest.EventHold then
+			table.insert(centers, nest.Center)
+		end
 	end
 	return centers
+end
+
+local function nestAt(center: Vector3): Nest?
+	for _, nest in nests do
+		if nest.Center == center then
+			return nest
+		end
+	end
+	return nil
+end
+
+-- A nest hosts either its regular Mother or one Halloween Mother. HoldNest removes the regular Mother (and her
+-- babies) and keeps her away; ReleaseNest brings a regular Mother back once the event Mother is gone.
+function ZoneService.HoldNest(center: Vector3): boolean
+	local nest = nestAt(center)
+	if not nest or nest.EventHold then
+		return false
+	end
+	nest.EventHold = true
+	clearNest(nest)
+	return true
+end
+
+function ZoneService.ReleaseNest(center: Vector3)
+	local nest = nestAt(center)
+	if nest and nest.EventHold then
+		nest.EventHold = nil
+		spawnNest(nest)
+	end
 end
 
 function ZoneService.CleanupPlayer(player: Player)

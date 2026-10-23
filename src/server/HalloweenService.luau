@@ -37,6 +37,7 @@ type Invader = {
 	Level: number,
 	Species: string,
 	Title: string, -- shown name: the Mother's species name
+	HeldNest: Vector3?, -- the zone nest this Mother took over (its regular Mother returns when this one is gone)
 	Element: string,
 	Model: Model,
 	Root: BasePart,
@@ -914,6 +915,10 @@ local function removeInvader(invader: Invader)
 	if index then
 		table.remove(invaders, index)
 	end
+	if invader.HeldNest then
+		ZoneService.ReleaseNest(invader.HeldNest)
+		invader.HeldNest = nil
+	end
 end
 
 local function settleInvader(invader: Invader, killerName: string)
@@ -940,7 +945,7 @@ local function settleInvader(invader: Invader, killerName: string)
 	end
 end
 
-local function spawnInvader(position: Vector3, level: number, species: string): Invader?
+local function spawnInvader(position: Vector3, level: number, species: string, heldNest: Vector3?): Invader?
 	local info = Config.Species[species].Model
 	local template = info and MonsterModels.Get(info.Region, info.Index, "Adult")
 	if not info or not template or not invaderFolder then
@@ -1063,6 +1068,7 @@ local function spawnInvader(position: Vector3, level: number, species: string): 
 		Level = level,
 		Species = species,
 		Title = title,
+		HeldNest = heldNest,
 		Element = element,
 		Model = model,
 		Root = root,
@@ -1106,8 +1112,8 @@ local function spawnInvader(position: Vector3, level: number, species: string): 
 	return invader
 end
 
--- Event Mothers appear exactly where the zone Mothers stand (one per nest, at random), as if the nests themselves
--- were haunted. Only if there are no nests (e.g. a bare test place) do they fall back to the open plaza.
+-- Event Mothers take over zone nests (one per nest, at random): the nest holds either its regular Mother or an
+-- event Mother, never both. Only if there are no nests (e.g. a bare test place) do they use the open plaza.
 local function pickNestSpots(count: number): { Vector3 }
 	local centers = ZoneService.GetNestCenters()
 	for index = #centers, 2, -1 do
@@ -1116,9 +1122,7 @@ local function pickNestSpots(count: number): { Vector3 }
 	end
 	local spots: { Vector3 } = {}
 	for index = 1, math.min(count, #centers) do
-		-- stand a few studs to the side so the event Mother does not overlap the zone's own Mother
-		local side = if rng:NextNumber() < 0.5 then -1 else 1
-		table.insert(spots, centers[index] + Vector3.new(0, 0, side * 16))
+		table.insert(spots, centers[index])
 	end
 	return spots
 end
@@ -1161,11 +1165,15 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 	local weights = speciesWeights()
 	local spawned = 0
 	local nestSpots = pickNestSpots(count)
-	for _, spot in (if #nestSpots > 0 then nestSpots else pickInvasionSpots(count)) do
+	local fromNests = #nestSpots > 0
+	for _, spot in (if fromNests then nestSpots else pickInvasionSpots(count)) do
 		local level = rng:NextInteger(invasionSettings.MinLevel, invasionSettings.MaxLevel)
 		local species = HalloweenLogic.WeightedPick(weights, rng:NextNumber()) :: string?
-		if species and spawnInvader(spot, level, species) then
+		local held = fromNests and ZoneService.HoldNest(spot)
+		if species and spawnInvader(spot, level, species, if held then spot else nil) then
 			spawned += 1
+		elseif held then
+			ZoneService.ReleaseNest(spot)
 		end
 	end
 	setNight("Invasion", spawned > 0)
