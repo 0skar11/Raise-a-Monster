@@ -321,6 +321,15 @@ for index, species in { "HalloweenGhostSlime", "HalloweenSkeletonImp", "Hallowee
 	check(definition and definition.Model and definition.Model.Region == 6 and definition.Model.Index == index and definition.EventOnly == true, species .. " has a rigged model and is event-only")
 end
 check(service:find("species.Model and not species.EventOnly", 1, true), "Event-only monsters are never picked for Mother Invasions")
+local invasionConfig = Config.Halloween.Invasion
+check(#invasionConfig.Mothers >= 3 and invasionConfig.CustomShare > 0 and invasionConfig.CustomShare < 1, "Invasions include custom Halloween Mothers")
+for _, mother in invasionConfig.Mothers do
+	local definition = Config.Species[mother.Species]
+	check(definition and definition.EventOnly and definition.Model and mother.Title ~= "" and mother.Weight > 0 and mother.Scale > 0 and mother.Health > 0, mother.Title .. " is a valid custom Mother")
+end
+check(service:find("invasionSettings.Mothers", 1, true) and service:find("custom.Health", 1, true), "Invasion spawns custom Mothers with their own HP and size")
+check(Config.Camera.MinZoom > 0 and Config.Camera.MaxZoom > Config.Camera.MinZoom, "Camera zoom limits are configured")
+check(read("src/client/init.client.luau"):find("CameraMaxZoomDistance", 1, true), "Client applies the camera zoom limit")
 local rigs = read("src/server/MonsterModels.luau")
 check(rigs:find('name = "Halloween"', 1, true) and rigs:find('rarity = "Mythic"', 1, true) and rigs:find("def.rarity or RARITY_ORDER", 1, true), "MonsterModels defines the Halloween region with explicit rarities")
 check(rigs:find("build it from code, once, on demand", 1, true), "Regions missing from the saved Studio rigs are built on demand")

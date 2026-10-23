@@ -554,6 +554,11 @@ Config.Followers = {
 	VisualPadding = 1.2,
 }
 
+Config.Camera = {
+	MinZoom = 4, -- studs
+	MaxZoom = 40,
+}
+
 Config.Combat = {
 	BaseDamage = 10, -- ضرر اللاعب من غير وحوش
 	DamagePerProduction = 2, -- كل 1 Coin/s من وحوشك بيزوّد ضربتك 2
@@ -923,6 +928,14 @@ Config.Halloween = {
 		ChaseSpeed = 14, -- slower than a player (25) so they can run away
 		NoticeRange = 34,
 		LeashRange = 90,
+		-- Event-only Mothers with their own name, size, HP and aura. CustomShare of each wave is picked from here
+		-- (by Weight); the rest are the game's regular Mothers.
+		CustomShare = 0.7,
+		Mothers = {
+			{ Species = "HalloweenGhostSlime", Title = "Phantom Mother", Weight = 40, Scale = 1.05, Health = 1, Aura = Color3.fromRGB(170, 210, 255) },
+			{ Species = "HalloweenSkeletonImp", Title = "Bone Queen", Weight = 35, Scale = 1.15, Health = 1.4, Aura = Color3.fromRGB(255, 200, 90) },
+			{ Species = "HalloweenPumpkinKing", Title = "Pumpkin Matriarch", Weight = 25, Scale = 1.3, Health = 2, Aura = Color3.fromRGB(255, 120, 20) },
+		} :: { { Species: string, Title: string, Weight: number, Scale: number, Health: number, Aura: Color3 } },
 	},
 	Pumpkins = {
 		Interval = 1800, -- Pumpkin Hunt every 30 minutes

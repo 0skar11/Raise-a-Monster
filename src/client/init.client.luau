@@ -29,6 +29,9 @@ local HalloweenDecor = require(script.HalloweenDecor)
 local FollowerSmooth = require(script.FollowerSmooth)
 
 local player = Players.LocalPlayer
+-- Camera zoom limits: keeps the view close enough to read the plaza and stops zooming out to see the whole map.
+player.CameraMinZoomDistance = Config.Camera.MinZoom
+player.CameraMaxZoomDistance = Config.Camera.MaxZoom
 local remotes = Remotes.Get()
 local ui = UI.Create(player:WaitForChild("PlayerGui") :: PlayerGui)
 CashCounterFormatter.Start(player:WaitForChild("PlayerGui"))

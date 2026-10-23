@@ -32,9 +32,12 @@ local invasionSettings = settings.Invasion
 local pumpkinSettings = settings.Pumpkins
 local makePart = Build.MakePart
 
+type CustomMother = { Species: string, Title: string, Weight: number, Scale: number, Health: number, Aura: Color3 }
+
 type Invader = {
 	Level: number,
 	Species: string,
+	Title: string, -- shown name: the custom Mother's title, else the species name
 	Element: string,
 	Model: Model,
 	Root: BasePart,
@@ -920,7 +923,7 @@ local function settleInvader(invader: Invader, killerName: string)
 	end
 	local rewards = HalloweenLogic.Settle(invader.Tracker, invasionSettings, invader.Level)
 	removeInvader(invader)
-	local name = Config.Species[invader.Species].DisplayName
+	local name = invader.Title
 	announce(string.format("🎃 %s finished off a Lv %d %s Mother!", killerName, invader.Level, name), Color3.fromRGB(255, 170, 60))
 	for _, reward in rewards do
 		local player = Players:GetPlayerByUserId(reward.UserId)
@@ -938,15 +941,17 @@ local function settleInvader(invader: Invader, killerName: string)
 	end
 end
 
-local function spawnInvader(position: Vector3, level: number, species: string): Invader?
+local function spawnInvader(position: Vector3, level: number, species: string, custom: CustomMother?): Invader?
 	local info = Config.Species[species].Model
 	local template = info and MonsterModels.Get(info.Region, info.Index, "Adult")
 	if not info or not template or not invaderFolder then
 		return nil
 	end
 	local model: Model = template
-	model:ScaleTo(Config.MotherScale)
-	local pivotHeight = (model:GetAttribute("Scale") or 1) * Config.MotherScale
+	local motherScale = Config.MotherScale * (if custom then custom.Scale else 1)
+	local title = if custom then custom.Title else Config.Species[species].DisplayName
+	model:ScaleTo(motherScale)
+	local pivotHeight = (model:GetAttribute("Scale") or 1) * motherScale
 	model:SetAttribute("PivotHeight", pivotHeight)
 	local focus = Vector3.new(Config.Map.PlazaMinX + 40, position.Y + pivotHeight, 0)
 	model:PivotTo(CFrame.lookAt(position + Vector3.new(0, pivotHeight, 0), focus))
@@ -970,7 +975,7 @@ local function spawnInvader(position: Vector3, level: number, species: string): 
 	local extents = model:GetExtentsSize()
 	local height = extents.Y - pivotHeight
 	local element = Config.RegionMonsters[info.Region].Region
-	local maxHealth = HalloweenLogic.HealthForLevel(invasionSettings, level)
+	local maxHealth = HalloweenLogic.HealthForLevel(invasionSettings, level) * (if custom then custom.Health else 1)
 
 	local gui, label = Build.MakeBillboard(root, UDim2.fromScale(16, 5.5), Vector3.new(0, height + 4, 0), 140)
 	gui.Name = "Info"
@@ -978,7 +983,7 @@ local function spawnInvader(position: Vector3, level: number, species: string): 
 	label.Size = UDim2.fromScale(1, 0.6)
 	label.Text = string.format(
 		'<font color="#FFA030">🎃 %s</font> · Lv %d MOTHER\n<font color="%s">%s</font>',
-		Config.Species[species].DisplayName,
+		title,
 		level,
 		Build.ColorToHex(Config.Rarities[Config.Species[species].Rarity].Color),
 		Config.Species[species].Rarity
@@ -1007,15 +1012,16 @@ local function spawnInvader(position: Vector3, level: number, species: string): 
 	text.ZIndex = 2
 	text.Parent = bar
 	local glowFire = Instance.new("Fire")
-	glowFire.Color = Color3.fromRGB(255, 130, 30)
+	glowFire.Color = if custom then custom.Aura else Color3.fromRGB(255, 130, 30)
 	glowFire.SecondaryColor = Color3.fromRGB(120, 40, 160)
-	glowFire.Size = 6
+	glowFire.Size = if custom then 8 else 6
 	glowFire.Heat = 4
 	glowFire.Parent = root
 
 	local invader: Invader = {
 		Level = level,
 		Species = species,
+		Title = title,
 		Element = element,
 		Model = model,
 		Root = root,
@@ -1095,11 +1101,25 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 	local count = forcedCount or HalloweenLogic.RollInvasionCount(invasionSettings, rng:NextNumber())
 	count = math.max(invasionSettings.MinCount, math.floor(count))
 	local weights = speciesWeights()
+	local customWeights: { [string]: number } = {}
+	for index, mother in invasionSettings.Mothers do
+		customWeights[tostring(index)] = mother.Weight
+	end
 	local spawned = 0
 	for _, spot in pickInvasionSpots(count) do
-		local species = HalloweenLogic.WeightedPick(weights, rng:NextNumber()) :: string?
 		local level = rng:NextInteger(invasionSettings.MinLevel, invasionSettings.MaxLevel)
-		if species and spawnInvader(spot, level, species) then
+		local custom: CustomMother? = nil
+		local species: string?
+		if rng:NextNumber() < invasionSettings.CustomShare then
+			local picked = HalloweenLogic.WeightedPick(customWeights, rng:NextNumber()) :: string?
+			custom = picked and invasionSettings.Mothers[tonumber(picked) :: number]
+		end
+		if custom then
+			species = custom.Species
+		else
+			species = HalloweenLogic.WeightedPick(weights, rng:NextNumber()) :: string?
+		end
+		if species and spawnInvader(spot, level, species, custom) then
 			spawned += 1
 		end
 	end
