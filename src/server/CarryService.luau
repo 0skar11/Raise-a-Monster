@@ -28,6 +28,7 @@ type Carry = {
 	Model: Model,
 	DiedConnection: RBXScriptConnection?,
 	LastFullWarning: number,
+	FromZones: boolean, -- picked up inside the monster zones: walking out of them delivers it
 }
 
 local CarryService = {}
@@ -236,7 +237,9 @@ function CarryService.StartCarry(player: Player, cargo: Cargo): boolean
 	weldConstraint.Parent = body
 	model.Parent = character
 
-	local carry: Carry = { Cargo = cargo, Model = model, DiedConnection = nil, LastFullWarning = 0 }
+	local pickupRoot = character:FindFirstChild("HumanoidRootPart")
+	local fromZones = pickupRoot ~= nil and pickupRoot:IsA("BasePart") and pickupRoot.Position.X >= PlotService.ZonesStartX
+	local carry: Carry = { Cargo = cargo, Model = model, DiedConnection = nil, LastFullWarning = 0, FromZones = fromZones }
 	carry.DiedConnection = humanoid.Died:Connect(function()
 		if carries[player] == carry then
 			onCarrierDied(player)
@@ -244,7 +247,7 @@ function CarryService.StartCarry(player: Player, cargo: Cargo): boolean
 	end)
 	carries[player] = carry
 	CharacterService.SetSpeedFactor(player, "Carry", speedFor(cargo))
-	MonsterService.Notify(player, "🎒 You picked up " .. CarryService.CargoName(cargo) .. "! Carry it back to your base!", "warning")
+	MonsterService.Notify(player, "🎒 You picked up " .. CarryService.CargoName(cargo) .. (if fromZones then "! Walk out of the monster zone to keep it!" else "! Carry it back to your base!"), "warning")
 	return true
 end
 
@@ -268,7 +271,7 @@ local function update()
 		if not carry.Model.Parent then
 			-- الشخصية اتشالت (Respawn مثلاً) من غير Died
 			onCarrierDied(player)
-		elseif plot and root and PlotService.IsInsidePlot(plot, root.Position) then
+		elseif root and ((plot and PlotService.IsInsidePlot(plot, root.Position)) or (carry.FromZones and root.Position.X < PlotService.ZonesStartX)) then
 			deliver(player, carry)
 		end
 	end

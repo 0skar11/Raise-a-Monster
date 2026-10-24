@@ -260,6 +260,11 @@ for text in (service .. ui):gmatch("remotes%.(Halloween%w+)") do
 end
 local server = read("src/server/init.server.luau")
 check(server:find("HalloweenService.Init(remotes)", 1, true) and server:find("MonsterService.GetEventMultiplier = HalloweenService.GetCashMultiplier", 1, true), "Server initialises the event and links the cash multiplier")
+local pumpkinDecor = read("src/server/PumpkinDecor.luau")
+check(server:find("PumpkinDecor.Init()", 1, true) and pumpkinDecor:find('child.Name == "HalloweenWorld"', 1, true), "Carved pumpkin decor initializes and follows the event world")
+check(pumpkinDecor:find('child.Name == "Pumpkin"', 1, true) and pumpkinDecor:find('child.Name == "PumpkinPart"', 1, true) and pumpkinDecor:find('rbxassetid://16973748', 1, true) and pumpkinDecor:find('rbxassetid://16973739', 1, true), "Only map pumpkin parts use the carved classic mesh and texture")
+check(pumpkinDecor:find('child:IsA("Folder")', 1, true) and pumpkinDecor:find('modelChild:IsA("BasePart")', 1, true) and pumpkinDecor:find('model.WorldPivot = pivot', 1, true), "Nested leaf decorations are reached while the original model pivot is preserved")
+check(pumpkinDecor:find('CarvedPumpkinDecorVersion', 1, true) and pumpkinDecor:find('Enum.MeshType.FileMesh', 1, true), "Carved pumpkin conversion is idempotent and uses the source mesh")
 check(server:find("HalloweenService.SetupPlayer(player)", 1, true) and server:find("HalloweenService.CleanupPlayer(player)", 1, true) and server:find("HalloweenService.OnCharacter(player)", 1, true), "Join, leave and respawn are handled")
 check(read("src/client/init.client.luau"):find("HalloweenUI.Init(ui, remotes)", 1, true), "Client starts the Halloween UI")
 local monsterService = read("src/server/MonsterService.luau")

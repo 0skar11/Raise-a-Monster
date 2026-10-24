@@ -24,6 +24,7 @@ local MonsterPortraits = require(script.MonsterPortraits)
 local TradeService = require(script.TradeService)
 local ArenaService = require(script.ArenaService)
 local HalloweenService = require(script.HalloweenService)
+local PumpkinDecor = require(script.PumpkinDecor)
 local AdminService = require(script.AdminService)
 
 local remotes = Remotes.Get()
@@ -64,6 +65,7 @@ TerrainService.Init()
 MonetizationService.Init(remotes)
 EventService.Init()
 HalloweenService.Init(remotes)
+PumpkinDecor.Init()
 LeaderboardService.Init()
 RewardService.Init(remotes)
 TradeService.Init(remotes)
@@ -81,7 +83,7 @@ PlotService.Callbacks.OpenShop = function(player)
 	remotes.OpenShop:FireClient(player)
 end
 
--- تليبورت للبيت أو المتجر (مش شغال جوه مناطق الوحوش، ولا وانت شايل وحش)
+-- تليبورت للبيت أو المتجر أو الأرينا من أي مكان في الماب (مش شغال وانت شايل وحش)
 local lastTeleport: { [Player]: number } = {}
 remotes.Teleport.OnServerEvent:Connect(function(player: Player, where: unknown)
 	if where ~= "Home" and where ~= "Shop" and where ~= "Arena" then
@@ -95,10 +97,6 @@ remotes.Teleport.OnServerEvent:Connect(function(player: Player, where: unknown)
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not character or not root or not humanoid or humanoid.Health <= 0 then
-		return
-	end
-	if root.Position.X >= PlotService.ZonesStartX then
-		MonsterService.Notify(player, "🚫 You can't teleport from inside the monster zones!", "error")
 		return
 	end
 	if CarryService.IsCarrying(player) then
