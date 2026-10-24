@@ -87,8 +87,15 @@ check(monsters.TakeMonsterData(player, "a4") ~= nil, "Trading transfer returns o
 check(not table.find(followers.GetIds(player), "a4"), "Traded monster immediately unequipped")
 profile.Data.Monsters.a5.Level = 1
 check(not table.find(followers.GetIds(player), "a5"), "Level downgrade is revalidated")
+local chosen = followers.GetIds(player)
+check(#chosen > 0, "Test setup keeps at least one follower")
+followers.Hide(player)
+check(#followers.GetIds(player) == #chosen, "Dying or respawning only hides the followers; the selection stays")
 followers.Clear(player)
-check(#followers.GetIds(player) == 0 and followers.GetDamageBonus(player) == 0, "Respawn clear removes slots and bonus")
+check(table.concat(followers.GetIds(player), ",") == table.concat(chosen, ","), "The selection is restored from the profile after rejoining")
+check(table.concat(profile.Data.Followers, ",") == table.concat(chosen, ","), "Chosen followers are saved in the profile")
+for _, id in chosen do followers.Remove(player, id) end
+check(#followers.GetIds(player) == 0 and #profile.Data.Followers == 0 and followers.GetDamageBonus(player) == 0, "Unequipping removes the slot, the save and the bonus")
 add("legendary-stage", config.MaxLevel)
 check(toggle("legendary-stage"), "Highest evolution stage remains eligible")
 local expected = math.floor(base * (1 + math.min(config.Followers.MaxLevelBonus, (config.MaxLevel - minimum) * config.Followers.LevelBonusPerLevel)))
@@ -100,7 +107,7 @@ check(followers.GetDamageBonus(player) == 0, "Dead player receives no follower d
 check(not toggle("a"), "Dead player cannot equip")
 humanoid.Health = 100
 followers.CleanupPlayer(player)
-check(#followers.GetIds(player) == 0, "Player cleanup clears session equipment")
+check(table.concat(followers.GetIds(player), ",") == table.concat(profile.Data.Followers, ","), "Player cleanup drops only the session cache; the saved selection comes back")
 local attack = fs.readFile("src/server/MonsterService.luau"):match("function MonsterService.GetAttackDamage.-\nend")
 check(attack and not attack:find("Production"), "Production is absent from damage calculation")
 print(string.format("PASS: %d follower policy checks (real Config and production server modules)", checks))
@@ -178,7 +185,7 @@ local visualCharacter = {
     WaitForChild = function(_, name) return if name == "Humanoid" then visualHumanoid else nil end,
 }
 local visualPlayer = { UserId = 7, Character = visualCharacter, Parent = true, CharacterRemoving = stubSignal, CharacterAdded = stubSignal }
-local visualProfile = { Data = { Monsters = {} } }
+local visualProfile = { Data = { Monsters = {}, Followers = {} } }
 local scheduled = {}
 local tagged = {}
 local visualPlayers = { PlayerAdded = stubSignal, PlayerRemoving = stubSignal, GetPlayers = function() return { visualPlayer } end }
@@ -257,7 +264,8 @@ end
 local folderVisuals = testWorkspace:FindFirstChild("MonsterFollowers")
 local speciesCount, legacyCount = 0, 0
 for species, definition in config.Species do
-    visualFollowers.Clear(visualPlayer)
+    visualProfile.Data.Followers = {}
+visualFollowers.Clear(visualPlayer)
     equipVisual("species-check", species)
     tickVisuals()
     local model = folderVisuals:FindFirstChild("species-check")
@@ -275,6 +283,7 @@ for species, definition in config.Species do
     end
     speciesCount += 1
 end
+visualProfile.Data.Followers = {}
 visualFollowers.Clear(visualPlayer)
 local giantSpecies
 for species, definition in config.Species do if definition.DisplayName == "Sun Wyrm" then giantSpecies = species; break end end
@@ -322,6 +331,7 @@ for _, model in giantModels do
     local behind = (bounds.Position - visualRoot.Position):Dot(-visualRoot.CFrame.LookVector)
     visualCheck(behind - size.Z / 2 > 0.5, "Turning preserves clearance behind the avatar")
 end
+visualProfile.Data.Followers = {}
 visualFollowers.Clear(visualPlayer)
 visualCheck(#folderVisuals:GetChildren() == 0, "Cleanup destroys all real visuals")
 print(string.format("PASS: %d visual checks across %d real asset/fallback species (%d legacy/Secret), five giants, movement and cleanup", visualChecks, speciesCount, legacyCount))

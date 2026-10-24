@@ -9,8 +9,11 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local MonsterService = require(script.Parent.MonsterService)
 local HalloweenService = require(script.Parent.HalloweenService)
+local EventService = require(script.Parent.EventService)
 
 local AdminService = {}
+
+local BOSS_MOVES = { Sweep = true, Slam = true, Bombs = true, Vine = true, Pulse = true, Rain = true }
 
 local MAX_COINS = 1e15
 local MAX_CANDY = 1e7
@@ -120,6 +123,50 @@ local actions: { [string]: (admin: Player, target: Player, args: { [string]: any
 	StartPumpkinHunt = function()
 		local spawned = HalloweenService.StartPumpkinHunt()
 		return spawned > 0, if spawned > 0 then "Started a Pumpkin Hunt." else "The Halloween event is not running."
+	end,
+	HealAll = function()
+		local healed = 0
+		for _, other in Players:GetPlayers() do
+			local _, humanoid = aliveRoot(other)
+			if humanoid then
+				humanoid.Health = humanoid.MaxHealth
+				healed += 1
+			end
+		end
+		return healed > 0, string.format("Healed %d players.", healed)
+	end,
+	GoToBoss = function(admin)
+		local position = EventService.GetBossPosition()
+		local mine = aliveRoot(admin)
+		if not position then return false, "No boss is alive right now." end
+		if not mine then return false, "You are not alive." end
+		mine.CFrame = CFrame.new(position + Vector3.new(0, 4, 90))
+		return true, "Teleported near the Big Boss."
+	end,
+	MonsterRain = function()
+		EventService.MonsterRain()
+		return true, "Monster Rain started."
+	end,
+	SpawnBoss = function()
+		if EventService.IsBossAlive() then return false, "A boss is already alive." end
+		EventService.SpawnBoss()
+		return true, "Big Boss spawned."
+	end,
+	KillBoss = function(admin)
+		local ok = EventService.KillBoss(admin)
+		return ok, if ok then "Big Boss killed." else "No boss is alive right now."
+	end,
+	BossHealth = function(_, _, args)
+		local percent = args.Amount
+		if type(percent) ~= "number" or percent ~= percent or percent < 1 or percent > 100 then return false, "Health is 1-100%." end
+		local ok = EventService.SetBossHealthFraction(percent / 100)
+		return ok, if ok then string.format("Boss health set to %d%%.", percent) else "No boss is alive right now."
+	end,
+	BossAttack = function(_, _, args)
+		local name = args.Name
+		if type(name) ~= "string" or not BOSS_MOVES[name] then return false, "Unknown boss attack." end
+		local ok = EventService.ForceBossAttack(name)
+		return ok, if ok then name .. " queued." else "No boss is alive right now."
 	end,
 	Announce = function(_, _, args)
 		local text = args.Text

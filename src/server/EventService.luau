@@ -297,6 +297,47 @@ function EventService.SpawnBoss()
 	end)
 end
 
+-- Admin controls: all act on the boss that is alive right now and return false when there is none.
+function EventService.IsBossAlive(): boolean
+	return boss ~= nil and not boss.Dead
+end
+
+function EventService.GetBossPosition(): Vector3?
+	local current = boss
+	if current and not current.Dead then
+		return current.Part.Position
+	end
+	return nil
+end
+
+function EventService.KillBoss(killer: Player): boolean
+	local current = boss
+	if not current or current.Dead then
+		return false
+	end
+	current.Target.OnHit(killer, current.Health + 1)
+	return true
+end
+
+function EventService.SetBossHealthFraction(fraction: number): boolean
+	local current = boss
+	if not current or current.Dead then
+		return false
+	end
+	current.Health = math.max(1, current.MaxHealth * math.clamp(fraction, 0, 1))
+	updateBossBar(current)
+	return true
+end
+
+function EventService.ForceBossAttack(name: string): boolean
+	local current = boss
+	if not current or current.Dead then
+		return false
+	end
+	current.Part:SetAttribute("AdminAttack", name)
+	return true
+end
+
 function EventService.Init()
 	eventsFolder = Instance.new("Folder")
 	eventsFolder.Name = "Events"

@@ -25,4 +25,12 @@ check(service:find("remotes.AdminAccess:FireClient(player, true", 1, true) and n
 check(service:find("ACTION_COOLDOWN", 1, true) and service:find("MAX_COINS", 1, true), "Admin actions are rate limited and clamped")
 check(read("src/server/init.server.luau"):find("AdminService.Init(remotes)", 1, true), "AdminService is started")
 check(read("src/client/init.client.luau"):find("AdminPanel.Start", 1, true), "The client starts the admin panel")
+for _, action in { "HealAll", "GoToBoss", "MonsterRain", "SpawnBoss", "KillBoss", "BossHealth", "BossAttack" } do
+	check(service:find("\t" .. action .. " = function", 1, true), "Admin action exists: " .. action)
+end
+local panel = read("src/client/AdminPanel.luau")
+for _, action in { "HealAll", "GoToBoss", "MonsterRain", "SpawnBoss", "KillBoss", "BossHealth", "BossAttack", "GiveCoins", "GiveCandy", "GiveEgg", "GiveMonster", "Announce" } do
+	check(panel:find('"' .. action .. '"', 1, true), "Panel sends: " .. action)
+end
+check(read("src/server/BossAttacks.luau"):find("AdminAttack", 1, true), "Boss reads the admin-forced attack")
 print(("PASS: admin panel (%d checks)"):format(checks))

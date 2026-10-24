@@ -34,6 +34,7 @@ export type PlayerData = {
 	SpeedAccessories: { [string]: boolean },
 	Weapons: { [string]: boolean },
 	EquippedWeapon: string,
+	Followers: { string }, -- adult monsters chosen to follow the player; restored on respawn and rejoin
 	EquippedSpeedAccessory: string?,
 	Daily: { LastClaim: number, Streak: number },
 	LastSpin: number,
@@ -81,6 +82,7 @@ local DEFAULT_DATA: PlayerData = {
 	SpeedAccessories = {},
 	Weapons = { Bat = true },
 	EquippedWeapon = "Bat",
+	Followers = {},
 	Daily = { LastClaim = 0, Streak = 0 },
 	LastSpin = 0,
 	ProcessedReceipts = {},
@@ -292,6 +294,17 @@ function DataService.Load(player: Player): Profile
 
 	reconcileGear(data)
 	sanitizeHalloween(data)
+	do
+		local cleaned: { string } = {}
+		if type((data :: any).Followers) == "table" then
+			for _, id in (data :: any).Followers do
+				if type(id) == "string" and #cleaned < Config.Followers.MaxCount and not table.find(cleaned, id) then
+					table.insert(cleaned, id)
+				end
+			end
+		end
+		data.Followers = cleaned
+	end
 	DataService.NormalizeMonsterSlots(data, Config.MaxSlots)
 	local profile: Profile = {
 		Data = data, LoadFailed = loadFailed, CanSave = not loadFailed, SessionId = sessionId,

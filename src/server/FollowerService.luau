@@ -46,8 +46,19 @@ local function removeVisual(player: Player, id: string)
 	if visual then visual.Model:Destroy(); list[id] = nil end
 end
 
+-- The chosen followers are stored in the profile (Data.Followers), so they survive death, respawn and rejoining.
+local function persist(player: Player, ids: { string })
+	local profile = DataService.Get(player)
+	if profile then
+		profile.Data.Followers = table.clone(ids)
+	end
+end
+
 function FollowerService.GetIds(player: Player): { string }
 	local profile = DataService.Get(player)
+	if equipped[player] == nil and profile then
+		equipped[player] = table.clone(profile.Data.Followers or {})
+	end
 	local valid: { string } = {}
 	local seen: { [string]: boolean } = {}
 	for _, id in equipped[player] or {} do
@@ -59,21 +70,34 @@ function FollowerService.GetIds(player: Player): { string }
 			removeVisual(player, id)
 		end
 	end
+	local stored = equipped[player] or {}
 	equipped[player] = valid
+	if #valid ~= #stored then
+		persist(player, valid)
+	end
 	return table.clone(valid)
 end
 
 function FollowerService.Remove(player: Player, id: string)
 	local ids = equipped[player]
 	local index = ids and table.find(ids, id)
-	if ids and index then table.remove(ids, index) end
+	if ids and index then
+		table.remove(ids, index)
+		persist(player, ids)
+	end
 	removeVisual(player, id)
 end
 
-function FollowerService.Clear(player: Player)
+-- Dying or respawning hides the followers; the selection itself is kept and they come back with the character.
+function FollowerService.Hide(player: Player)
 	for id in visuals[player] or {} do removeVisual(player, id) end
-	equipped[player] = nil
 	visuals[player] = nil
+end
+
+-- Leaving the game: drop the session cache (the profile keeps the selection).
+function FollowerService.Clear(player: Player)
+	FollowerService.Hide(player)
+	equipped[player] = nil
 end
 
 function FollowerService.Toggle(player: Player, id: unknown): (boolean, string)
@@ -95,6 +119,7 @@ function FollowerService.Toggle(player: Player, id: unknown): (boolean, string)
 	if #ids >= Config.Followers.MaxCount then return false, string.format("You can have up to %d followers.", Config.Followers.MaxCount) end
 	table.insert(ids, id)
 	equipped[player] = ids
+	persist(player, ids)
 	return true, "Monster is now following you!"
 end
 
@@ -263,7 +288,7 @@ function FollowerService.Init(carriedCheck: (Player, string) -> boolean, onChang
 		local list: { RBXScriptConnection } = {}
 		playerConnections[player] = list
 		local function clear()
-			FollowerService.Clear(player)
+			FollowerService.Hide(player)
 			if player.Parent then changed(player) end
 		end
 		table.insert(list, player.CharacterRemoving:Connect(clear))

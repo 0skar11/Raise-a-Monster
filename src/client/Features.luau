@@ -143,41 +143,267 @@ end
 
 -- إعلانات كبيرة -----------------------------------------------------------------------------
 
-local banner: TextLabel
-local bannerToken = 0
+-- Announcements stack at the top of the screen. Each one drops in with a pop, shows the emoji it starts with on an accent
+-- plate, a glowing animated border, a shine that sweeps across it and a timer bar that runs down; the oldest slides out
+-- when more than three are showing. Built lazily on the first announcement.
+local bannerHost: Frame? = nil
+local activeBanners: { { Slot: Frame, Close: () -> () } } = {}
+local BANNER_SECONDS = 6
+local MAX_BANNERS = 2
+
 local function buildBanner()
-	banner = Instance.new("TextLabel")
-	banner.AnchorPoint = Vector2.new(0.5, 0)
-	banner.Position = UDim2.new(0.5, 0, 0, 132)
-	banner.Size = UDim2.fromOffset(760, 64)
-	banner.BackgroundColor3 = COLORS.Panel
-	banner.BackgroundTransparency = 0.1
-	banner.Font = Enum.Font.FredokaOne
-	banner.TextSize = 24
-	banner.TextWrapped = true
-	banner.TextColor3 = COLORS.Yellow
-	banner.Visible = false
-	banner.ZIndex = 20
-	banner.Parent = ui.Gui
-	UI.Corner(banner, 14)
-	UI.Stroke(banner, COLORS.Yellow, 3)
+	-- intentionally empty: the host is created by the first announcement
+end
+
+local function splitIcon(text: string): (string, string)
+	local ok, first = pcall(utf8.codepoint, text, 1)
+	if ok and first and first > 0x2000 then
+		local icon = utf8.char(first)
+		local nextPosition = utf8.offset(text, 2)
+		if nextPosition then
+			local okNext, second = pcall(utf8.codepoint, text, nextPosition)
+			if okNext and second == 0xFE0F then
+				icon ..= utf8.char(second)
+				nextPosition = utf8.offset(text, 3)
+			end
+			return icon, (text:sub(nextPosition or #text + 1):gsub("^%s+", ""))
+		end
+	end
+	return "📢", text
 end
 
 local function announce(text: string, color: Color3?)
-	bannerToken += 1
-	local token = bannerToken
-	banner.Text = text
-	banner.TextColor3 = color or COLORS.Yellow
-	local stroke = banner:FindFirstChildOfClass("UIStroke")
-	if stroke then
-		stroke.Color = color or COLORS.Yellow
+	local TextService = game:GetService("TextService")
+	if not bannerHost then
+		local host = Instance.new("Frame")
+		host.Name = "Announcements"
+		-- small cards in the top-left, above the Shop button column
+		host.AnchorPoint = Vector2.new(0, 0)
+		host.Position = UDim2.new(0, 14, 0, 46)
+		host.Size = UDim2.fromOffset(340, 10)
+		host.AutomaticSize = Enum.AutomaticSize.Y
+		host.BackgroundTransparency = 1
+		host.ZIndex = 20
+		host.Parent = ui.Gui
+		local list = Instance.new("UIListLayout")
+		list.Padding = UDim.new(0, 5)
+		list.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		list.SortOrder = Enum.SortOrder.LayoutOrder
+		list.Parent = host
+		bannerHost = host
 	end
-	banner.Visible = true
-	task.delay(6, function()
-		if bannerToken == token then
-			banner.Visible = false
+	local host = bannerHost :: Frame
+	local accent = color or COLORS.Yellow
+	local icon, message = splitIcon(text)
+	local bright = accent:Lerp(Color3.new(1, 1, 1), 0.35)
+	local deep = accent:Lerp(Color3.fromRGB(8, 4, 16), 0.86)
+	local deeper = accent:Lerp(Color3.fromRGB(8, 4, 16), 0.93)
+
+	local textWidth = 250
+	local size = TextService:GetTextSize(message, 15, Enum.Font.FredokaOne, Vector2.new(textWidth, 1000))
+	local width = math.clamp(size.X + 84, 200, 340)
+	local height = math.max(size.Y + 28, 48)
+
+	-- the slot reserves the space in the stack; the card inside it animates
+	local order = (activeBanners[#activeBanners] and activeBanners[#activeBanners].Slot.LayoutOrder or 0) + 1
+	local slot = Instance.new("Frame")
+	slot.Size = UDim2.fromOffset(width, height)
+	slot.BackgroundTransparency = 1
+	slot.LayoutOrder = order
+	slot.ZIndex = 20
+	slot.Parent = host
+
+	local card = Instance.new("CanvasGroup")
+	card.Size = UDim2.fromScale(1, 1)
+	card.Position = UDim2.fromOffset(-60, 0)
+	card.BackgroundTransparency = 1
+	card.GroupTransparency = 1
+	card.ZIndex = 20
+	card.Parent = slot
+	UI.Corner(card, 12)
+	local cardScale = Instance.new("UIScale")
+	cardScale.Scale = 0.9
+	cardScale.Parent = card
+	local fillGradient = Instance.new("UIGradient")
+	fillGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, deep),
+		ColorSequenceKeypoint.new(0.55, deeper),
+		ColorSequenceKeypoint.new(1, deep),
+	})
+	-- the gradient lives on its own background frame: on the CanvasGroup it would tint every child, text included
+	local backdrop = Instance.new("Frame")
+	backdrop.Size = UDim2.fromScale(1, 1)
+	backdrop.BackgroundColor3 = Color3.new(1, 1, 1)
+	backdrop.BorderSizePixel = 0
+	backdrop.ZIndex = 20
+	backdrop.Parent = card
+	fillGradient.Parent = backdrop
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 2
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = card
+	local strokeGradient = Instance.new("UIGradient")
+	strokeGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, accent),
+		ColorSequenceKeypoint.new(0.35, bright),
+		ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(0.65, bright),
+		ColorSequenceKeypoint.new(1, accent),
+	})
+	strokeGradient.Parent = stroke
+
+	-- the icon plate
+	local plate = Instance.new("Frame")
+	plate.Position = UDim2.fromOffset(6, 6)
+	plate.Size = UDim2.new(0, 38, 1, -12)
+	plate.BackgroundColor3 = Color3.new(1, 1, 1)
+	plate.BorderSizePixel = 0
+	plate.ZIndex = 21
+	plate.Parent = card
+	UI.Corner(plate, 9)
+	local plateGradient = Instance.new("UIGradient")
+	plateGradient.Color = ColorSequence.new(bright, accent:Lerp(Color3.fromRGB(8, 4, 16), 0.35))
+	plateGradient.Rotation = 90
+	plateGradient.Parent = plate
+	local iconLabel = Instance.new("TextLabel")
+	iconLabel.BackgroundTransparency = 1
+	iconLabel.Size = UDim2.fromScale(1, 1)
+	iconLabel.Font = Enum.Font.GothamBold
+	iconLabel.Text = icon
+	iconLabel.TextSize = 22
+	iconLabel.ZIndex = 22
+	iconLabel.Parent = plate
+	local iconScale = Instance.new("UIScale")
+	iconScale.Parent = iconLabel
+
+	local header = Instance.new("TextLabel")
+	header.BackgroundTransparency = 1
+	header.Position = UDim2.fromOffset(52, 5)
+	header.Size = UDim2.new(1, -60, 0, 10)
+	header.Font = Enum.Font.GothamBlack
+	header.Text = "A N N O U N C E M E N T"
+	header.TextSize = 8
+	header.TextColor3 = bright
+	header.TextXAlignment = Enum.TextXAlignment.Left
+	header.ZIndex = 21
+	header.Parent = card
+
+	local body = Instance.new("TextLabel")
+	body.BackgroundTransparency = 1
+	body.Position = UDim2.fromOffset(52, 15)
+	body.Size = UDim2.new(1, -60, 1, -22)
+	body.Font = Enum.Font.FredokaOne
+	body.Text = message
+	body.TextSize = 15
+	body.TextWrapped = true
+	body.TextColor3 = accent:Lerp(Color3.new(1, 1, 1), 0.78)
+	body.TextStrokeColor3 = Color3.fromRGB(10, 4, 18)
+	body.TextStrokeTransparency = 0.5
+	body.TextXAlignment = Enum.TextXAlignment.Left
+	body.TextYAlignment = Enum.TextYAlignment.Top
+	body.ZIndex = 21
+	body.Parent = card
+
+	-- a shine that sweeps across now and then
+	local shine = Instance.new("Frame")
+	shine.AnchorPoint = Vector2.new(0.5, 0.5)
+	shine.Size = UDim2.new(0, 40, 2.4, 0)
+	shine.BackgroundColor3 = Color3.new(1, 1, 1)
+	shine.BackgroundTransparency = 0.82
+	shine.BorderSizePixel = 0
+	shine.Rotation = 18
+	shine.ZIndex = 23
+	shine.Parent = card
+	local shineGradient = Instance.new("UIGradient")
+	shineGradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.5, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	shineGradient.Parent = shine
+
+	-- sparkles drifting on the right
+	local sparkles: { Frame } = {}
+	for index = 1, 4 do
+		local sparkle = Instance.new("Frame")
+		sparkle.AnchorPoint = Vector2.new(0.5, 0.5)
+		sparkle.Size = UDim2.fromOffset(3 + index, 3 + index)
+		sparkle.Rotation = 45
+		sparkle.BackgroundColor3 = bright
+		sparkle.BorderSizePixel = 0
+		sparkle.ZIndex = 22
+		sparkle.Parent = card
+		sparkles[index] = sparkle
+	end
+
+	-- time bar
+	local timer = Instance.new("Frame")
+	timer.AnchorPoint = Vector2.new(0, 1)
+	timer.Position = UDim2.new(0, 8, 1, -4)
+	timer.Size = UDim2.new(1, -16, 0, 2)
+	timer.BackgroundColor3 = bright
+	timer.BorderSizePixel = 0
+	timer.ZIndex = 24
+	timer.Parent = card
+	UI.Corner(timer, 2)
+
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+	sound.Volume = 0.35
+	sound.Parent = card
+	sound:Play()
+
+	local started = os.clock()
+	local closed = false
+	local connection: RBXScriptConnection
+	connection = RunService.RenderStepped:Connect(function()
+		local now = os.clock() - started
+		-- rotating glow on the border, breathing icon, travelling shine and sparkles
+		strokeGradient.Rotation = (now * 70) % 360
+		fillGradient.Offset = Vector2.new(math.sin(now * 0.9) * 0.25, 0)
+		iconScale.Scale = 1 + 0.1 * math.sin(now * 5)
+		shine.Position = UDim2.new(-0.2 + ((now * 0.45) % 2.2) * 0.75, 0, 0.5, 0)
+		for index, sparkle in sparkles do
+			local phase = now * (0.9 + index * 0.25) + index * 1.7
+			sparkle.Position = UDim2.new(0.62 + index * 0.085, 0, 0.5 + 0.28 * math.sin(phase), 0)
+			sparkle.BackgroundTransparency = 0.2 + 0.7 * (0.5 + 0.5 * math.sin(phase * 2))
 		end
 	end)
+
+	local function close()
+		if closed then
+			return
+		end
+		closed = true
+		TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { GroupTransparency = 1, Position = UDim2.fromOffset(-40, 0) }):Play()
+		TweenService:Create(cardScale, TweenInfo.new(0.35), { Scale = 0.92 }):Play()
+		task.delay(0.3, function()
+			TweenService:Create(slot, TweenInfo.new(0.25), { Size = UDim2.fromOffset(width, 0) }):Play()
+		end)
+		task.delay(0.6, function()
+			connection:Disconnect()
+			slot:Destroy()
+		end)
+		for index, entry in activeBanners do
+			if entry.Slot == slot then
+				table.remove(activeBanners, index)
+				break
+			end
+		end
+	end
+	table.insert(activeBanners, { Slot = slot, Close = close })
+	while #activeBanners > MAX_BANNERS do
+		activeBanners[1].Close()
+	end
+
+	-- entrance: drop in with a pop, the plate flashes once
+	TweenService:Create(card, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(0, 0) }):Play()
+	TweenService:Create(card, TweenInfo.new(0.25), { GroupTransparency = 0 }):Play()
+	TweenService:Create(cardScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	plate.BackgroundColor3 = Color3.new(1, 1, 1)
+	TweenService:Create(timer, TweenInfo.new(BANNER_SECONDS, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 0, 2) }):Play()
+	task.delay(BANNER_SECONDS, close)
 end
 
 -- Popup (طلبات الـ Trade والـ Arena) ----------------------------------------------------------
@@ -227,7 +453,92 @@ end
 
 -- تليبورت وأزرار جانبية -----------------------------------------------------------------------
 
+-- "Income x2" sits right under the cash counter (the Studio-authored CashCounter ScreenGui, bottom-left).
+local incomeLabel: TextLabel? = nil
+local incomeMultiplier = 1
+local incomeConnections: { RBXScriptConnection } = {}
+local placeIncomeLabel: (() -> ())? = nil
+local updateIncomeLabel: ((multiplier: number?) -> ())? = nil
+
+local function buildIncomeLabel()
+	local playerGui = player:WaitForChild("PlayerGui")
+	local function attach(gui: Instance)
+		if gui.Name ~= "CashCounter" or not gui:IsA("ScreenGui") then
+			return
+		end
+		for _, connection in incomeConnections do
+			connection:Disconnect()
+		end
+		table.clear(incomeConnections)
+		local pill = incomeLabel
+		if not pill then
+			pill = Instance.new("TextLabel")
+			local label = pill :: TextLabel
+			label.Name = "IncomeBoost"
+			label.AutomaticSize = Enum.AutomaticSize.X
+			label.Size = UDim2.fromOffset(0, 24)
+			label.BackgroundColor3 = Color3.fromRGB(26, 20, 52)
+			label.BackgroundTransparency = 0.15
+			label.Font = Enum.Font.FredokaOne
+			label.TextSize = 16
+			label.TextColor3 = Color3.fromRGB(255, 214, 90)
+			label.TextStrokeTransparency = 0.5
+			label.ZIndex = 5
+			label.Visible = false
+			UI.Corner(label, 12)
+			UI.Stroke(label, Color3.fromRGB(255, 190, 60), 1.5)
+			local padding = Instance.new("UIPadding")
+			padding.PaddingLeft = UDim.new(0, 10)
+			padding.PaddingRight = UDim.new(0, 10)
+			padding.Parent = label
+			incomeLabel = label
+		end
+		local label = incomeLabel :: TextLabel
+		label.Parent = gui
+		placeIncomeLabel = function()
+			local icon = gui:FindFirstChild("CashLabel")
+			local current = incomeLabel
+			if icon and icon:IsA("GuiObject") and current then
+				-- the cash counter sits on the bottom edge of the screen, so there is no room under it: the pill
+				-- goes right after the amount, centered on the coin icon
+				local amount = gui:FindFirstChild("TextLabel")
+				local left = icon.AbsolutePosition.X + icon.AbsoluteSize.X + 6
+				if amount and amount:IsA("TextLabel") then
+					left = amount.AbsolutePosition.X + math.min(amount.TextBounds.X, amount.AbsoluteSize.X) + 10
+				end
+				current.Position = UDim2.fromOffset(left - gui.AbsolutePosition.X, icon.AbsolutePosition.Y - gui.AbsolutePosition.Y + icon.AbsoluteSize.Y / 2 - 12)
+			end
+		end
+		local icon = gui:FindFirstChild("CashLabel")
+		if icon and icon:IsA("GuiObject") then
+			table.insert(incomeConnections, icon:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeIncomeLabel :: any))
+			table.insert(incomeConnections, icon:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeIncomeLabel :: any))
+		end
+		local amountLabel = gui:FindFirstChild("TextLabel")
+		if amountLabel and amountLabel:IsA("TextLabel") then
+			table.insert(incomeConnections, amountLabel:GetPropertyChangedSignal("TextBounds"):Connect(placeIncomeLabel :: any))
+		end
+		(placeIncomeLabel :: () -> ())()
+	end
+	updateIncomeLabel = function(multiplier: number?)
+		incomeMultiplier = multiplier or 1
+		local label = incomeLabel
+		if label then
+			label.Text = "💰 Income x" .. tostring(incomeMultiplier)
+			label.Visible = incomeMultiplier > 1
+			if placeIncomeLabel then
+				placeIncomeLabel()
+			end
+		end
+	end
+	playerGui.ChildAdded:Connect(attach)
+	for _, gui in playerGui:GetChildren() do
+		attach(gui)
+	end
+end
+
 local function buildButtons()
+	buildIncomeLabel()
 	TravelControls.Start(ui.Gui.Parent, {
 		HomeButton = ui.HomeButton, TeleportShopButton = ui.TeleportShopButton, TeleportArenaButton = ui.TeleportArenaButton,
 	}, function(destination) remotes.Teleport:FireServer(destination) end)
@@ -816,10 +1127,10 @@ function Features.Refresh()
 	if state.BoostLeft and state.BoostLeft > 0 then
 		table.insert(parts, "💨 Boost " .. formatTime(state.BoostLeft))
 	end
-	if state.CoinMultiplier and state.CoinMultiplier > 1 then
-		table.insert(parts, "💰 Income x" .. state.CoinMultiplier)
-	end
 	statusLabel.Text = table.concat(parts, "   ")
+	if updateIncomeLabel then
+		updateIncomeLabel(state.CoinMultiplier)
+	end
 
 	if rewardsController then rewardsController:Refresh(state) end
 	local dailyIn = state.DailyReadyIn or 0

@@ -489,6 +489,11 @@ function BossAttacks.Run(ctx: Context)
 			-- Studio only: set the attribute DebugAttack (Sweep/Slam/Bombs/Vine/Pulse/Rain) on the BigBoss part to fire a move
 			-- right now, and DebugPhase to pick the phase it is used at.
 			local forced = if RunService:IsStudio() then ctx.Part:GetAttribute("DebugAttack") else nil
+			local adminForced = ctx.Part:GetAttribute("AdminAttack") -- set by AdminService through EventService.ForceBossAttack
+			if type(adminForced) == "string" then
+				ctx.Part:SetAttribute("AdminAttack", nil)
+				forced = adminForced
+			end
 			if type(forced) == "string" then
 				ctx.Part:SetAttribute("DebugAttack", nil)
 				local forcedPhase = ctx.Part:GetAttribute("DebugPhase")
