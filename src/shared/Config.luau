@@ -722,13 +722,43 @@ Config.MonsterRain = {
 
 -- Big Boss: أوقات بينزل في الماب ومعاه بيضة Secret. لازم الكل يتجمع يقتله.
 Config.Boss = {
-	MinInterval = 2400, -- بين 40 و 80 دقيقة
-	MaxInterval = 4800,
-	HealthPerPlayer = 60000,
-	MinHealth = 120000,
-	Damage = 30, -- كل ضربة، لكل اللي جنبه (شكلها في Config.MotherAttacks.Styles.Boss)
+	MinInterval = 10800, -- the Big Boss arrives every 3 hours
+	MaxInterval = 10800,
+	HealthPerPlayer = 0, -- the boss has a fixed health pool (MinHealth), whatever the player count
+	MinHealth = 5000000,
+	Damage = 40, -- base hit: every main move deals >= 50, so an unarmored player (100 HP) dies in two hits. كل ضربة، لكل اللي جنبه (شكلها في Config.MotherAttacks.Styles.Boss)
 	AttackRange = 30, -- لو حد قرّب أكتر من كده بيبدأ يضرب
-	Size = 18,
+	Size = 18, -- the plain cube used when the Pumpkin Titan model is not in ServerStorage
+	-- The Pumpkin Titan: ServerStorage.BossModels.PumpkinTitan (import assets/PumpkinBossPreview/PumpkinTitan.fbx in Studio).
+	ModelFolder = "BossModels",
+	ModelName = "PumpkinTitan",
+	ModelHeight = 40, -- studs tall once placed (the source model is 28 units, about 5x a character)
+	ModelYaw = 0, -- degrees; turn the imported model if it does not face the plaza
+	-- Attack kit. Phases switch at these health fractions; each phase unlocks harder moves, shortens telegraphs and cooldowns
+	-- and raises damage (Damage above is the base hit).
+	Attacks = {
+		AggroRange = 120, -- the boss fights any player this close
+		PhaseAt = { 0.75, 0.5, 0.25 }, -- phase 2, 3 (rage), 4 start below these health fractions
+		DamageScale = { 1, 1.15, 1.3, 1.5 },
+		WindupScale = { 1, 0.92, 0.82, 0.72 },
+		Cooldown = { 3.4, 2.8, 2.2, 1.6 },
+		ChainChance = { 0, 0, 0.35, 0.55 }, -- chance to chain a second/third move straight after the first
+		SweepRange = 40, SweepHalfAngle = 70, SweepWindup = 1.15, SweepDamage = 1.3,
+		SlamRadius = 26, SlamOuter = 50, SlamFar = 74, SlamWindup = 1.4, SlamDamage = 1.6, SlamWaveGap = 0.75,
+		BombRadius = 9, BombWindup = 1.9, BombDamage = 1.3, BombStagger = 0.33, BombFireSeconds = 4, BombFireDamage = 0.2,
+		VineRadius = 5.5, VineWindup = 1.5, VineDamage = 1.4, VineRootSeconds = 1.4,
+		PulseRadius = 90, PulseSafeRadius = 9, PulseWindup = 3.4, PulseDamage = 1.5, PulseCooldown = 18, PulseExposedBonus = 1.5,
+		RainSeconds = 5.5, RainRadius = 5.5, RainWindup = 1.1, RainDamage = 1.3, RainTick = 0.22, RainCooldown = 14, RainCandy = 10,
+		EnrageSeconds = 2.2,
+	},
+	-- Entrance (the "why boss fights feel epic" beats): the path crumbles and the light dies, a build-up of rumbling,
+	-- a slow reveal as it climbs out feet first, the name card + boss bar, then the roar. It cannot be hurt and does not
+	-- attack until the roar is over.
+	IntroBuildUp = 1.8,
+	IntroRise = 3.7,
+	IntroRoar = 0.9,
+	IntroCamera = true, -- briefly pans the camera of nearby players from its feet up to its head
+	DeathSeconds = 2, -- how long the corpse stays (collapse animation) before the egg drops
 	Lifetime = 600, -- لو محدش قتله بيمشي
 	Position = Vector3.new(Config.Map.ZonesStartX + Config.Map.ZoneLength / 2, 0, 0), -- في الطريق جوه Zone 1
 }

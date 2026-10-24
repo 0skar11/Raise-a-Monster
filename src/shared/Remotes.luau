@@ -62,6 +62,8 @@ local EVENT_NAMES = {
 	-- Admin panel (server checks Config.Admin.Usernames on every call; non-admins are ignored)
 	"AdminAction", -- ("Hello" | actionName, { Target: string?, Amount: number?, Name: string?, Text: string? })
 	"AdminAccess", -- (true, { actionNames }) only ever sent to an admin
+	-- Big Boss attack visuals (server decides damage; the client only draws)
+	"BossFx", -- (kind, data)
 }
 
 local Remotes = {}

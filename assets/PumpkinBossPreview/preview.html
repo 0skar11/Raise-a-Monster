@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pumpkin Titan · 3D model</title>
+<script type="module" src="./vendor/model-viewer.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#15181d;color:#f5e5cf;font:15px system-ui,sans-serif}main{height:100dvh;display:grid;grid-template-rows:auto 1fr auto}header,footer{padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-color:#3b3f46;border-style:solid;border-width:0 0 1px}h1{font-size:20px;margin:0}header p{margin:4px 0 0;color:#b7bdc5;font-size:13px}footer{border-width:1px 0 0;flex-wrap:wrap;color:#b7bdc5}nav{display:flex;gap:8px;flex-wrap:wrap}button{font:inherit;color:#f5e5cf;background:#272c33;border:1px solid #58616e;border-radius:6px;padding:9px 15px;cursor:pointer;min-height:44px}button:hover,button:focus-visible{background:#3a434f;outline:2px solid #ffc46c;outline-offset:2px}model-viewer{width:100%;height:100%;min-height:280px;background:radial-gradient(ellipse at 50% 65%,#3b3438,#15181d 70%)}#status{font-size:13px}a{color:#ffc46c} @media(max-width:600px){header,footer{padding:12px 16px}h1{font-size:18px}footer{font-size:12px}}
+</style>
+<style>header p,footer,a{background-color:#15181d}</style>
+<main>
+<header><div><h1>Pumpkin Titan</h1><p>Actual 3D mesh preview</p></div><span id="status" role="status">Loading model…</span></header>
+<model-viewer id="boss" src="./PumpkinTitan.glb" alt="A giant carved pumpkin boss with wooden armor, green vines and orange claw hands" camera-controls auto-rotate rotation-per-second="10deg" camera-orbit="25deg 80deg auto" shadow-intensity="0.8" exposure="1.2" environment-image="neutral" interaction-prompt="none"></model-viewer>
+<footer><span>Drag to rotate · Scroll to zoom</span><nav aria-label="Model views"><button data-orbit="0deg 80deg auto" disabled>Front</button><button data-orbit="90deg 80deg auto" disabled>Side</button><button data-orbit="180deg 80deg auto" disabled>Back</button><button id="rotate" disabled>Pause rotation</button></nav><a href="./PumpkinTitan.glb" download>Download GLB</a></footer>
+</main>
+<script>
+const boss=document.querySelector('#boss'),status=document.querySelector('#status');
+const rotateButton=document.querySelector('#rotate'),viewButtons=document.querySelectorAll('[data-orbit]');
+let cancelSettling=()=>{};
+function setRotation(enabled){boss.autoRotate=enabled;rotateButton.textContent=enabled?'Pause rotation':'Resume rotation'}
+boss.addEventListener('load',()=>{status.textContent='3D model ready';document.body.dataset.modelReady='true';document.querySelectorAll('nav button').forEach(button=>button.disabled=false)});
+boss.addEventListener('error',()=>{status.textContent='Model could not load. Serve this folder over HTTP.';document.body.dataset.modelReady='error'});
+viewButtons.forEach(button=>button.addEventListener('click',()=>{
+  cancelSettling();
+  setRotation(false);
+  // Auto-rotation turns the model separately from the camera's orbital position.
+  // Clear that accumulated turntable angle before applying an absolute view.
+  boss.resetTurntableRotation(0);
+  boss.cameraOrbit=button.dataset.orbit;
+  boss.jumpCameraToGoal();
+  status.textContent=`Setting ${button.textContent.toLowerCase()} view…`;
+  const theta=parseFloat(button.dataset.orbit)*Math.PI/180,phi=80*Math.PI/180;
+  let frame=0,stableFrames=0;
+  const timeout=setTimeout(()=>{cancelSettling();status.textContent='View is still updating. Try the view button again.'},2000);
+  cancelSettling=()=>{cancelAnimationFrame(frame);clearTimeout(timeout)};
+  function checkView(){
+    const orbit=boss.getCameraOrbit();
+    const angleError=Math.atan2(Math.sin(orbit.theta-theta),Math.cos(orbit.theta-theta));
+    const settled=Math.abs(angleError)<0.001&&Math.abs(orbit.phi-phi)<0.001&&Math.abs(boss.turntableRotation)<0.001;
+    stableFrames=settled?stableFrames+1:0;
+    if(stableFrames>=2){cancelSettling();status.textContent=`${button.textContent} view ready`;return}
+    frame=requestAnimationFrame(checkView);
+  }
+  frame=requestAnimationFrame(checkView);
+}));
+rotateButton.addEventListener('click',()=>{cancelSettling();setRotation(!boss.autoRotate);status.textContent=boss.autoRotate?'Rotation running':'Rotation paused'});
+</script>
+</html>

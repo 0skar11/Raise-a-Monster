@@ -1,0 +1,23 @@
+{
+  "name": "Pumpkin Titan",
+  "model_meshes": 332,
+  "vertices": 27443,
+  "triangles": 53490,
+  "bounds_min": [
+    -13.220800399780273,
+    -7.915794849395752,
+    0.19088956713676453
+  ],
+  "bounds_max": [
+    13.220352172851562,
+    3.609978675842285,
+    28.24604034423828
+  ],
+  "height_units": 28.055150777101517,
+  "reference_height_units": 5.5,
+  "height_to_reference_ratio": 5.100936504927549,
+  "render_engine": "BLENDER_EEVEE",
+  "rigged": false,
+  "export_contains_stage": false,
+  "preview_is_render_of_exported_geometry": true
+}
