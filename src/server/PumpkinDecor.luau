@@ -1,14 +1,11 @@
--- Replace only the map's natural Halloween pumpkins with the classic carved mesh.
--- Pumpkin Hunt pickups live under HalloweenEvent, outside HalloweenWorld.Props, and are never touched here.
+-- Convert authored decorative pumpkins. Interactive pickups are created with PumpkinVisual directly.
+
+local PumpkinVisual = require(game:GetService("ReplicatedStorage").Shared.PumpkinVisual)
 
 local PumpkinDecor = {}
 
-local VERSION = 1
-local SOURCE_ASSET_ID = 1051236676
-local MESH_ID = "rbxassetid://16973748"
-local TEXTURE_ID = "rbxassetid://16973739"
-local MESH_SIZE = Vector3.new(1.74819, 1.738895, 1.81699)
-local MESH_CENTER = Vector3.new(0, 0.2544275, 0.002035)
+local VERSION = 2
+local MESH_SIZE = PumpkinVisual.MeshSize
 local MODEL_PART_NAMES = { Pumpkin = true, PumpkinPart = true, Rib = true, RibPart = true, Stem = true, StemTip = true, Eye = true, Mouth = true, Zig = true, Tooth = true, MouthCorner = true, Nose = true }
 
 local function removeMatchingOrnaments(body: Part, oldSize: Vector3, parent: Instance): { Instance }
@@ -70,8 +67,7 @@ local function convert(body: BasePart, pendingRemoval: { Instance }?): boolean
 			ornament:Destroy()
 		end
 	end
-	body.Shape = Enum.PartType.Block
-	body.Size = scaledMeshSize
+	PumpkinVisual.Apply(body, oldSize.X)
 	body.CFrame = oldCFrame * CFrame.new(0, (scaledMeshSize.Y - oldSize.Y) * 0.5, 0)
 	body.Color = Color3.new(1, 1, 1)
 	body.Material = Enum.Material.SmoothPlastic
@@ -79,14 +75,6 @@ local function convert(body: BasePart, pendingRemoval: { Instance }?): boolean
 	body.CanCollide = false
 	body.CanQuery = false
 	body.CanTouch = false
-
-	local mesh = Instance.new("SpecialMesh")
-	mesh.MeshType = Enum.MeshType.FileMesh
-	mesh.MeshId = MESH_ID
-	mesh.TextureId = TEXTURE_ID
-	mesh.Scale = Vector3.new(scale, scale, scale)
-	mesh.Offset = -MESH_CENTER * scale
-	mesh.Parent = body
 
 	local light = body:FindFirstChildOfClass("PointLight")
 	if light then
@@ -96,7 +84,6 @@ local function convert(body: BasePart, pendingRemoval: { Instance }?): boolean
 		light.Shadows = false
 	end
 	body:SetAttribute("CarvedPumpkinDecorVersion", VERSION)
-	body:SetAttribute("SourceAssetId", SOURCE_ASSET_ID)
 	return true
 end
 
@@ -182,12 +169,26 @@ function PumpkinDecor.Apply(props: Instance?): number
 	return applyContainer(props)
 end
 
+function PumpkinDecor.ApplyWorld(world: Instance): number
+	local converted = PumpkinDecor.Apply(world:FindFirstChild("Props"))
+	local merchant = world:FindFirstChild("Merchant")
+	if merchant then
+		converted += PumpkinDecor.Apply(merchant)
+		local model = merchant:FindFirstChild("PumpkinMerchant", true)
+		local head = model and model:FindFirstChild("Head")
+		if head and head:IsA("Part") and head:GetAttribute("PumpkinVisualVersion") ~= PumpkinVisual.Version then
+			PumpkinVisual.Fit(head)
+			local face = head:FindFirstChild("face")
+			if face and face:IsA("Decal") then face:Destroy() end
+			converted += 1
+		end
+	end
+	return converted
+end
+
 function PumpkinDecor.Init()
 	local function applyWorld(world: Instance)
-		local props = world:FindFirstChild("Props")
-		if props then
-			PumpkinDecor.Apply(props)
-		end
+		PumpkinDecor.ApplyWorld(world)
 	end
 
 	local existing = workspace:FindFirstChild("HalloweenWorld")

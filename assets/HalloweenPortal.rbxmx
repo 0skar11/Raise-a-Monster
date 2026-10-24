@@ -1,0 +1,4774 @@
+<roblox version="4">
+  <Item class="Model" referent="0">
+    <Properties>
+      <string name="Name">HalloweenPortal</string>
+      <BinaryString name="AttributesSerialize">AQAAAA0AAABQb3J0YWxWZXJzaW9uBQAAgD8=</BinaryString>
+      <Ref name="PrimaryPart">1</Ref>
+    </Properties>
+    <Item class="Part" referent="2">
+      <Properties>
+        <string name="Name">Foundation</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>0.94999695</Y>
+          <Z>11</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>7</X>
+          <Y>1.5</Y>
+          <Z>6</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="3">
+      <Properties>
+        <string name="Name">FoundationCap</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>2.199997</Y>
+          <Z>11</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3484479</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>5.800003</X>
+          <Y>1.3999939</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="4">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>4.149994</Y>
+          <Z>11</Z>
+          <R00>0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>-0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>-0.017425537</R21>
+          <R22>0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="5">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>7.399994</Y>
+          <Z>11</Z>
+          <R00>-0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>0.017425537</R21>
+          <R22>-0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4009543</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="6">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>10.649994</Y>
+          <Z>11</Z>
+          <R00>0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>-0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>-0.017425537</R21>
+          <R22>0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4075080</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="7">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>13.899994</Y>
+          <Z>11</Z>
+          <R00>-0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>0.017425537</R21>
+          <R22>-0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4140872</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="8">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>11.350006</Y>
+          <Z>10.642502</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="9">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>10.050003</Y>
+          <Z>10.642502</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="10">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>10.050003</Y>
+          <Z>11.357498</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="11">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>11.350006</Y>
+          <Z>11.357498</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="12">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.949997</Y>
+          <Z>10.807495</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="13">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.25</Y>
+          <Z>10.807495</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="14">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.25</Y>
+          <Z>11.192505</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="15">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.949997</Y>
+          <Z>11.192505</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="16">
+      <Properties>
+        <string name="Name">Foundation</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>0.94999695</Y>
+          <Z>-11</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>7</X>
+          <Y>1.5</Y>
+          <Z>6</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="17">
+      <Properties>
+        <string name="Name">FoundationCap</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>2.199997</Y>
+          <Z>-11</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3484479</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>5.800003</X>
+          <Y>1.3999939</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="18">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>4.149994</Y>
+          <Z>-11</Z>
+          <R00>-0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>0.017425537</R21>
+          <R22>-0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="19">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>7.399994</Y>
+          <Z>-11</Z>
+          <R00>0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>-0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>-0.017425537</R21>
+          <R22>0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4009543</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="20">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>10.649994</Y>
+          <Z>-11</Z>
+          <R00>-0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>0.017425537</R21>
+          <R22>-0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4075080</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="21">
+      <Properties>
+        <string name="Name">PillarStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>13.899994</Y>
+          <Z>-11</Z>
+          <R00>0.052322388</R00>
+          <R01>0.00091552734</R01>
+          <R02>0.9986267</R02>
+          <R10>-0.017456055</R10>
+          <R11>0.9998474</R11>
+          <R12>0</R12>
+          <R20>-0.9984741</R20>
+          <R21>-0.017425537</R21>
+          <R22>0.052337646</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4140872</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4.199997</X>
+          <Y>3.149994</Y>
+          <Z>4.300003</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="22">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>11.350006</Y>
+          <Z>-11.357498</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="23">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>10.050003</Y>
+          <Z>-11.357498</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="24">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>10.050003</Y>
+          <Z>-10.642502</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="25">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>11.350006</Y>
+          <Z>-10.642502</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>1.4836578</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="26">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.949997</Y>
+          <Z>-11.192505</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="27">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.25</Y>
+          <Z>-11.192505</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>-0.8762207</R11>
+          <R12>0</R12>
+          <R20>0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="28">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.25</Y>
+          <Z>-10.807495</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="29">
+      <Properties>
+        <string name="Name">EmberRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.77</X>
+          <Y>6.949997</Y>
+          <Z>-10.807495</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.48191833</R10>
+          <R11>0.8762207</R11>
+          <R12>0</R12>
+          <R20>-0.8762207</R20>
+          <R21>-0.48191833</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25</X>
+          <Y>0.79888916</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="30">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>16.199997</Y>
+          <Z>-11</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-1</R10>
+          <R11>-0</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>-1</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="31">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>19.599182</Y>
+          <Z>-10.461624</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9510498</R10>
+          <R11>0.309021</R11>
+          <R12>0</R12>
+          <R20>-0.309021</R20>
+          <R21>-0.9510498</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4075337</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="32">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>22.665634</Y>
+          <Z>-8.899185</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.809021</R10>
+          <R11>0.5877838</R11>
+          <R12>0</R12>
+          <R20>-0.5877838</R20>
+          <R21>-0.809021</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4272203</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="33">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>25.099182</Y>
+          <Z>-6.465637</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.5877838</R10>
+          <R11>0.809021</R11>
+          <R12>0</R12>
+          <R20>-0.809021</R20>
+          <R21>-0.5877838</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="34">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>26.661621</Y>
+          <Z>-3.3991852</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.309021</R10>
+          <R11>0.9510498</R11>
+          <R12>0</R12>
+          <R20>-0.9510498</R20>
+          <R21>-0.309021</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4075337</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="35">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>27.199997</Y>
+          <Z>-0</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4272203</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="36">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>26.661621</Y>
+          <Z>3.3991852</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.309021</R10>
+          <R11>0.9510498</R11>
+          <R12>0</R12>
+          <R20>-0.9510498</R20>
+          <R21>0.309021</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="37">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>25.099182</Y>
+          <Z>6.465637</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.5877838</R10>
+          <R11>0.809021</R11>
+          <R12>0</R12>
+          <R20>-0.809021</R20>
+          <R21>0.5877838</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4075337</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="38">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>22.665634</Y>
+          <Z>8.899185</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.809021</R10>
+          <R11>0.5877838</R11>
+          <R12>0</R12>
+          <R20>-0.5877838</R20>
+          <R21>0.809021</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4272203</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="39">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>19.599182</Y>
+          <Z>10.461624</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.9510498</R10>
+          <R11>0.309021</R11>
+          <R12>0</R12>
+          <R20>-0.309021</R20>
+          <R21>0.9510498</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3943750</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="40">
+      <Properties>
+        <string name="Name">ArchStone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>16.199997</Y>
+          <Z>11</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>1</R10>
+          <R11>-0</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>1</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4075337</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>4.800003</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="41">
+      <Properties>
+        <string name="Name">Keystone</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>27.199997</Y>
+          <Z>0</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">3221051</Color3uint8>
+        <token name="Material">800</token>
+        <Vector3 name="size">
+          <X>5</X>
+          <Y>5.5</Y>
+          <Z>5</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="42">
+      <Properties>
+        <string name="Name">KeystoneRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.4</X>
+          <Y>27.949997</Y>
+          <Z>-0.42500305</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.49301147</R10>
+          <R11>-0.87002563</R11>
+          <R12>0</R12>
+          <R20>0.87002563</R20>
+          <R21>-0.49301147</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27999878</X>
+          <Y>1.7240906</Y>
+          <Z>0.27999878</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="43">
+      <Properties>
+        <string name="Name">KeystoneRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.4</X>
+          <Y>26.449997</Y>
+          <Z>-0.42500305</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.49301147</R10>
+          <R11>-0.87002563</R11>
+          <R12>0</R12>
+          <R20>0.87002563</R20>
+          <R21>0.49301147</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27999878</X>
+          <Y>1.7240906</Y>
+          <Z>0.27999878</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="44">
+      <Properties>
+        <string name="Name">KeystoneRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.4</X>
+          <Y>26.449997</Y>
+          <Z>0.42500305</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.49301147</R10>
+          <R11>0.87002563</R11>
+          <R12>0</R12>
+          <R20>-0.87002563</R20>
+          <R21>0.49301147</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27999878</X>
+          <Y>1.7240906</Y>
+          <Z>0.27999878</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="45">
+      <Properties>
+        <string name="Name">KeystoneRune</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>986.4</X>
+          <Y>27.949997</Y>
+          <Z>0.42500305</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.49301147</R10>
+          <R11>0.87002563</R11>
+          <R12>0</R12>
+          <R20>-0.87002563</R20>
+          <R21>-0.49301147</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16729608</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27999878</X>
+          <Y>1.7240906</Y>
+          <Z>0.27999878</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="46">
+      <Properties>
+        <string name="Name">PortalSurface</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989.2</X>
+          <Y>8.699997</Y>
+          <Z>-0</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4919170</Color3uint8>
+        <token name="Material">1568</token>
+        <Vector3 name="size">
+          <X>18</X>
+          <Y>15</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.2</float>
+      </Properties>
+      <Item class="PointLight" referent="47">
+        <Properties>
+          <string name="Name">PointLight</string>
+          <float name="Brightness">1.2</float>
+          <Color3 name="Color">
+            <R>0.42352942</R>
+            <G>0.10980392</G>
+            <B>0.7529412</B>
+          </Color3>
+          <float name="Range">26</float>
+        </Properties>
+      </Item>
+      <Item class="Attachment" referent="48">
+        <Properties>
+          <string name="Name">Attachment</string>
+          <Vector3 name="Position">
+            <X>0</X>
+            <Y>4.5</Y>
+            <Z>-1</Z>
+          </Vector3>
+        </Properties>
+        <Item class="ParticleEmitter" referent="49">
+          <Properties>
+            <string name="Name">VortexMist</string>
+            <ColorSequence name="Color">0 0.45490196 0.15686275 0.8039216 0 1 0.67058825 0.34509805 0.90588236 0 </ColorSequence>
+            <NumberRange name="Lifetime">2 3 </NumberRange>
+            <float name="LightEmission">0.8</float>
+            <float name="Rate">11</float>
+            <NumberRange name="RotSpeed">15 30 </NumberRange>
+            <NumberRange name="Rotation">0 360 </NumberRange>
+            <NumberSequence name="Size">0 8 0 1 13 0 </NumberSequence>
+            <NumberRange name="Speed">0.2 0.7 </NumberRange>
+            <Content name="Texture"><url>rbxasset://textures/particles/smoke_main.dds</url></Content>
+            <NumberSequence name="Transparency">0 1 0 0.2 0.5 0 1 1 0 </NumberSequence>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+    <Item class="Part" referent="50">
+      <Properties>
+        <string name="Name">PortalCrown</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989.2</X>
+          <Y>16.199997</Y>
+          <Z>-0</Z>
+          <R00>-1</R00>
+          <R01>0</R01>
+          <R02>-0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>-1</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">4919170</Color3uint8>
+        <token name="Material">1568</token>
+        <token name="shape">2</token>
+        <Vector3 name="size">
+          <X>0.2400055</X>
+          <Y>18</Y>
+          <Z>18</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.2</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="1">
+      <Properties>
+        <string name="Name">TeleportTrigger</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989</X>
+          <Y>12.199997</Y>
+          <Z>0</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">true</bool>
+        <Color3uint8 name="Color3uint8">7085248</Color3uint8>
+        <token name="Material">272</token>
+        <Vector3 name="size">
+          <X>17</X>
+          <Y>22</Y>
+          <Z>4</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">1</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="51">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.275223</Y>
+          <Z>-0.61738586</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.84194946</R10>
+          <R11>0.5395508</R11>
+          <R12>0</R12>
+          <R20>-0.5395508</R20>
+          <R21>-0.84194946</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.16000366</X>
+          <Y>0.27882385</Y>
+          <Z>0.16000366</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.22</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="52">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.471741</Y>
+          <Z>-0.82714844</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.6059265</R10>
+          <R11>0.79551697</R11>
+          <R12>0</R12>
+          <R20>-0.79551697</R20>
+          <R21>-0.6059265</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.16856384</X>
+          <Y>0.30493164</Y>
+          <Z>0.16856384</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.24071428</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="53">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.752441</Y>
+          <Z>-0.97351074</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.32077026</R10>
+          <R11>0.9471588</R11>
+          <R12>0</R12>
+          <R20>-0.9471588</R20>
+          <R21>-0.32077026</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.17713928</X>
+          <Y>0.33662415</Y>
+          <Z>0.17713928</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.26142856</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="54">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>14.098022</Y>
+          <Z>-1.0320435</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.024414063</R10>
+          <R11>0.9996948</R11>
+          <R12>0</R12>
+          <R20>-0.9996948</R20>
+          <R21>-0.024414063</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.18571472</X>
+          <Y>0.37245178</Y>
+          <Z>0.18571472</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.28214285</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="55">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>14.482986</Y>
+          <Z>-0.9838257</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.25656128</R10>
+          <R11>0.9665222</R11>
+          <R12>0</R12>
+          <R20>-0.9665222</R20>
+          <R21>0.25656128</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.19429016</X>
+          <Y>0.41134644</Y>
+          <Z>0.19429016</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.30285713</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="56">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>14.877121</Y>
+          <Z>-0.8169098</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.50453186</R10>
+          <R11>0.8634033</R11>
+          <R12>0</R12>
+          <R20>-0.8634033</R20>
+          <R21>0.50453186</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.20285034</X>
+          <Y>0.45251465</Y>
+          <Z>0.20285034</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.3235714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="57">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.247391</Y>
+          <Z>-0.527359</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.7080536</R10>
+          <R11>0.7061615</R11>
+          <R12>0</R12>
+          <R20>-0.7061615</R20>
+          <R21>0.7080536</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.21142578</X>
+          <Y>0.4954071</Y>
+          <Z>0.21142578</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.34428573</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="58">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.559891</Y>
+          <Z>-0.119903564</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.8601837</R10>
+          <R11>0.5099945</R11>
+          <R12>0</R12>
+          <R20>-0.5099945</R20>
+          <R21>0.8601837</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.22000122</X>
+          <Y>0.5395813</Y>
+          <Z>0.22000122</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.365</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="59">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.782059</Y>
+          <Z>0.39204407</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.9572449</R10>
+          <R11>0.28927612</R11>
+          <R12>0</R12>
+          <R20>-0.28927612</R20>
+          <R21>0.9572449</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.22857666</X>
+          <Y>0.58477783</Y>
+          <Z>0.22857666</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.3857143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="60">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.884781</Y>
+          <Z>0.98680115</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.99835205</R10>
+          <R11>0.05747986</R11>
+          <R12>0</R12>
+          <R20>-0.05747986</R20>
+          <R21>0.99835205</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.23713684</X>
+          <Y>0.63075256</Y>
+          <Z>0.23713684</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.40642858</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="61">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.844345</Y>
+          <Z>1.6352386</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.9849396</R10>
+          <R11>-0.1729126</R11>
+          <R12>0</R12>
+          <R20>0.1729126</R20>
+          <R21>0.9849396</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.24571228</X>
+          <Y>0.67736816</Y>
+          <Z>0.24571228</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.42714286</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="62">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.644287</Y>
+          <Z>2.3022766</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.92056274</R10>
+          <R11>-0.39060974</R11>
+          <R12>0</R12>
+          <R20>0.39060974</R20>
+          <R21>0.92056274</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25428772</X>
+          <Y>0.7244873</Y>
+          <Z>0.25428772</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.44785714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="63">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.276718</Y>
+          <Z>2.948639</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.81056213</R10>
+          <R11>-0.5856476</R11>
+          <R12>0</R12>
+          <R20>0.5856476</R20>
+          <R21>0.81056213</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.26286316</X>
+          <Y>0.77201843</Y>
+          <Z>0.26286316</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.46857142</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="64">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>14.743362</Y>
+          <Z>3.5328827</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.661911</R10>
+          <R11>-0.749588</R11>
+          <R12>0</R12>
+          <R20>0.749588</R20>
+          <R21>0.661911</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27142334</X>
+          <Y>0.8199005</Y>
+          <Z>0.27142334</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.4892857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="65">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>14.055954</Y>
+          <Z>4.013748</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.4827423</R10>
+          <R11>-0.87576294</R11>
+          <R12>0</R12>
+          <R20>0.87576294</R20>
+          <R21>0.4827423</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27999878</X>
+          <Y>0.86805725</Y>
+          <Z>0.27999878</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.51</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="66">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.236237</Y>
+          <Z>4.352585</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.2821808</R10>
+          <R11>-0.95936584</R11>
+          <R12>0</R12>
+          <R20>0.95936584</R20>
+          <R21>0.2821808</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.28857422</X>
+          <Y>0.9164734</Y>
+          <Z>0.28857422</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.5307143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="67">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.315262</Y>
+          <Z>4.5155945</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.069869995</R10>
+          <R11>-0.9975586</R11>
+          <R12>0</R12>
+          <R20>0.9975586</R20>
+          <R21>0.069869995</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.29714966</X>
+          <Y>0.96507263</Y>
+          <Z>0.29714966</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.55142856</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="68">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.332275</Y>
+          <Z>4.4761505</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.14433289</R10>
+          <R11>-0.9895325</R11>
+          <R12>0</R12>
+          <R20>0.9895325</R20>
+          <R21>-0.14433289</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.30570984</X>
+          <Y>1.0138702</Y>
+          <Z>0.30570984</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.57214284</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="69">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>10.333023</Y>
+          <Z>4.2165527</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.35081482</R10>
+          <R11>-0.93644714</R11>
+          <R12>0</R12>
+          <R20>0.93644714</R20>
+          <R21>-0.35081482</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.31428528</X>
+          <Y>1.0628052</Y>
+          <Z>0.31428528</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.5928571</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="70">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>9.3676605</Y>
+          <Z>3.72966</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.54048157</R10>
+          <R11>-0.84135437</R11>
+          <R12>0</R12>
+          <R20>0.84135437</R20>
+          <R21>-0.54048157</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.32286072</X>
+          <Y>1.1118622</Y>
+          <Z>0.32286072</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6135714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="71">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>8.488327</Y>
+          <Z>3.0198212</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.70518494</R10>
+          <R11>-0.70903015</R11>
+          <R12>0</R12>
+          <R20>0.70903015</R20>
+          <R21>-0.70518494</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.33143616</X>
+          <Y>1.1610413</Y>
+          <Z>0.33143616</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6342857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="72">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>7.746475</Y>
+          <Z>2.1033325</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.8379669</R10>
+          <R11>-0.54571533</R11>
+          <R12>0</R12>
+          <R20>0.54571533</R20>
+          <R21>-0.8379669</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.33999634</X>
+          <Y>1.2103271</Y>
+          <Z>0.33999634</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.655</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="73">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>7.1901855</Y>
+          <Z>1.0083313</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9333954</R10>
+          <R11>-0.35887146</R11>
+          <R12>0</R12>
+          <R20>0.35887146</R20>
+          <R21>-0.9333954</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.34857178</X>
+          <Y>1.2597046</Y>
+          <Z>0.34857178</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6757143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="74">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>6.861496</Y>
+          <Z>-0.2260437</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9876251</R10>
+          <R11>-0.1568451</R11>
+          <R12>0</R12>
+          <R20>0.1568451</R20>
+          <R21>-0.9876251</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.35714722</X>
+          <Y>1.3091431</Y>
+          <Z>0.35714722</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6964286</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="75">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>6.793808</Y>
+          <Z>-1.5509491</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9986725</R10>
+          <R11>0.051498413</R11>
+          <R12>0</R12>
+          <R20>-0.051498413</R20>
+          <R21>-0.9986725</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.3657074</X>
+          <Y>1.3586731</Y>
+          <Z>0.3657074</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.7171429</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="76">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>7.0098267</Y>
+          <Z>-2.9098358</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9663849</R10>
+          <R11>0.2571106</R11>
+          <R12>0</R12>
+          <R20>-0.2571106</R20>
+          <R21>-0.9663849</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.37428284</X>
+          <Y>1.4082489</Y>
+          <Z>0.37428284</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.73785716</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="77">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>7.519745</Y>
+          <Z>-4.2408295</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.89242554</R10>
+          <R11>0.45118713</R11>
+          <R12>0</R12>
+          <R20>-0.45118713</R20>
+          <R21>-0.89242554</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.38285828</X>
+          <Y>1.4578857</Y>
+          <Z>0.38285828</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.75857145</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="78">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>8.320129</Y>
+          <Z>-5.479492</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.78022766</R10>
+          <R11>0.6254883</R11>
+          <R12>0</R12>
+          <R20>-0.6254883</R20>
+          <R21>-0.78022766</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.39143372</X>
+          <Y>1.5075836</Y>
+          <Z>0.39143372</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.7792857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="79">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.697052</Y>
+          <Z>0.37382507</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.8882446</R10>
+          <R11>0.45936584</R11>
+          <R12>0</R12>
+          <R20>-0.45936584</R20>
+          <R21>0.8882446</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.16000366</X>
+          <Y>0.27882385</Y>
+          <Z>0.16000366</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.22</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="80">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.780457</Y>
+          <Z>0.64889526</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.9918976</R10>
+          <R11>0.1269989</R11>
+          <R12>0</R12>
+          <R20>-0.1269989</R20>
+          <R21>0.9918976</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.16856384</X>
+          <Y>0.30493164</Y>
+          <Z>0.16856384</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.24071428</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="81">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.766876</Y>
+          <Z>0.96517944</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.98065186</R10>
+          <R11>-0.19578552</R11>
+          <R12>0</R12>
+          <R20>0.19578552</R20>
+          <R21>0.98065186</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.17713928</X>
+          <Y>0.33662415</Y>
+          <Z>0.17713928</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.26142856</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="82">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.644775</Y>
+          <Z>1.2937317</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.87797546</R10>
+          <R11>-0.478714</R11>
+          <R12>0</R12>
+          <R20>0.478714</R20>
+          <R21>0.87797546</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.18571472</X>
+          <Y>0.37245178</Y>
+          <Z>0.18571472</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.28214285</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="83">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.410522</Y>
+          <Z>1.6030121</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.7087555</R10>
+          <R11>-0.7054596</R11>
+          <R12>0</R12>
+          <R20>0.7054596</R20>
+          <R21>0.7087555</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.19429016</X>
+          <Y>0.41134644</Y>
+          <Z>0.19429016</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.30285713</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="84">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.068893</Y>
+          <Z>1.8608856</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.49546814</R10>
+          <R11>-0.8686371</R11>
+          <R12>0</R12>
+          <R20>0.8686371</R20>
+          <R21>0.49546814</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.20285034</X>
+          <Y>0.45251465</Y>
+          <Z>0.20285034</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.3235714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="85">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.633011</Y>
+          <Z>2.0367737</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.25752258</R10>
+          <R11>-0.9662781</R11>
+          <R12>0</R12>
+          <R20>0.9662781</R20>
+          <R21>0.25752258</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.21142578</X>
+          <Y>0.4954071</Y>
+          <Z>0.21142578</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.34428573</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="86">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.123901</Y>
+          <Z>2.1036835</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.011581421</R10>
+          <R11>-0.99993896</R11>
+          <R12>0</R12>
+          <R20>0.99993896</R20>
+          <R21>0.011581421</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.22000122</X>
+          <Y>0.5395813</Y>
+          <Z>0.22000122</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.365</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="87">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.569443</Y>
+          <Z>2.0401154</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.22810364</R10>
+          <R11>-0.9736328</R11>
+          <R12>0</R12>
+          <R20>0.9736328</R20>
+          <R21>-0.22810364</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.22857666</X>
+          <Y>0.58477783</Y>
+          <Z>0.22857666</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.3857143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="88">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.003021</Y>
+          <Z>1.8316803</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.4493866</R10>
+          <R11>-0.89334106</R11>
+          <R12>0</R12>
+          <R20>0.89334106</R20>
+          <R21>-0.4493866</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.23713684</X>
+          <Y>0.63075256</Y>
+          <Z>0.23713684</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.40642858</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="89">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>10.46167</Y>
+          <Z>1.4724579</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.6422119</R10>
+          <R11>-0.76652527</R11>
+          <R12>0</R12>
+          <R20>0.76652527</R20>
+          <R21>-0.6422119</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.24571228</X>
+          <Y>0.67736816</Y>
+          <Z>0.24571228</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.42714286</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="90">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>9.984024</Y>
+          <Z>0.9656677</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.79855347</R10>
+          <R11>-0.60191345</R11>
+          <R12>0</R12>
+          <R20>0.60191345</R20>
+          <R21>-0.79855347</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25428772</X>
+          <Y>0.7244873</Y>
+          <Z>0.25428772</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.44785714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="91">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>9.6080475</Y>
+          <Z>0.32417297</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9124603</R10>
+          <R11>-0.40914917</R11>
+          <R12>0</R12>
+          <R20>0.40914917</R20>
+          <R21>-0.9124603</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.26286316</X>
+          <Y>0.77201843</Y>
+          <Z>0.26286316</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.46857142</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="92">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>9.368759</Y>
+          <Z>-0.42985535</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9801178</R10>
+          <R11>-0.1984253</R11>
+          <R12>0</R12>
+          <R20>0.1984253</R20>
+          <R21>-0.9801178</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27142334</X>
+          <Y>0.8199005</Y>
+          <Z>0.27142334</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.4892857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="93">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>9.296005</Y>
+          <Z>-1.2655945</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.99980164</R10>
+          <R11>0.019821167</R11>
+          <R12>0</R12>
+          <R20>-0.019821167</R20>
+          <R21>-0.99980164</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27999878</X>
+          <Y>0.86805725</Y>
+          <Z>0.27999878</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.51</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="94">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>9.41243</Y>
+          <Z>-2.1449127</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9719238</R10>
+          <R11>0.23530579</R11>
+          <R12>0</R12>
+          <R20>-0.23530579</R20>
+          <R21>-0.9719238</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.28857422</X>
+          <Y>0.9164734</Y>
+          <Z>0.28857422</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.5307143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="95">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>9.7317505</Y>
+          <Z>-3.024002</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.8988495</R10>
+          <R11>0.43826294</R11>
+          <R12>0</R12>
+          <R20>-0.43826294</R20>
+          <R21>-0.8988495</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.29714966</X>
+          <Y>0.96507263</Y>
+          <Z>0.29714966</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.55142856</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="96">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>10.2574005</Y>
+          <Z>-3.8555603</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.78479004</R10>
+          <R11>0.61976624</R11>
+          <R12>0</R12>
+          <R20>-0.61976624</R20>
+          <R21>-0.78479004</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.30570984</X>
+          <Y>1.0138702</Y>
+          <Z>0.30570984</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.57214284</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="97">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>10.981842</Y>
+          <Z>-4.5911407</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.63557434</R10>
+          <R11>0.7720337</R11>
+          <R12>0</R12>
+          <R20>-0.7720337</R20>
+          <R21>-0.63557434</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.31428528</X>
+          <Y>1.0628052</Y>
+          <Z>0.31428528</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.5928571</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="98">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.886185</Y>
+          <Z>-5.183731</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.45838928</R10>
+          <R11>0.88874817</R11>
+          <R12>0</R12>
+          <R20>-0.88874817</R20>
+          <R21>-0.45838928</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.32286072</X>
+          <Y>1.1118622</Y>
+          <Z>0.32286072</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6135714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="99">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.940598</Y>
+          <Z>-5.5903473</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.2614441</R10>
+          <R11>0.9652252</R11>
+          <R12>0</R12>
+          <R20>-0.9652252</R20>
+          <R21>-0.2614441</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.33143616</X>
+          <Y>1.1610413</Y>
+          <Z>0.33143616</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6342857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="100">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>14.105225</Y>
+          <Z>-5.7745667</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.053619385</R10>
+          <R11>0.9985657</R11>
+          <R12>0</R12>
+          <R20>-0.9985657</R20>
+          <R21>-0.053619385</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.33999634</X>
+          <Y>1.2103271</Y>
+          <Z>0.33999634</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.655</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="101">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.331665</Y>
+          <Z>-5.7088165</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.15589905</R10>
+          <R11>0.9877777</R11>
+          <R12>0</R12>
+          <R20>-0.9877777</R20>
+          <R21>0.15589905</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.34857178</X>
+          <Y>1.2597046</Y>
+          <Z>0.34857178</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6757143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="102">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>16.565018</Y>
+          <Z>-5.3762817</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.35798645</R10>
+          <R11>0.9337311</R11>
+          <R12>0</R12>
+          <R20>-0.9337311</R20>
+          <R21>0.35798645</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.35714722</X>
+          <Y>1.3091431</Y>
+          <Z>0.35714722</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6964286</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="103">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>17.746262</Y>
+          <Z>-4.7724457</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.54393005</R10>
+          <R11>0.8391266</R11>
+          <R12>0</R12>
+          <R20>-0.8391266</R20>
+          <R21>0.54393005</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.3657074</X>
+          <Y>1.3586731</Y>
+          <Z>0.3657074</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.7171429</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="104">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>18.815079</Y>
+          <Z>-3.9059296</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.7058563</R10>
+          <R11>0.70835876</R11>
+          <R12>0</R12>
+          <R20>-0.70835876</R20>
+          <R21>0.7058563</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.37428284</X>
+          <Y>1.4082489</Y>
+          <Z>0.37428284</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.73785716</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="105">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>19.7128</Y>
+          <Z>-2.7988281</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.83695984</R10>
+          <R11>0.5472717</R11>
+          <R12>0</R12>
+          <R20>-0.5472717</R20>
+          <R21>0.83695984</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.38285828</X>
+          <Y>1.4578857</Y>
+          <Z>0.38285828</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.75857145</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="106">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>20.385315</Y>
+          <Z>-1.4863434</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.9318085</R10>
+          <R11>0.36296082</R11>
+          <R12>0</R12>
+          <R20>-0.36296082</R20>
+          <R21>0.9318085</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.39143372</X>
+          <Y>1.5075836</Y>
+          <Z>0.39143372</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.7792857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="107">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.627731</Y>
+          <Z>0.24354553</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.046295166</R10>
+          <R11>-0.9989319</R11>
+          <R12>0</R12>
+          <R20>0.9989319</R20>
+          <R21>-0.046295166</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.16000366</X>
+          <Y>0.27882385</Y>
+          <Z>0.16000366</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.22</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="108">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.347809</Y>
+          <Z>0.17823792</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.38597107</R10>
+          <R11>-0.92251587</R11>
+          <R12>0</R12>
+          <R20>0.92251587</R20>
+          <R21>-0.38597107</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.16856384</X>
+          <Y>0.30493164</Y>
+          <Z>0.16856384</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.24071428</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="109">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.080688</Y>
+          <Z>0.008331299</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.6598816</R10>
+          <R11>-0.7513733</R11>
+          <R12>0</R12>
+          <R20>0.7513733</R20>
+          <R21>-0.6598816</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.17713928</X>
+          <Y>0.33662415</Y>
+          <Z>0.17713928</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.26142856</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="110">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.857208</Y>
+          <Z>-0.26168823</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.8535614</R10>
+          <R11>-0.5209961</R11>
+          <R12>0</R12>
+          <R20>0.5209961</R20>
+          <R21>-0.8535614</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.18571472</X>
+          <Y>0.37245178</Y>
+          <Z>0.18571472</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.28214285</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="111">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.706497</Y>
+          <Z>-0.6191864</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9653168</R10>
+          <R11>-0.26106262</R11>
+          <R12>0</R12>
+          <R20>0.26106262</R20>
+          <R21>-0.9653168</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.19429016</X>
+          <Y>0.41134644</Y>
+          <Z>0.19429016</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.30285713</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="112">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.653976</Y>
+          <Z>-1.0439758</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.99998474</R10>
+          <R11>0.0052337646</R11>
+          <R12>0</R12>
+          <R20>-0.0052337646</R20>
+          <R21>-0.99998474</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.20285034</X>
+          <Y>0.45251465</Y>
+          <Z>0.20285034</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.3235714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="113">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.7196045</Y>
+          <Z>-1.5093994</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.9655762</R10>
+          <R11>0.26011658</R11>
+          <R12>0</R12>
+          <R20>-0.26011658</R20>
+          <R21>-0.9655762</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.21142578</X>
+          <Y>0.4954071</Y>
+          <Z>0.21142578</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.34428573</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="114">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>11.916214</Y>
+          <Z>-1.9837646</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.8717499</R10>
+          <R11>0.48994446</R11>
+          <R12>0</R12>
+          <R20>-0.48994446</R20>
+          <R21>-0.8717499</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.22000122</X>
+          <Y>0.5395813</Y>
+          <Z>0.22000122</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.365</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="115">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.248489</Y>
+          <Z>-2.4321594</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.72914124</R10>
+          <R11>0.6843567</R11>
+          <R12>0</R12>
+          <R20>-0.6843567</R20>
+          <R21>-0.72914124</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.22857666</X>
+          <Y>0.58477783</Y>
+          <Z>0.22857666</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.3857143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="116">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.712204</Y>
+          <Z>-2.8184814</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.54896545</R10>
+          <R11>0.83584595</R11>
+          <R12>0</R12>
+          <R20>-0.83584595</R20>
+          <R21>-0.54896545</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.23713684</X>
+          <Y>0.63075256</Y>
+          <Z>0.23713684</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.40642858</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="117">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.293976</Y>
+          <Z>-3.1076813</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.34272766</R10>
+          <R11>0.93943787</R11>
+          <R12>0</R12>
+          <R20>-0.93943787</R20>
+          <R21>-0.34272766</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.24571228</X>
+          <Y>0.67736816</Y>
+          <Z>0.24571228</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.42714286</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="118">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.971695</Y>
+          <Z>-3.2679596</Z>
+          <R00>-0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.12199402</R10>
+          <R11>0.9925232</R11>
+          <R12>0</R12>
+          <R20>-0.9925232</R20>
+          <R21>-0.12199402</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.25428772</X>
+          <Y>0.7244873</Y>
+          <Z>0.25428772</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.44785714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="119">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>14.7152405</Y>
+          <Z>-3.272812</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.10189819</R10>
+          <R11>0.99479675</R11>
+          <R12>0</R12>
+          <R20>-0.99479675</R20>
+          <R21>0.10189819</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.26286316</X>
+          <Y>0.77201843</Y>
+          <Z>0.26286316</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.46857142</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="120">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.4878845</Y>
+          <Z>-3.1030273</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.3182068</R10>
+          <R11>0.9480133</R11>
+          <R12>0</R12>
+          <R20>-0.9480133</R20>
+          <R21>0.3182068</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27142334</X>
+          <Y>0.8199005</Y>
+          <Z>0.27142334</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.4892857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="121">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>16.248032</Y>
+          <Z>-2.7481537</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.5170593</R10>
+          <R11>0.8559418</R11>
+          <R12>0</R12>
+          <R20>-0.8559418</R20>
+          <R21>0.5170593</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.27999878</X>
+          <Y>0.86805725</Y>
+          <Z>0.27999878</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.51</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="122">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>16.951324</Y>
+          <Z>-2.207672</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.68974304</R10>
+          <R11>0.72406006</R11>
+          <R12>0</R12>
+          <R20>-0.72406006</R20>
+          <R21>0.68974304</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.28857422</X>
+          <Y>0.9164734</Y>
+          <Z>0.28857422</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.5307143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="123">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>17.552994</Y>
+          <Z>-1.4915924</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.8289795</R10>
+          <R11>0.55929565</R11>
+          <R12>0</R12>
+          <R20>-0.55929565</R20>
+          <R21>0.8289795</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.29714966</X>
+          <Y>0.96507263</Y>
+          <Z>0.29714966</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.55142856</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="124">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>18.010315</Y>
+          <Z>-0.62057495</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.9291229</R10>
+          <R11>0.36976624</R11>
+          <R12>0</R12>
+          <R20>-0.36976624</R20>
+          <R21>0.9291229</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.30570984</X>
+          <Y>1.0138702</Y>
+          <Z>0.30570984</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.57214284</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="125">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>18.285126</Y>
+          <Z>0.374588</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.98638916</R10>
+          <R11>0.16441345</R11>
+          <R12>0</R12>
+          <R20>-0.16441345</R20>
+          <R21>0.98638916</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.31428528</X>
+          <Y>1.0628052</Y>
+          <Z>0.31428528</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.5928571</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="126">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>18.34616</Y>
+          <Z>1.454071</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.99887085</R10>
+          <R11>-0.0473938</R11>
+          <R12>0</R12>
+          <R20>0.0473938</R20>
+          <R21>0.99887085</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.32286072</X>
+          <Y>1.1118622</Y>
+          <Z>0.32286072</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6135714</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="127">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>18.171082</Y>
+          <Z>2.5705261</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.966629</R10>
+          <R11>-0.25619507</R11>
+          <R12>0</R12>
+          <R20>0.25619507</R20>
+          <R21>0.966629</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.33143616</X>
+          <Y>1.1610413</Y>
+          <Z>0.33143616</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6342857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="128">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>17.748306</Y>
+          <Z>3.6712341</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.8915863</R10>
+          <R11>-0.45285034</R11>
+          <R12>0</R12>
+          <R20>0.45285034</R20>
+          <R21>0.8915863</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.33999634</X>
+          <Y>1.2103271</Y>
+          <Z>0.33999634</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.655</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="129">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>17.07814</Y>
+          <Z>4.700485</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.7774811</R10>
+          <R11>-0.62890625</R11>
+          <R12>0</R12>
+          <R20>0.62890625</R20>
+          <R21>0.7774811</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.34857178</X>
+          <Y>1.2597046</Y>
+          <Z>0.34857178</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6757143</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="130">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>16.173492</Y>
+          <Z>5.6023254</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.6296387</R10>
+          <R11>-0.776886</R11>
+          <R12>0</R12>
+          <R20>0.776886</R20>
+          <R21>0.6296387</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.35714722</X>
+          <Y>1.3091431</Y>
+          <Z>0.35714722</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.6964286</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="131">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>15.059937</Y>
+          <Z>6.323395</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.45474243</R10>
+          <R11>-0.890625</R11>
+          <R12>0</R12>
+          <R20>0.890625</R20>
+          <R21>0.45474243</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.3657074</X>
+          <Y>1.3586731</Y>
+          <Z>0.3657074</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.7171429</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="132">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>13.775101</Y>
+          <Z>6.8157654</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.26052856</R10>
+          <R11>-0.96546936</R11>
+          <R12>0</R12>
+          <R20>0.96546936</R20>
+          <R21>0.26052856</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.37428284</X>
+          <Y>1.4082489</Y>
+          <Z>0.37428284</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.73785716</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="133">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>12.367462</Y>
+          <Z>7.0396576</Z>
+          <R00>0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0.055480957</R10>
+          <R11>-0.99845886</R11>
+          <R12>0</R12>
+          <R20>0.99845886</R20>
+          <R21>0.055480957</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.38285828</X>
+          <Y>1.4578857</Y>
+          <Z>0.38285828</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.75857145</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="134">
+      <Properties>
+        <string name="Name">VortexBand</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AQAAAAYAAABWb3J0ZXgDAQ==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.5</X>
+          <Y>10.894562</Y>
+          <Z>6.965851</Z>
+          <R00>0</R00>
+          <R01>-0</R01>
+          <R02>1</R02>
+          <R10>-0.15156555</R10>
+          <R11>-0.9884491</R11>
+          <R12>0</R12>
+          <R20>0.9884491</R20>
+          <R21>-0.15156555</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">9653725</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.39143372</X>
+          <Y>1.5075836</Y>
+          <Z>0.39143372</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.7792857</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="135">
+      <Properties>
+        <string name="Name">VortexCore</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>988.4</X>
+          <Y>13.199997</Y>
+          <Z>0</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">12618239</Color3uint8>
+        <token name="Material">288</token>
+        <token name="shape">0</token>
+        <Vector3 name="size">
+          <X>0.80000305</X>
+          <Y>0.80000305</Y>
+          <Z>0.25</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">0.2</float>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="136">
+      <Properties>
+        <string name="Name">JackOLantern</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AgAAABQAAABQdW1wa2luVmlzdWFsVmVyc2lvbgUAAIA/DQAAAFNvdXJjZUFzc2V0SWQFZaJ6Tg==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>985</X>
+          <Y>2.6369781</Y>
+          <Z>12</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16777215</Color3uint8>
+        <token name="Material">272</token>
+        <float name="Reflectance">0</float>
+        <token name="shape">1</token>
+        <Vector3 name="size">
+          <X>4.899994</X>
+          <Y>4.873947</Y>
+          <Z>5.0928345</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+      <Item class="SpecialMesh" referent="137">
+        <Properties>
+          <string name="Name">SpecialMesh</string>
+          <Content name="MeshId"><url>rbxassetid://16973748</url></Content>
+          <token name="MeshType">5</token>
+          <Vector3 name="Offset">
+            <X>0</X>
+            <Y>-0.71313477</Y>
+            <Z>-0.005706787</Z>
+          </Vector3>
+          <Vector3 name="Scale">
+            <X>2.8029022</X>
+            <Y>2.8029022</Y>
+            <Z>2.8029022</Z>
+          </Vector3>
+          <Content name="TextureId"><url>rbxassetid://16973739</url></Content>
+        </Properties>
+      </Item>
+      <Item class="PointLight" referent="138">
+        <Properties>
+          <string name="Name">PointLight</string>
+          <float name="Brightness">1.1</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.27450982</G>
+            <B>0.03137255</B>
+          </Color3>
+          <float name="Range">10</float>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="139">
+      <Properties>
+        <string name="Name">Wisp</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989.25</X>
+          <Y>5.199997</Y>
+          <Z>14</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">7085248</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.19999695</X>
+          <Y>0.19999695</Y>
+          <Z>0.19999695</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">1</float>
+      </Properties>
+      <Item class="ParticleEmitter" referent="140">
+        <Properties>
+          <string name="Name">ParticleEmitter</string>
+          <ColorSequence name="Color">0 0.6627451 0.21568628 1 0 1 0.8666667 0.57254905 1 0 </ColorSequence>
+          <NumberRange name="Lifetime">0.8 1.3 </NumberRange>
+          <float name="LightEmission">1</float>
+          <float name="Rate">9</float>
+          <NumberSequence name="Size">0 1.3 0 0.5 2 0 1 0 0 </NumberSequence>
+          <NumberRange name="Speed">2 4 </NumberRange>
+          <Vector2 name="SpreadAngle">
+            <X>15</X>
+            <Y>15</Y>
+          </Vector2>
+          <Content name="Texture"><url>rbxasset://textures/particles/fire_main.dds</url></Content>
+          <NumberSequence name="Transparency">0 1 0 0.2 0.25 0 1 1 0 </NumberSequence>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="141">
+      <Properties>
+        <string name="Name">Wisp</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989.25</X>
+          <Y>20.199997</Y>
+          <Z>12.300003</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">7085248</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.19999695</X>
+          <Y>0.19999695</Y>
+          <Z>0.19999695</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">1</float>
+      </Properties>
+      <Item class="ParticleEmitter" referent="142">
+        <Properties>
+          <string name="Name">ParticleEmitter</string>
+          <ColorSequence name="Color">0 0.6627451 0.21568628 1 0 1 0.8666667 0.57254905 1 0 </ColorSequence>
+          <NumberRange name="Lifetime">0.8 1.3 </NumberRange>
+          <float name="LightEmission">1</float>
+          <float name="Rate">9</float>
+          <NumberSequence name="Size">0 1.3 0 0.5 2 0 1 0 0 </NumberSequence>
+          <NumberRange name="Speed">2 4 </NumberRange>
+          <Vector2 name="SpreadAngle">
+            <X>15</X>
+            <Y>15</Y>
+          </Vector2>
+          <Content name="Texture"><url>rbxasset://textures/particles/fire_main.dds</url></Content>
+          <NumberSequence name="Transparency">0 1 0 0.2 0.25 0 1 1 0 </NumberSequence>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="143">
+      <Properties>
+        <string name="Name">JackOLantern</string>
+        <bool name="Anchored">true</bool>
+        <BinaryString name="AttributesSerialize">AgAAABQAAABQdW1wa2luVmlzdWFsVmVyc2lvbgUAAIA/DQAAAFNvdXJjZUFzc2V0SWQFZaJ6Tg==</BinaryString>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>985</X>
+          <Y>2.6369781</Y>
+          <Z>-12</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">16777215</Color3uint8>
+        <token name="Material">272</token>
+        <float name="Reflectance">0</float>
+        <token name="shape">1</token>
+        <Vector3 name="size">
+          <X>4.899994</X>
+          <Y>4.873947</Y>
+          <Z>5.0928345</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+      </Properties>
+      <Item class="SpecialMesh" referent="144">
+        <Properties>
+          <string name="Name">SpecialMesh</string>
+          <Content name="MeshId"><url>rbxassetid://16973748</url></Content>
+          <token name="MeshType">5</token>
+          <Vector3 name="Offset">
+            <X>0</X>
+            <Y>-0.71313477</Y>
+            <Z>-0.005706787</Z>
+          </Vector3>
+          <Vector3 name="Scale">
+            <X>2.8029022</X>
+            <Y>2.8029022</Y>
+            <Z>2.8029022</Z>
+          </Vector3>
+          <Content name="TextureId"><url>rbxassetid://16973739</url></Content>
+        </Properties>
+      </Item>
+      <Item class="PointLight" referent="145">
+        <Properties>
+          <string name="Name">PointLight</string>
+          <float name="Brightness">1.1</float>
+          <Color3 name="Color">
+            <R>1</R>
+            <G>0.27450982</G>
+            <B>0.03137255</B>
+          </Color3>
+          <float name="Range">10</float>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="146">
+      <Properties>
+        <string name="Name">Wisp</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989.25</X>
+          <Y>5.199997</Y>
+          <Z>-14</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">7085248</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.19999695</X>
+          <Y>0.19999695</Y>
+          <Z>0.19999695</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">1</float>
+      </Properties>
+      <Item class="ParticleEmitter" referent="147">
+        <Properties>
+          <string name="Name">ParticleEmitter</string>
+          <ColorSequence name="Color">0 0.6627451 0.21568628 1 0 1 0.8666667 0.57254905 1 0 </ColorSequence>
+          <NumberRange name="Lifetime">0.8 1.3 </NumberRange>
+          <float name="LightEmission">1</float>
+          <float name="Rate">9</float>
+          <NumberSequence name="Size">0 1.3 0 0.5 2 0 1 0 0 </NumberSequence>
+          <NumberRange name="Speed">2 4 </NumberRange>
+          <Vector2 name="SpreadAngle">
+            <X>15</X>
+            <Y>15</Y>
+          </Vector2>
+          <Content name="Texture"><url>rbxasset://textures/particles/fire_main.dds</url></Content>
+          <NumberSequence name="Transparency">0 1 0 0.2 0.25 0 1 1 0 </NumberSequence>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Part" referent="148">
+      <Properties>
+        <string name="Name">Wisp</string>
+        <bool name="Anchored">true</bool>
+        <token name="BottomSurface">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>989.25</X>
+          <Y>20.199997</Y>
+          <Z>-12.300003</Z>
+          <R00>-0</R00>
+          <R01>0</R01>
+          <R02>1</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>-1</R20>
+          <R21>0</R21>
+          <R22>-0</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">false</bool>
+        <bool name="CanQuery">false</bool>
+        <bool name="CanTouch">false</bool>
+        <Color3uint8 name="Color3uint8">7085248</Color3uint8>
+        <token name="Material">288</token>
+        <Vector3 name="size">
+          <X>0.19999695</X>
+          <Y>0.19999695</Y>
+          <Z>0.19999695</Z>
+        </Vector3>
+        <token name="TopSurface">0</token>
+        <float name="Transparency">1</float>
+      </Properties>
+      <Item class="ParticleEmitter" referent="149">
+        <Properties>
+          <string name="Name">ParticleEmitter</string>
+          <ColorSequence name="Color">0 0.6627451 0.21568628 1 0 1 0.8666667 0.57254905 1 0 </ColorSequence>
+          <NumberRange name="Lifetime">0.8 1.3 </NumberRange>
+          <float name="LightEmission">1</float>
+          <float name="Rate">9</float>
+          <NumberSequence name="Size">0 1.3 0 0.5 2 0 1 0 0 </NumberSequence>
+          <NumberRange name="Speed">2 4 </NumberRange>
+          <Vector2 name="SpreadAngle">
+            <X>15</X>
+            <Y>15</Y>
+          </Vector2>
+          <Content name="Texture"><url>rbxasset://textures/particles/fire_main.dds</url></Content>
+          <NumberSequence name="Transparency">0 1 0 0.2 0.25 0 1 1 0 </NumberSequence>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+</roblox>

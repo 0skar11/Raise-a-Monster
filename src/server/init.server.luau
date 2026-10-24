@@ -26,6 +26,7 @@ local ArenaService = require(script.ArenaService)
 local HalloweenService = require(script.HalloweenService)
 local PumpkinDecor = require(script.PumpkinDecor)
 local AdminService = require(script.AdminService)
+local HalloweenPortalService = require(script.HalloweenPortalService)
 
 local remotes = Remotes.Get()
 
@@ -71,6 +72,7 @@ RewardService.Init(remotes)
 TradeService.Init(remotes)
 ArenaService.Init(remotes)
 AdminService.Init(remotes)
+HalloweenPortalService.Init()
 DataService.StartAutosave()
 
 PlotService.Callbacks.Collect = MonsterService.Collect

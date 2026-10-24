@@ -43,7 +43,7 @@ end
 -- presentation: its own animation, a cinematic entrance, safe zones shaped like the map's carved pumpkin
 check(events:find('SetAttribute("Procedural", false)', 1, true) and client:find("ANIMS.Slam", 1, true) and client:find("ANIMS.Throw", 1, true), "The client animates the boss, timed to each attack")
 check(client:find("handlers.Entrance = function", 1, true) and events:find('"Entrance"', 1, true) and events:find("IntroUntil", 1, true), "The boss has a cinematic entrance and cannot be hurt during it")
-check(client:find('"rbxassetid://16973748"', 1, true) and client:find("local lantern = carvedPumpkin(", 1, true), "Safe zones use the map's carved pumpkin")
+check(client:find('require(ReplicatedStorage.Shared.PumpkinVisual)', 1, true) and client:find("local lantern = carvedPumpkin(", 1, true), "Safe zones use the shared carved pumpkin")
 -- entrance beats (from the "why boss fights feel epic" reel): path crumbles, build-up, slow reveal, name card, boss bar, roar
 check(Config.Boss.IntroBuildUp > 0 and Config.Boss.IntroRise > Config.Boss.IntroBuildUp and Config.Boss.IntroRoar > 0, "The entrance has a build-up, a slow rise and a roar")
 check(client:find("THE PATH BEHIND YOU CRUMBLES", 1, true) and client:find("showBossBar(part", 1, true) and client:find("setBossMusic(true)", 1, true), "Entrance: crumbling path, boss bar and heavy music")

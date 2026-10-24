@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local PumpkinVisual = require(ReplicatedStorage.Shared.PumpkinVisual)
 
 local BossFx = {}
 
@@ -380,26 +381,9 @@ local function fireball(position: Vector3, radius: number, color: Color3, second
 	Debris:AddItem(core, seconds)
 end
 
--- The carved jack-o'-lantern used by the map's pumpkins (same mesh and texture as PumpkinDecor).
-local PUMPKIN_MESH = "rbxassetid://16973748"
-local PUMPKIN_TEXTURE = "rbxassetid://16973739"
-local PUMPKIN_MESH_SIZE = Vector3.new(1.74819, 1.738895, 1.81699)
-local PUMPKIN_MESH_CENTER = Vector3.new(0, 0.2544275, 0.002035)
-
 local function carvedPumpkin(size: number, tint: Color3?): Part
-	local scale = size / PUMPKIN_MESH_SIZE.X
-	local body = fxPart({
-		Size = PUMPKIN_MESH_SIZE * scale,
-		Color = tint or Color3.new(1, 1, 1),
-		Material = Enum.Material.SmoothPlastic,
-	})
-	local mesh = Instance.new("SpecialMesh")
-	mesh.MeshType = Enum.MeshType.FileMesh
-	mesh.MeshId = PUMPKIN_MESH
-	mesh.TextureId = PUMPKIN_TEXTURE
-	mesh.Scale = Vector3.one * scale
-	mesh.Offset = -PUMPKIN_MESH_CENTER * scale
-	mesh.Parent = body
+	local body = fxPart({})
+	PumpkinVisual.Apply(body, size, tint)
 	local light = Instance.new("PointLight")
 	light.Color = ORANGE
 	light.Range = size * 6

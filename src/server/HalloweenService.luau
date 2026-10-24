@@ -19,6 +19,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local HalloweenLogic = require(ReplicatedStorage.Shared.HalloweenLogic)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
+local PumpkinVisual = require(ReplicatedStorage.Shared.PumpkinVisual)
 local PlotService = require(script.Parent.PlotService)
 local Build = require(script.Parent.Build)
 local DataService = require(script.Parent.DataService)
@@ -278,11 +279,9 @@ local function applyCosmetics(player: Player)
 	local equipped = data.Equipped
 
 	if equipped.Hat and data.Owned[equipped.Hat] then
-		local hatColor = settings.Items[equipped.Hat].Color
-		local hat = makePart({ Name = "PumpkinHat", Shape = Enum.PartType.Ball, Size = Vector3.new(1.7, 1.4, 1.7), Color = hatColor, Material = Enum.Material.SmoothPlastic, Anchored = false, Parent = container })
-		hat.CFrame = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.45, 0)
-		local stem = makePart({ Name = "PumpkinStem", Size = Vector3.new(0.3, 0.5, 0.3), Color = Color3.fromRGB(70, 110, 40), Material = Enum.Material.Wood, Anchored = false, Parent = container })
-		stem.CFrame = hat.CFrame * CFrame.new(0, 0.85, 0)
+		local hat = PumpkinVisual.Create("PumpkinHat", 1.7, CFrame.new())
+		hat.Parent = container
+		hat.CFrame = head.CFrame * CFrame.new(0, head.Size.Y / 2 + hat.Size.Y / 2 - 0.25, 0)
 		local light = Instance.new("PointLight")
 		light.Color = Color3.fromRGB(255, 150, 50)
 		light.Range = 10
@@ -290,7 +289,6 @@ local function applyCosmetics(player: Player)
 		light.Shadows = false
 		light.Parent = hat
 		weldTo(hat, head)
-		weldTo(stem, head)
 	end
 
 	if equipped.Trail or equipped.Aura then
@@ -568,22 +566,14 @@ end
 -- props -----------------------------------------------------------------------------------------------
 
 local ORANGE = Color3.fromRGB(240, 120, 25)
-local FACE = Color3.fromRGB(255, 225, 110)
 
 local function jackOLantern(parent: Instance, position: Vector3, size: number, yaw: number, lit: boolean, tint: Color3?)
-	local base = CFrame.new(position + Vector3.new(0, size * 0.5, 0)) * CFrame.Angles(0, yaw, 0)
-	local common = { CanCollide = false, CanQuery = false, CanTouch = false, Parent = parent }
-	local function part(props: { [string]: any }): Part
-		for key, value in common do props[key] = value end
-		return makePart(props)
-	end
-	local body = part({ Name = "Pumpkin", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 1.15, size, size * 1.15), CFrame = base, Color = tint or ORANGE, Material = Enum.Material.SmoothPlastic })
-	part({ Name = "Stem", Size = Vector3.new(size * 0.2, size * 0.3, size * 0.2), CFrame = base * CFrame.new(0, size * 0.55, 0), Color = Color3.fromRGB(70, 105, 40), Material = Enum.Material.Wood })
+	local width = size * 1.15
+	local height = PumpkinVisual.MeshSize.Y * width / PumpkinVisual.MeshSize.X
+	local base = CFrame.new(position + Vector3.new(0, height * 0.5, 0)) * CFrame.Angles(0, yaw, 0)
+	local body = PumpkinVisual.Create("Pumpkin", width, base, tint)
+	body.Parent = parent
 	if lit then
-		for _, side in { -1, 1 } do
-			part({ Name = "Eye", Size = Vector3.new(size * 0.17, size * 0.2, size * 0.06), CFrame = base * CFrame.new(side * size * 0.22, size * 0.1, -size * 0.56), Color = FACE, Material = Enum.Material.Neon })
-		end
-		part({ Name = "Mouth", Size = Vector3.new(size * 0.52, size * 0.12, size * 0.06), CFrame = base * CFrame.new(0, -size * 0.2, -size * 0.57), Color = FACE, Material = Enum.Material.Neon })
 		local light = Instance.new("PointLight")
 		light.Color = Color3.fromRGB(255, 150, 50)
 		light.Range = settings.Atmosphere.LanternRange
@@ -815,11 +805,7 @@ local function buildDefaultMerchant()
 	limb("LeftArm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, -0.3), Color3.fromRGB(70, 38, 100))
 	limb("RightArm", Vector3.new(1, 2, 1), Vector3.new(1.5, 3, -0.3), Color3.fromRGB(70, 38, 100))
 	local head = limb("Head", Vector3.new(2.5, 2.2, 2.5), Vector3.new(0, 5.2, 0), ORANGE, Enum.Material.SmoothPlastic, Enum.PartType.Ball)
-	limb("Stem", Vector3.new(0.4, 0.7, 0.4), Vector3.new(0, 6.5, 0), Color3.fromRGB(70, 105, 40), Enum.Material.Wood)
-	for _, side in { -1, 1 } do
-		limb("Eye", Vector3.new(0.45, 0.5, 0.2), Vector3.new(side * 0.55, 5.4, -1.15), FACE, Enum.Material.Neon)
-	end
-	limb("Mouth", Vector3.new(1.3, 0.3, 0.2), Vector3.new(0, 4.7, -1.2), FACE, Enum.Material.Neon)
+	PumpkinVisual.Fit(head)
 	local brim = limb("HatBrim", Vector3.new(0.25, 3.4, 3.4), Vector3.new(0, 6.15, 0), Color3.fromRGB(30, 20, 40), Enum.Material.Fabric, Enum.PartType.Cylinder)
 	brim.CFrame = origin * CFrame.new(0, 6.15, 0) * CFrame.Angles(0, 0, math.pi / 2)
 	limb("HatCone", Vector3.new(2, 1.9, 2), Vector3.new(0, 7.15, 0), Color3.fromRGB(30, 20, 40))
@@ -1435,8 +1421,8 @@ end
 local function makePumpkinModel(position: Vector3, golden: boolean): Part
 	local size = if golden then 3.8 else 3.2
 	-- a glossy jack-o'-lantern candy bowl: ribbed pumpkin, carved face, and a heap of lollipops and sweets on top
-	local orange = if golden then Color3.fromRGB(255, 205, 50) else Color3.fromRGB(255, 112, 24)
-	local height = size * 0.95
+	local tint = if golden then Color3.fromRGB(255, 225, 120) else nil
+	local height = PumpkinVisual.MeshSize.Y * (size * 1.1) / PumpkinVisual.MeshSize.X
 	local focus = Vector3.new(Config.Map.PlazaMinX + 40, position.Y, 0)
 	local flat = Vector3.new(position.X, position.Y, position.Z)
 	local base = if (focus - flat).Magnitude > 1 then CFrame.lookAt(flat, focus) else CFrame.new(flat)
@@ -1453,31 +1439,11 @@ local function makePumpkinModel(position: Vector3, golden: boolean): Part
 		return created
 	end
 	local body = add(pumpkinFolder :: Instance, {
-		Name = if golden then "GoldenPumpkin" else "HuntPumpkin", Shape = Enum.PartType.Ball,
-		Size = Vector3.new(size * 1.1, height, size * 1.05), Color = orange,
+		Name = if golden then "GoldenPumpkin" else "HuntPumpkin",
+		Size = Vector3.new(size * 1.1, height, size * 1.05), Color = Color3.new(1, 1, 1),
 	}, CFrame.new(0, height / 2, 0))
+	PumpkinVisual.Apply(body, size * 1.1, tint)
 	body.CanQuery = true
-	-- ribs: two overlapping lobes on each side of the centre
-	for _, side in { -1, 1 } do
-		add(body, { Name = "Rib", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 0.62, height * 0.96, size * 1.0), Color = orange }, CFrame.new(side * size * 0.38, height / 2, 0))
-		add(body, { Name = "RibOuter", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 0.42, height * 0.84, size * 0.82), Color = orange }, CFrame.new(side * size * 0.58, height / 2 - height * 0.02, 0))
-	end
-	-- carved face (looks toward the plaza)
-	local face = Color3.fromRGB(24, 14, 22)
-	local front = -size * 0.5
-	for _, side in { -1, 1 } do
-		add(body, { Name = "Eye", Shape = Enum.PartType.Ball, Size = Vector3.new(size * 0.24, size * 0.3, size * 0.1), Color = face, Reflectance = 0.25 },
-			CFrame.new(side * size * 0.27, height * 0.58, front) * CFrame.Angles(0, 0, side * math.rad(18)))
-	end
-	add(body, { Name = "Nose", Size = Vector3.new(size * 0.14, size * 0.16, size * 0.08), Color = face }, CFrame.new(0, height * 0.42, front - 0.02) * CFrame.Angles(0, 0, math.rad(45)))
-	add(body, { Name = "Mouth", Size = Vector3.new(size * 0.62, size * 0.1, size * 0.08), Color = face }, CFrame.new(0, height * 0.24, front))
-	for _, side in { -1, 1 } do
-		add(body, { Name = "MouthCorner", Size = Vector3.new(size * 0.22, size * 0.09, size * 0.08), Color = face },
-			CFrame.new(side * size * 0.38, height * 0.3, front) * CFrame.Angles(0, 0, side * math.rad(35)))
-	end
-	-- dark-green stem
-	add(body, { Name = "Stem", Size = Vector3.new(size * 0.16, size * 0.22, size * 0.16), Color = Color3.fromRGB(28, 52, 24) },
-		CFrame.new(size * 0.05, height * 0.98, 0) * CFrame.Angles(math.rad(8), math.rad(25), math.rad(-6)))
 	-- lollipops: a flat swirl disc on a stick, fanned out of the top
 	local pastel = {
 		{ Color3.fromRGB(255, 220, 90), Color3.fromRGB(255, 150, 40) },

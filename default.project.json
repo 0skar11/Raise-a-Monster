@@ -5,6 +5,7 @@
     "Workspace": {
       "$ignoreUnknownInstances": true,
       "StudioWorld": { "$path": "assets/StudioWorld.rbxmx" },
+      "HalloweenPortal": { "$path": "assets/HalloweenPortal.rbxmx" },
       "AnimationRigs": { "$path": "assets/AnimationRigs.rbxmx" }
     },
     "Lighting": {

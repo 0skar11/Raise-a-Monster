@@ -16,6 +16,9 @@ local environment = table.clone(getfenv())
 for key, value in r do
 	environment[key] = value
 end
+local PumpkinVisual = luau.load(fs.readFile("src/shared/PumpkinVisual.luau"), { environment = environment })()
+environment.game = { GetService = function() return { Shared = { PumpkinVisual = "PumpkinVisual" } } end }
+environment.require = function(key) assert(key == "PumpkinVisual"); return PumpkinVisual end
 local PumpkinDecor = luau.load(fs.readFile("src/server/PumpkinDecor.luau"), { environment = environment, injectGlobals = true })()
 
 local function part(parent, name, className)
