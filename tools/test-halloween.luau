@@ -24,6 +24,7 @@ check(H.CandyToCoinRate > 0, "Leftover Candy converts to cash at a positive conf
 check(H.Invasion.Interval == 3600 and H.Invasion.AnnounceBefore == 60 and H.Invasion.MinCount == 3, "Invasion: hourly, 1 minute warning, min 3")
 check(H.Pumpkins.Interval == 1800 and H.Pumpkins.CountMin == 5 and H.Pumpkins.CountMax == 20 and H.Pumpkins.Lifetime == 120, "Pumpkin hunt: 30 min, 5-20 pumpkins, 2 minute life")
 check(H.Pumpkins.ZonesShare > 0 and H.Pumpkins.ZonesShare < 1 and H.Pumpkins.ZoneArea.MaxX > H.Pumpkins.ZoneArea.MinX, "Pumpkins hide in the plaza or the monster zones")
+check(fs.readFile("src/server/HalloweenService.luau"):find("a nest Mother roams around her own nest", 1, true), "Nest Mothers are not clamped back into the plaza (no teleport when they notice a player)")
 check(not fs.readFile("src/server/HalloweenService.luau"):find("sendHints", 1, true) and not fs.readFile("src/client/HalloweenUI.luau"):find("PumpkinHint", 1, true), "The pumpkin hint GUI is gone")
 check(not fs.readFile("src/client/AdminPanel.luau"):find("AdminLauncher", 1, true), "The admin launcher button is gone (F4 only)")
 check(H.Pumpkins.CandyMin == 3 and H.Pumpkins.CandyMax == 10 and H.Pumpkins.GoldenCandy == 50, "Pumpkin rewards 3-10, golden 50")

@@ -9,9 +9,9 @@ local MESH_ID = "rbxassetid://16973748"
 local TEXTURE_ID = "rbxassetid://16973739"
 local MESH_SIZE = Vector3.new(1.74819, 1.738895, 1.81699)
 local MESH_CENTER = Vector3.new(0, 0.2544275, 0.002035)
-local MODEL_PART_NAMES = { Pumpkin = true, PumpkinPart = true, Rib = true, RibPart = true, Stem = true, StemTip = true, Eye = true, Mouth = true }
+local MODEL_PART_NAMES = { Pumpkin = true, PumpkinPart = true, Rib = true, RibPart = true, Stem = true, StemTip = true, Eye = true, Mouth = true, Zig = true, Tooth = true, MouthCorner = true, Nose = true }
 
-local function removeMatchingOrnaments(body: Part, oldSize: Vector3, parent: Instance)
+local function removeMatchingOrnaments(body: Part, oldSize: Vector3, parent: Instance): { Instance }
 	local scale = oldSize.Y
 	local expected = {
 		Stem = { Vector3.new(0, scale * 0.55, 0) },
@@ -19,6 +19,7 @@ local function removeMatchingOrnaments(body: Part, oldSize: Vector3, parent: Ins
 		Mouth = { Vector3.new(0, -scale * 0.2, -scale * 0.57) },
 	}
 	local tolerance = math.max(0.05, scale * 0.08)
+	local remove = {}
 	for _, child in parent:GetChildren() do
 		if child:IsA("BasePart") and child.Name ~= "Pumpkin" then
 			local offsets = expected[child.Name]
@@ -26,22 +27,28 @@ local function removeMatchingOrnaments(body: Part, oldSize: Vector3, parent: Ins
 				local localPosition = body.CFrame:PointToObjectSpace(child.Position)
 				for _, offset in offsets do
 					if (localPosition - offset).Magnitude <= tolerance then
-						child:Destroy()
+						table.insert(remove, child)
 						break
 					end
 				end
 			end
 		end
 	end
+	return remove
 end
 
-local function convert(body: BasePart): boolean
+local function convert(body: BasePart, pendingRemoval: { Instance }?): boolean
 	if not body:IsA("Part") then
 		warn("[PumpkinDecor] Skipping unsupported pumpkin part:", body:GetFullName())
 		return false
 	end
 	if body:GetAttribute("CarvedPumpkinDecorVersion") == VERSION then
 		return false
+	end
+	for _, descendant in body:GetDescendants() do
+		if descendant:IsA("ProximityPrompt") then
+			return false
+		end
 	end
 
 	local oldSize = body.Size
@@ -53,7 +60,16 @@ local function convert(body: BasePart): boolean
 		return false
 	end
 
-	removeMatchingOrnaments(body, oldSize, parent)
+	local ornaments = removeMatchingOrnaments(body, oldSize, parent)
+	if pendingRemoval then
+		for _, ornament in ornaments do
+			table.insert(pendingRemoval, ornament)
+		end
+	else
+		for _, ornament in ornaments do
+			ornament:Destroy()
+		end
+	end
 	body.Shape = Enum.PartType.Block
 	body.Size = scaledMeshSize
 	body.CFrame = oldCFrame * CFrame.new(0, (scaledMeshSize.Y - oldSize.Y) * 0.5, 0)
@@ -85,6 +101,11 @@ local function convert(body: BasePart): boolean
 end
 
 local function convertLeafModel(model: Model): boolean
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("ProximityPrompt") then
+			return false
+		end
+	end
 	local body: BasePart? = nil
 	local parts = {}
 	for _, child in model:GetChildren() do
@@ -123,6 +144,7 @@ end
 
 local function applyContainer(container: Instance): number
 	local converted = 0
+	local pendingRemoval = {}
 	for _, child in container:GetChildren() do
 		if child:IsA("Folder") then
 			converted += applyContainer(child)
@@ -142,10 +164,13 @@ local function applyContainer(container: Instance): number
 				end
 			end
 		elseif child:IsA("BasePart") and (child.Name == "Pumpkin" or child.Name == "PumpkinPart") then
-			if convert(child) then
+			if convert(child, pendingRemoval) then
 				converted += 1
 			end
 		end
+	end
+	for _, ornament in pendingRemoval do
+		ornament:Destroy()
 	end
 	return converted
 end

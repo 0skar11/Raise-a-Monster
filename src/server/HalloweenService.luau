@@ -1243,12 +1243,20 @@ local function invaderStep(dt: number)
 		if moving then
 			local step = math.min(invasionSettings.ChaseSpeed * dt, distance - stopDistance)
 			local position = pivot.Position + offset.Unit * step
-			-- never leave the plaza, never walk into a base
-			position = Vector3.new(
-				math.clamp(position.X, area.MinX - 6, area.MaxX + 6),
-				pivot.Position.Y,
-				math.clamp(position.Z, -area.HalfZ - 10, area.HalfZ + 10)
-			)
+			if invader.HeldNest then
+				-- a nest Mother roams around her own nest (never snapped back to the plaza box below)
+				local fromHome = Vector3.new(position.X - invader.Home.X, 0, position.Z - invader.Home.Z)
+				if fromHome.Magnitude > invasionSettings.LeashRange then
+					position = Vector3.new(invader.Home.X, pivot.Position.Y, invader.Home.Z) + fromHome.Unit * invasionSettings.LeashRange
+				end
+			else
+				-- never leave the plaza, never walk into a base
+				position = Vector3.new(
+					math.clamp(position.X, area.MinX - 6, area.MaxX + 6),
+					pivot.Position.Y,
+					math.clamp(position.Z, -area.HalfZ - 10, area.HalfZ + 10)
+				)
+			end
 			invader.Model:PivotTo(CFrame.lookAt(position, position + offset.Unit))
 		end
 		if moving ~= invader.Moving then
