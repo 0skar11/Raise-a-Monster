@@ -19,8 +19,9 @@ local player = Players.LocalPlayer
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local FIRE = "rbxasset://textures/particles/fire_main.dds"
-local WINDUP_SOUND = Config.MotherAttacks.Sounds.Windup
-local IMPACT_SOUND = Config.MotherAttacks.Sounds.Impact
+local WINDUP_SOUND = Config.Boss.Audio.Windup
+local IMPACT_SOUND = Config.Boss.Audio.Impact
+local GROWL_SOUND = Config.Boss.Audio.Growl
 
 local RED = Color3.fromRGB(255, 62, 38)
 local ORANGE = Color3.fromRGB(255, 130, 30)
@@ -114,7 +115,17 @@ local function playSound(id: string, position: Vector3, volume: number, speed: n
 	sound.RollOffMaxDistance = 260
 	sound.Parent = holder
 	sound:Play()
-	Debris:AddItem(holder, 3)
+	if id == IMPACT_SOUND then
+		-- every hit also carries a deep groan, so it reads as the Titan and not as a plain explosion
+		local growl = Instance.new("Sound")
+		growl.SoundId = GROWL_SOUND
+		growl.Volume = math.min(volume * 0.6, 1)
+		growl.PlaybackSpeed = math.clamp(speed * 0.55, 0.22, 0.5)
+		growl.RollOffMaxDistance = 260
+		growl.Parent = holder
+		growl:Play()
+	end
+	Debris:AddItem(holder, 4)
 end
 
 local rayParams = RaycastParams.new()
@@ -805,11 +816,47 @@ local function restoreLights(seconds: number)
 	tween(Lighting, seconds, { Brightness = Lighting:GetAttribute("BossBaseBrightness") })
 end
 
--- heavy and slow: the background music drops in pitch while a boss is alive
+-- the normal background music pauses and the boss theme plays until the boss is gone. The theme is flagged as music so
+-- the player's music button (Settings) still mutes it.
+local bossTheme: Sound? = nil
 local function setBossMusic(on: boolean)
-	local music = SoundService:FindFirstChild("BackgroundMusic")
-	if music and music:IsA("Sound") then
-		tween(music, 1.2, { PlaybackSpeed = if on then 0.86 else 1 })
+	local background = SoundService:FindFirstChild("BackgroundMusic")
+	if on then
+		if background and background:IsA("Sound") then
+			background:Pause()
+		end
+		if not bossTheme then
+			local theme = Instance.new("Sound")
+			theme.Name = "BossMusic"
+			theme.SoundId = Config.Boss.Audio.Music
+			theme.Looped = true
+			theme.Volume = 0
+			theme:SetAttribute("RaiseAMonsterMusic", true)
+			theme.Parent = SoundService
+			bossTheme = theme
+		end
+		local theme = bossTheme :: Sound
+		theme.PlaybackSpeed = 1
+		theme:Play()
+		tween(theme, 2.5, { Volume = Config.Boss.Audio.MusicVolume })
+	else
+		local theme = bossTheme
+		bossTheme = nil
+		if theme then
+			tween(theme, 2, { Volume = 0 })
+			task.delay(2.2, function()
+				theme:Destroy()
+			end)
+		end
+		if background and background:IsA("Sound") then
+			background:Resume()
+		end
+	end
+end
+
+local function enrageMusic()
+	if bossTheme then
+		tween(bossTheme, 1.5, { PlaybackSpeed = Config.Boss.Audio.RageSpeed })
 	end
 end
 
@@ -1561,9 +1608,8 @@ handlers.Entrance = function(data)
 	local ground = groundY(position)
 	local base = Vector3.new(position.X, ground, position.Z)
 	local part = data.Part :: BasePart?
-	if Lighting:GetAttribute("BossBaseBrightness") == nil then
-		Lighting:SetAttribute("BossBaseBrightness", Lighting.Brightness)
-	end
+	-- the server fades the world to night as the boss spawns, so the entrance dims relative to the night brightness
+	Lighting:SetAttribute("BossBaseBrightness", Config.Halloween.Atmosphere.Brightness)
 	setBossMusic(true)
 
 	-- 1. the path behind you crumbles, the light dies, the ground starts to tremble
@@ -1769,6 +1815,9 @@ handlers.Phase = function(data)
 	local ground = groundY(origin)
 	waveRing(Vector3.new(origin.X, ground + 0.1, origin.Z), 6, 46, 0.8, AMBER, 3, 1)
 	banner("PHASE " .. tostring(phase), AMBER, 1.6)
+	if phase >= 3 then
+		enrageMusic()
+	end
 	shake(0.5, 0.5, origin)
 end
 

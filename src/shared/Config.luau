@@ -725,7 +725,7 @@ Config.Boss = {
 	MinInterval = 10800, -- the Big Boss arrives every 3 hours
 	MaxInterval = 10800,
 	HealthPerPlayer = 0, -- the boss has a fixed health pool (MinHealth), whatever the player count
-	MinHealth = 5000000,
+	MinHealth = 3000000,
 	Damage = 40, -- base hit: every main move deals >= 50, so an unarmored player (100 HP) dies in two hits. كل ضربة، لكل اللي جنبه (شكلها في Config.MotherAttacks.Styles.Boss)
 	AttackRange = 30, -- لو حد قرّب أكتر من كده بيبدأ يضرب
 	Size = 18, -- the plain cube used when the Pumpkin Titan model is not in ServerStorage
@@ -739,10 +739,10 @@ Config.Boss = {
 	Attacks = {
 		AggroRange = 120, -- the boss fights any player this close
 		PhaseAt = { 0.75, 0.5, 0.25 }, -- phase 2, 3 (rage), 4 start below these health fractions
-		DamageScale = { 1, 1.15, 1.3, 1.5 },
-		WindupScale = { 1, 0.92, 0.82, 0.72 },
-		Cooldown = { 3.4, 2.8, 2.2, 1.6 },
-		ChainChance = { 0, 0, 0.35, 0.55 }, -- chance to chain a second/third move straight after the first
+		DamageScale = { 1, 1.1, 1.2, 1.35 },
+		WindupScale = { 1.15, 1.05, 0.95, 0.85 }, -- longer telegraphs than the first version: easier to dodge
+		Cooldown = { 4.4, 3.6, 3, 2.4 },
+		ChainChance = { 0, 0, 0.2, 0.35 }, -- chance to chain a second/third move straight after the first
 		SweepRange = 40, SweepHalfAngle = 70, SweepWindup = 1.15, SweepDamage = 1.3,
 		SlamRadius = 26, SlamOuter = 50, SlamFar = 74, SlamWindup = 1.4, SlamDamage = 1.6, SlamWaveGap = 0.75,
 		BombRadius = 9, BombWindup = 1.9, BombDamage = 1.3, BombStagger = 0.33, BombFireSeconds = 4, BombFireDamage = 0.2,
@@ -758,9 +758,19 @@ Config.Boss = {
 	IntroRise = 3.7,
 	IntroRoar = 0.9,
 	IntroCamera = true, -- briefly pans the camera of nearby players from its feet up to its head
+	-- Sounds. Music is an APM track ("Fury"); the effects are the sounds that ship with the Roblox client, pitched down
+	-- into thuds, wails and growls so nothing depends on third-party audio.
+	Audio = {
+		Music = "rbxassetid://1843463107",
+		MusicVolume = 0.5,
+		RageSpeed = 1.1, -- the track speeds up once the boss enrages
+		Windup = "rbxasset://sounds/action_falling.ogg",
+		Impact = "rbxasset://sounds/impact_explosion_03.mp3",
+		Growl = "rbxasset://sounds/ouch.ogg", -- pitched far down it is a ghoulish groan layered under every hit
+	},
 	DeathSeconds = 2, -- how long the corpse stays (collapse animation) before the egg drops
 	Lifetime = 600, -- لو محدش قتله بيمشي
-	Position = Vector3.new(Config.Map.ZonesStartX + Config.Map.ZoneLength / 2, 0, 0), -- في الطريق جوه Zone 1
+	Position = Vector3.new(1600, 0.2, 0), -- center of the dedicated Halloween boss arena
 }
 
 -- اللوحات اللي في الساحة (Leaderboards)

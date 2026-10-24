@@ -535,8 +535,8 @@ local function fadeToDay()
 end
 
 local function refreshNight()
-	local wanted = false
-	if active then
+	local wanted = nightHolds.Boss == true -- the Big Boss brings the night with it, event running or not
+	if active and not wanted then
 		for _, held in nightHolds do
 			if held then wanted = true break end
 		end
@@ -556,6 +556,11 @@ end
 local function setNight(reason: string, on: boolean)
 	nightHolds[reason] = on or nil
 	refreshNight()
+end
+
+-- the Big Boss holds the night for as long as it is alive
+function HalloweenService.SetBossNight(on: boolean)
+	setNight("Boss", on)
 end
 
 -- exposed for tests / debugging

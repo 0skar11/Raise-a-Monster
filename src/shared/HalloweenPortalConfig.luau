@@ -1,5 +1,6 @@
--- The destination is deliberately unset until the Halloween place is supplied.
+-- The approved arena is in this place; external travel remains an explicit option.
 return {
+	DestinationMode = "Arena",
 	DestinationPlaceId = 0,
 	Cooldown = 5,
 	-- Centered on the end of the Void road; local -Z faces approaching players.

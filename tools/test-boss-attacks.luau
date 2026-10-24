@@ -35,8 +35,8 @@ for _, kind in { "Sweep", "Slam", "Bomb", "BombFire", "Vine", "VineGrabbed", "He
 end
 check(fs.readFile("src/shared/Remotes.luau"):find('"BossFx"', 1, true), "The BossFx remote exists")
 check(fs.readFile("src/client/init.client.luau"):find("BossFx.Start", 1, true), "The client starts BossFx")
--- balance: 5M health, and every main hit kills an unarmored (100 HP) player in two
-check(Config.Boss.MinHealth == 5000000 and Config.Boss.HealthPerPlayer == 0, "The boss has a fixed 5 million health")
+-- balance: 3M health (eased from 5M), and every main hit kills an unarmored (100 HP) player in two
+check(Config.Boss.MinHealth == 3000000 and Config.Boss.HealthPerPlayer == 0, "The boss has a fixed 3 million health")
 for _, move in { "SweepDamage", "SlamDamage", "BombDamage", "VineDamage", "PulseDamage", "RainDamage" } do
 	check(Config.Boss.Damage * A[move] * A.DamageScale[1] >= Config.PlayerBaseHealth / 2, move .. " takes an unarmored player down in two hits")
 end
@@ -48,4 +48,6 @@ check(client:find('require(ReplicatedStorage.Shared.PumpkinVisual)', 1, true) an
 check(Config.Boss.IntroBuildUp > 0 and Config.Boss.IntroRise > Config.Boss.IntroBuildUp and Config.Boss.IntroRoar > 0, "The entrance has a build-up, a slow rise and a roar")
 check(client:find("THE PATH BEHIND YOU CRUMBLES", 1, true) and client:find("showBossBar(part", 1, true) and client:find("setBossMusic(true)", 1, true), "Entrance: crumbling path, boss bar and heavy music")
 check(client:find('"MaxHealth"', 1, true) and events:find('SetAttribute("MaxHealth"', 1, true), "The boss health is shared with clients for the big bar")
+check(events:find("SetBossNight(true)", 1, true) and events:find("SetBossNight(false)", 1, true), "Night falls while the boss is alive")
+check(client:find("BossMusic", 1, true) and Config.Boss.Audio.Music ~= nil, "The boss has its own music")
 print(("PASS: boss attack kit (%d checks)"):format(checks))

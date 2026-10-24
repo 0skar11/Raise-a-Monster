@@ -17,6 +17,8 @@ local MonsterService = require(script.Parent.MonsterService)
 local CombatService = require(script.Parent.CombatService)
 local CarryService = require(script.Parent.CarryService)
 local BossAttacks = require(script.Parent.BossAttacks)
+local HalloweenService = require(script.Parent.HalloweenService)
+local ArenaConfig = require(ReplicatedStorage.Shared.HalloweenArenaConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local EventService = {}
@@ -68,6 +70,7 @@ local function removeBoss(current: Boss)
 	current.Part:Destroy()
 	if boss == current then
 		boss = nil
+		HalloweenService.SetBossNight(false) -- day returns once the boss is gone
 	end
 end
 
@@ -121,7 +124,7 @@ local function cloneBossModel(): (Model?, number, number, CFrame?)
 	local boxCFrame, boxSize = model:GetBoundingBox()
 	local pivotOffset = boxCFrame:ToObjectSpace(model:GetPivot())
 	local ground = settings.Position
-	local toward = Vector3.new(Config.Map.PlazaMinX + 40 - ground.X, 0, 0)
+	local toward = if ArenaConfig.IsArenaBoss(ground) then Vector3.new(0, 0, 1) else Vector3.new(Config.Map.PlazaMinX + 40 - ground.X, 0, 0)
 	local direction = if toward.Magnitude > 1 then toward else Vector3.new(-1, 0, 0)
 	local facing = CFrame.lookAt(ground, ground + direction) * CFrame.Angles(0, math.rad(settings.ModelYaw), 0)
 	local standing = facing * CFrame.new(0, boxSize.Y / 2, 0) * pivotOffset
@@ -226,6 +229,11 @@ function EventService.SpawnBoss()
 				if current.Dead or os.clock() < state.IntroUntil then
 					return -- it cannot be hurt while it is still climbing out of the ground
 				end
+				local character = player.Character
+				local attackerRoot = character and character:FindFirstChild("HumanoidRootPart")
+				if ArenaConfig.IsArenaBoss(settings.Position) and (not attackerRoot or not ArenaConfig.IsCombatPosition(attackerRoot.Position)) then
+					return -- the arrival courtyard is outside the encounter in both directions
+				end
 				current.Health -= damage * (if os.clock() < state.VulnerableUntil then Config.Boss.Attacks.PulseExposedBonus else 1)
 				if highlight then
 					highlight.FillTransparency = 0.45
@@ -251,8 +259,9 @@ function EventService.SpawnBoss()
 		}),
 	}
 	boss = current
+	HalloweenService.SetBossNight(true) -- night falls the moment it appears
 	updateBossBar(current)
-	MonsterService.Announce("💀 A BIG BOSS appeared in Zone 1! Everyone team up to defeat it and win a SECRET EGG!", Color3.fromRGB(200, 120, 255))
+	MonsterService.Announce("💀 The PUMPKIN TITAN appeared! Enter the Halloween portal at the end of the Void road to battle for a SECRET EGG!", Color3.fromRGB(200, 120, 255))
 
 	if model and standing then
 		remotes.BossFx:FireAllClients("Entrance", { Position = part.Position, BuildUp = settings.IntroBuildUp, Rise = settings.IntroRise, Roar = settings.IntroRoar, Height = modelHeight, Part = part })
@@ -315,7 +324,10 @@ function EventService.KillBoss(killer: Player): boolean
 	if not current or current.Dead then
 		return false
 	end
-	current.Target.OnHit(killer, current.Health + 1)
+	-- straight to the kill: OnHit would ignore an admin who is outside the arena or while the boss is still rising
+	current.Health = 0
+	updateBossBar(current)
+	killBoss(current, killer)
 	return true
 end
 

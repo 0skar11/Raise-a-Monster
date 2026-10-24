@@ -36,12 +36,17 @@ local function signal()
 	local callbacks={}
 	return {Connect=function(_,fn) table.insert(callbacks,fn) end, Fire=function(_,...) for _,fn in callbacks do fn(...) end end}
 end
-local touched, failed, removing = signal(),signal(),signal()
+local touched, returning, failed, removing = signal(),signal(),signal(),signal()
 local trigger={CFrame=r.CFrame.new(),Size=r.Vector3.new(17,22,4),Touched=touched,IsA=function(_,name) return name=="BasePart" end}
 local livePortal={FindFirstChild=function(_,name) return name=="TeleportTrigger" and trigger end,SetAttribute=function() end}
+local returnTrigger={CFrame=r.CFrame.new(50,0,0),Size=r.Vector3.new(17,22,4),Touched=returning,IsA=function(_,name) return name=="BasePart" end}
+local returnPortal={FindFirstChild=function(_,name)return name=="TeleportTrigger" and returnTrigger end,SetAttribute=function()end,IsA=function(_,name)return name=="Model"end}
+local liveArena={FindFirstChild=function(_,name)return name=="ReturnPortal" and returnPortal end}
 local root={Position=r.Vector3.new(),IsA=function(_,name) return name=="BasePart" end}
 local humanoid={Health=100}
-local character={FindFirstChild=function() return root end,FindFirstChildOfClass=function() return humanoid end}
+local pivotCalls,lastPivot=0,nil
+local cargo={Kind="Egg",EggType="Secret"}
+local character={FindFirstChild=function() return root end,FindFirstChildOfClass=function() return humanoid end,PivotTo=function(_,cf)pivotCalls+=1;lastPivot=cf;root.Position=cf.Position end}
 local player={Character=character}
 local hit={FindFirstAncestorOfClass=function() return character end}
 local carrying, synchronousFailure, calls=false,false,0
@@ -51,14 +56,14 @@ local teleport={TeleportInitFailed=failed,TeleportAsync=function(_,id,list)
 	calls+=1
 	if synchronousFailure then error("test failure") end
 end}
-local serviceConfig={DestinationPlaceId=0,Cooldown=5}
+local serviceConfig={DestinationPlaceId=0,Cooldown=5,Origin=config.Origin}
 local shared={HalloweenPortalConfig="config",HalloweenPortalBuilder="builder"}
 local services={Players=players,TeleportService=teleport,ReplicatedStorage={Shared=shared}}
 local serviceEnv=setmetatable({
 	game={GetService=function(_,name) return assert(services[name]) end},
 	workspace={FindFirstChild=function() return livePortal end},
-	script={Parent={CarryService="carry"}},
-	require=function(key) if key=="config" then return serviceConfig elseif key=="builder" then return {} else return {IsCarrying=function() return carrying end} end end,
+	script={Parent={CarryService="carry",HalloweenArenaService="arena"}},
+	require=function(key) if key=="config" then return serviceConfig elseif key=="builder" then return {} elseif key=="arena" then return {Init=function()return liveArena end,NextArrival=function()return r.CFrame.new(1600,3.7,115)end} else return {IsCarrying=function() return carrying end} end end,
 	warn=function() end,
 }, {__index=env})
 for key,value in env do if rawget(serviceEnv,key)==nil then serviceEnv[key]=value end end
@@ -76,4 +81,14 @@ serviceConfig.Cooldown=0;touched:Fire(hit);assert(calls==2,"Async failure did no
 failed:Fire(player,nil,nil,123);synchronousFailure=true;touched:Fire(hit);touched:Fire(hit)
 assert(calls==4,"Synchronous failure did not clear pending")
 synchronousFailure=false;removing:Fire(player);touched:Fire(hit);assert(calls==5)
-print(string.format("PASS: %d anchored parts, 2 canonical pumpkins, 84 spiral segments, 4 wisps and portal mist; unset destination, proximity, alive/carry checks, cooldown, duplicate prevention and failure retry",parts))
+failed:Fire(player,nil,nil,123)
+serviceConfig.DestinationMode="Arena";serviceConfig.Cooldown=5
+removing:Fire(player);root.Position=r.Vector3.zero;carrying=true
+touched:Fire(hit);assert(pivotCalls==0,"Carried cargo entered the arena")
+carrying=false;touched:Fire(hit);assert(pivotCalls==1 and lastPivot.Position==r.Vector3.new(1600,3.7,115),"Arena arrival failed")
+root.Position=returnTrigger.CFrame.Position;returning:Fire(hit);assert(pivotCalls==1,"Arrival/return cooldown was bypassed")
+serviceConfig.Cooldown=0;carrying=true;returning:Fire(hit)
+assert(pivotCalls==2 and (lastPivot.Position-(config.Origin*r.CFrame.new(0,3.5,-12)).Position).Magnitude<.001,"Return with boss reward failed")
+assert(cargo.Kind=="Egg" and cargo.EggType=="Secret" and carrying,"Returning changed the cargo payload")
+assert(root.AssemblyLinearVelocity==r.Vector3.zero and root.AssemblyAngularVelocity==r.Vector3.zero,"Teleport momentum was retained")
+print(string.format("PASS: %d anchored parts, canonical geometry, external guards/failure retries and local entry/return with intact carried reward",parts))

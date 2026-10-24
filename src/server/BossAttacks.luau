@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local ArenaConfig = require(ReplicatedStorage.Shared.HalloweenArenaConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local CharacterService = require(script.Parent.CharacterService)
 local HalloweenService = require(script.Parent.HalloweenService)
@@ -59,6 +60,16 @@ local function origin(ctx: Context): Vector3
 	return Vector3.new(ctx.Part.Position.X, ctx.Ground, ctx.Part.Position.Z)
 end
 
+-- Lead/scatter must not paint a hazard onto the protected arrival courtyard.
+local function strikeCenter(ctx: Context, point: Vector3, radius: number): Vector3
+	if not ArenaConfig.IsArenaBoss(origin(ctx)) then return point end
+	local center = ArenaConfig.Origin.Position
+	local offset = flat(point - center)
+	local limit = math.max(0, ArenaConfig.CombatRadius - radius - PLAYER_RADIUS)
+	if offset.Magnitude > limit then offset = offset.Unit * limit end
+	return Vector3.new(center.X + offset.X, ctx.Ground, center.Z + offset.Z)
+end
+
 local function headPosition(ctx: Context): Vector3
 	local head = ctx.Model and ctx.Model:FindFirstChild("Head")
 	if head and head:IsA("BasePart") then
@@ -82,7 +93,9 @@ local function aliveTargets(ctx: Context): { Target }
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0 and flat(root.Position - center).Magnitude <= attacks.AggroRange then
+		if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
+			and flat(root.Position - center).Magnitude <= attacks.AggroRange
+			and (not ArenaConfig.IsArenaBoss(center) or ArenaConfig.IsCombatPosition(root.Position)) then
 			table.insert(list, { Player = player, Root = root, Humanoid = humanoid })
 		end
 	end
@@ -263,7 +276,7 @@ local function bombs(ctx: Context, _target: Target, scale: number, power: number
 		-- later phases lead the target, so just walking away in a line stops working
 		local lead = velocity * (0.5 + 0.18 * phase)
 		local scatter = Vector3.new((math.random() - 0.5) * 2, 0, (math.random() - 0.5) * 2) * (if index <= #list then 2 else 12)
-		local center = Vector3.new(victim.Root.Position.X, ctx.Ground, victim.Root.Position.Z) + lead + scatter
+		local center = strikeCenter(ctx, Vector3.new(victim.Root.Position.X, ctx.Ground, victim.Root.Position.Z) + lead + scatter, attacks.BombRadius)
 		fx("Bomb", { From = from, Center = center, Radius = attacks.BombRadius, Windup = windup })
 		task.delay(windup, function()
 			if not ctx.IsAlive() then
@@ -296,7 +309,7 @@ local function vineGrab(ctx: Context, _target: Target, scale: number, power: num
 			victim, far = candidate, distance
 		end
 	end
-	local center = Vector3.new(victim.Root.Position.X, ctx.Ground, victim.Root.Position.Z)
+	local center = strikeCenter(ctx, Vector3.new(victim.Root.Position.X, ctx.Ground, victim.Root.Position.Z), attacks.VineRadius)
 	local windup = attacks.VineWindup * scale
 	face(ctx, center - from)
 	setAnim(ctx, "Attack")
@@ -384,7 +397,7 @@ local function rain(ctx: Context, _target: Target, scale: number, power: number)
 		local aimed = drops % 3 == 0
 		local velocity = flat(victim.Root.AssemblyLinearVelocity)
 		local offset = Vector3.new((math.random() - 0.5) * 2, 0, (math.random() - 0.5) * 2) * (if aimed then 3 else 18)
-		local center = Vector3.new(victim.Root.Position.X, ctx.Ground, victim.Root.Position.Z) + offset + (if aimed then velocity * 0.6 else Vector3.zero)
+		local center = strikeCenter(ctx, Vector3.new(victim.Root.Position.X, ctx.Ground, victim.Root.Position.Z) + offset + (if aimed then velocity * 0.6 else Vector3.zero), attacks.RainRadius)
 		fx("Rain", { Center = center, Radius = attacks.RainRadius, Windup = windup, Golden = golden })
 		task.delay(windup, function()
 			if not ctx.IsAlive() then
