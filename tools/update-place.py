@@ -59,13 +59,17 @@ def items(tree):
 sources, embedded = scripts(stage), scripts(actual)
 # New scripts in the source get inserted under the same parent in the actual place.
 stage_items, actual_items = items(stage), items(actual)
+new_script_prefix = 'NEWSCRIPT_' + uuid.uuid4().hex + '_'
 for path in sorted(set(sources) - set(embedded)):
     parent = actual_items.get(path.rsplit('/', 1)[0])
     if parent is None:
         raise ValueError(f'No parent in the place for new script: {path}')
     copy = copy_module.deepcopy(stage_items[path])
+    script_references = {element.attrib['referent']: new_script_prefix + element.attrib['referent']
+                         for element in copy.iter() if 'referent' in element.attrib}
     for element in copy.iter():
-        if 'referent' in element.attrib: element.attrib['referent'] = 'NEWSCRIPT_' + element.attrib['referent']
+        if 'referent' in element.attrib: element.attrib['referent'] = script_references[element.attrib['referent']]
+        if element.tag == 'Ref': element.text = script_references.get(element.text, element.text)
     parent.append(copy)
     print(f'Added new script {path}')
 embedded = scripts(actual)

@@ -1,7 +1,7 @@
 -- Encounter capacity follows the tycoon slots, independently of Studio's player limit.
 local GameConfig = require(script.Parent.Config)
 local Arena = {
-	Origin = CFrame.new(1600, 0.2, 0),
+	Origin = CFrame.new(GameConfig.Boss.Position),
 	CombatRadius = 90,
 	ArrivalCenter = Vector3.new(0, 0, 123),
 	ArrivalSize = Vector3.new(40, 2, 30),

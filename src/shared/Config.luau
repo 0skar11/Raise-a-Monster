@@ -770,7 +770,7 @@ Config.Boss = {
 	},
 	DeathSeconds = 2, -- how long the corpse stays (collapse animation) before the egg drops
 	Lifetime = 600, -- لو محدش قتله بيمشي
-	Position = Vector3.new(1600, 0.2, 0), -- center of the dedicated Halloween boss arena
+	Position = Vector3.new(8000, 0.2, 8000), -- isolated Halloween arena, over 10,000 studs from spawn
 }
 
 -- اللوحات اللي في الساحة (Leaderboards)

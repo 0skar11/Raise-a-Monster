@@ -16,6 +16,7 @@ local function check(condition,label) checks+=1; assert(condition,label) end
 check(model.Name=="HalloweenArena" and model.Parent==nil,"Builder must return a detached arena")
 check(config.Capacity==dependencies.Config.MaxPlots and config.Capacity==6,"Capacity does not follow actual tycoon slots")
 check(config.CombatRadius==90,"Approved combat diameter changed")
+check((config.Origin.Position-dependencies.Config.Map.SpawnPosition).Magnitude>10000,"Arena must remain isolated from the tycoon spawn")
 local combat=model:FindFirstChild("CombatFloor")
 check(combat and combat.CanCollide and combat.Shape==r.Enum.PartType.Cylinder,"Solid circular combat floor missing")
 check(combat.Size==r.Vector3.new(2,180,180),"Combat floor is not 180 studs across")
