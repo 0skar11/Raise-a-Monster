@@ -760,6 +760,15 @@ local function startAnimator(model: Model)
 		local now = os.clock()
 		local pose: Pose = idlePose(now)
 		local current = a.Current
+		if not current and model:GetAttribute("AnimState") == "Walk" then
+			-- Translation/heading come from the server; only pose the joints here.
+			local stride = math.sin(now * 5.5)
+			pose.LegR = { stride * 0.4 }
+			pose.LegL = { -stride * 0.4 }
+			pose.ArmR = { -stride * 0.16, 0, 0.03 }
+			pose.ArmL = { stride * 0.16, 0, -0.03 }
+			pose.LowerTorso = { 0, stride * 0.025, 0, math.abs(stride) * 0.15 }
+		end
 		if current then
 			local t = now - current.Start
 			if t >= current.Duration and current.Name ~= "Death" then

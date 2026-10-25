@@ -23,8 +23,10 @@ function Arena.IsCombatPosition(position: Vector3): boolean
 end
 
 function Arena.IsArenaBoss(position: Vector3): boolean
-	local localPosition = Arena.Origin:PointToObjectSpace(position)
-	return math.abs(localPosition.X) < 5 and math.abs(localPosition.Z) < 5
+	-- Bosses can pursue players anywhere inside the encounter. The server also
+	-- snapshots this identity when spawning, so combat guards never depend on
+	-- remaining within five studs of the emergence seal.
+	return Arena.IsCombatPosition(position)
 end
 
 return Arena

@@ -730,6 +730,7 @@ Config.Boss = {
 	AttackRange = 30, -- لو حد قرّب أكتر من كده بيبدأ يضرب
 	Size = 18, -- the plain cube used when the Pumpkin Titan model is not in ServerStorage
 	-- The Pumpkin Titan: ServerStorage.BossModels.PumpkinTitan (import assets/PumpkinBossPreview/PumpkinTitan.fbx in Studio).
+	ChaseSpeed = 14, -- server-owned pursuit; movement pauses for each attack and its recovery
 	ModelFolder = "BossModels",
 	ModelName = "PumpkinTitan",
 	ModelHeight = 40, -- studs tall once placed (the source model is 28 units, about 5x a character)

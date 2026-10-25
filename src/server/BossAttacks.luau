@@ -24,6 +24,9 @@ export type Context = {
 	Part: BasePart, -- the invisible hitbox
 	Model: Model?,
 	BodyRadius: number,
+	MoveRadius: number?, -- full visual footprint, rather than the smaller combat hitbox
+	ModelOffset: CFrame?, -- authored standing pivot relative to the hitbox
+	ArenaBoss: boolean?, -- encounter identity stays fixed while the boss moves
 	Ground: number, -- ground height under the boss
 	IsAlive: () -> boolean,
 	HealthFraction: () -> number,
@@ -60,9 +63,14 @@ local function origin(ctx: Context): Vector3
 	return Vector3.new(ctx.Part.Position.X, ctx.Ground, ctx.Part.Position.Z)
 end
 
+local function isArenaBoss(ctx: Context): boolean
+	if ctx.ArenaBoss ~= nil then return ctx.ArenaBoss end
+	return ArenaConfig.IsArenaBoss(origin(ctx))
+end
+
 -- Lead/scatter must not paint a hazard onto the protected arrival courtyard.
 local function strikeCenter(ctx: Context, point: Vector3, radius: number): Vector3
-	if not ArenaConfig.IsArenaBoss(origin(ctx)) then return point end
+	if not isArenaBoss(ctx) then return point end
 	local center = ArenaConfig.Origin.Position
 	local offset = flat(point - center)
 	local limit = math.max(0, ArenaConfig.CombatRadius - radius - PLAYER_RADIUS)
@@ -95,7 +103,7 @@ local function aliveTargets(ctx: Context): { Target }
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
 			and flat(root.Position - center).Magnitude <= attacks.AggroRange
-			and (not ArenaConfig.IsArenaBoss(center) or ArenaConfig.IsCombatPosition(root.Position)) then
+			and (not isArenaBoss(ctx) or ArenaConfig.IsCombatPosition(root.Position)) then
 			table.insert(list, { Player = player, Root = root, Humanoid = humanoid })
 		end
 	end
@@ -126,21 +134,87 @@ local function setAnim(ctx: Context, state: string)
 	end
 end
 
--- Turn the model toward a direction (smoothly), keeping its position.
-local function face(ctx: Context, direction: Vector3)
+local function nearestTarget(ctx: Context): (Target?, number)
+	local best: Target? = nil
+	local distance = math.huge
+	local from = origin(ctx)
+	for _, target in aliveTargets(ctx) do
+		local candidateDistance = flat(target.Root.Position - from).Magnitude
+		if candidateDistance < distance then
+			best, distance = target, candidateDistance
+		end
+	end
+	return best, distance
+end
+
+-- A BasePart does not move its child Model. Move both from one frame, retaining
+-- the imported pivot/orientation and leaving the client's Motor6D poses alone.
+local function pose(ctx: Context, frame: CFrame)
 	local model = ctx.Model
-	if not model or direction.Magnitude < 0.01 then
+	if model and not ctx.ModelOffset then
+		ctx.ModelOffset = ctx.Part.CFrame:ToObjectSpace(model:GetPivot())
+	end
+	ctx.Part.CFrame = frame
+	if model and model.Parent then
+		model:PivotTo(frame * (ctx.ModelOffset :: CFrame))
+	end
+end
+
+local function chaseStep(ctx: Context, target: Target, dt: number): boolean
+	if not ctx.IsAlive() or os.clock() < ctx.State.IntroUntil then return false end
+	local character = target.Player.Character
+	if target.Humanoid.Health <= 0 or not character
+		or character:FindFirstChild("HumanoidRootPart") ~= target.Root
+		or character:FindFirstChildOfClass("Humanoid") ~= target.Humanoid
+		or (isArenaBoss(ctx) and not ArenaConfig.IsCombatPosition(target.Root.Position)) then
+		setAnim(ctx, "Idle")
+		return false
+	end
+	local from = origin(ctx)
+	local offset = flat(target.Root.Position - from)
+	local distance = offset.Magnitude
+	local radius = ctx.MoveRadius or ctx.BodyRadius
+	local stop = math.max(Config.Boss.AttackRange, radius + PLAYER_RADIUS + 3)
+	if distance <= stop + 0.05 then
+		setAnim(ctx, "Idle")
+		return true
+	end
+	if distance > attacks.AggroRange then
+		setAnim(ctx, "Idle")
+		return false
+	end
+	local elapsed = math.clamp(dt, 0, 0.1) -- a stalled frame must not teleport the Titan
+	local destination = from + offset.Unit * math.min(Config.Boss.ChaseSpeed * elapsed, distance - stop)
+	if isArenaBoss(ctx) then
+		local center = ArenaConfig.Origin.Position
+		local radial = flat(destination - center)
+		local limit = math.max(0, ArenaConfig.CombatRadius - radius - 3)
+		if radial.Magnitude > limit then radial = radial.Unit * limit end
+		destination = Vector3.new(center.X + radial.X, ctx.Ground, center.Z + radial.Z)
+	end
+	local position = Vector3.new(destination.X, ctx.Part.Position.Y, destination.Z)
+	local facing = CFrame.lookAt(ctx.Part.Position, ctx.Part.Position + offset.Unit)
+	local rotation = ctx.Part.CFrame:Lerp(facing, 1 - math.exp(-elapsed * 8)).Rotation
+	pose(ctx, CFrame.new(position) * rotation)
+	setAnim(ctx, if (destination - from).Magnitude > 0.001 then "Walk" else "Idle")
+	return false
+end
+
+-- Turn the complete boss smoothly around its ground anchor. Reconstructing a
+-- lookAt at the model pivot would discard the imported standing pivot offset.
+local function face(ctx: Context, direction: Vector3)
+	local flatDir = flat(direction)
+	if flatDir.Magnitude < 0.01 or (not ctx.Model and not ctx.Part.CFrame) then
 		return
 	end
-	local startCFrame = model:GetPivot()
+	local startCFrame = ctx.Part.CFrame
 	local position = startCFrame.Position
-	local flatDir = flat(direction).Unit
-	local goal = CFrame.lookAt(position, position + flatDir) * CFrame.Angles(0, math.rad(Config.Boss.ModelYaw), 0)
+	local goal = CFrame.lookAt(position, position + flatDir.Unit)
 	for step = 1, 4 do
-		if not ctx.IsAlive() or not model.Parent then
+		if not ctx.IsAlive() or (ctx.Model and not ctx.Model.Parent) then
 			return
 		end
-		model:PivotTo(startCFrame:Lerp(goal, step / 4))
+		pose(ctx, startCFrame:Lerp(goal, step / 4))
 		task.wait(0.04)
 	end
 end
@@ -169,6 +243,7 @@ local function sweep(ctx: Context, target: Target, scale: number, power: number)
 	local direction = flat(target.Root.Position - from)
 	direction = if direction.Magnitude > 0.1 then direction.Unit else flat(ctx.Part.CFrame.LookVector).Unit
 	face(ctx, direction)
+	if not ctx.IsAlive() then return end
 	local windup = attacks.SweepWindup * scale
 	local passes = if ctx.State.Enraged then 2 else 1
 	for pass = 1, passes do
@@ -312,6 +387,7 @@ local function vineGrab(ctx: Context, _target: Target, scale: number, power: num
 	local center = strikeCenter(ctx, Vector3.new(victim.Root.Position.X, ctx.Ground, victim.Root.Position.Z), attacks.VineRadius)
 	local windup = attacks.VineWindup * scale
 	face(ctx, center - from)
+	if not ctx.IsAlive() then return end
 	setAnim(ctx, "Attack")
 	fx("Vine", { From = heartPosition(ctx), Base = from, Center = center, Radius = attacks.VineRadius, Windup = windup })
 	if not pause(ctx, windup) then
@@ -335,7 +411,7 @@ local function vineGrab(ctx: Context, _target: Target, scale: number, power: num
 					if not ctx.IsAlive() or candidate.Humanoid.Health <= 0 or not candidate.Root.Parent
 						or not character or character:FindFirstChild("HumanoidRootPart") ~= candidate.Root
 						or character:FindFirstChildOfClass("Humanoid") ~= candidate.Humanoid
-						or (ArenaConfig.IsArenaBoss(origin(ctx)) and not ArenaConfig.IsCombatPosition(candidate.Root.Position)) then
+						or (isArenaBoss(ctx) and not ArenaConfig.IsCombatPosition(candidate.Root.Position)) then
 						return
 					end
 					local here = candidate.Root.Position
@@ -442,6 +518,7 @@ end
 type Move = { Name: string, Weight: number, MinPhase: number }
 
 function BossAttacks.Run(ctx: Context)
+	ctx.ArenaBoss = isArenaBoss(ctx)
 	task.spawn(function()
 		local phase = 1
 		local lastPulse = -math.huge
@@ -465,6 +542,11 @@ function BossAttacks.Run(ctx: Context)
 		end
 		-- a bug in one move must never stop the whole fight
 		local function runMove(name: string, pick: Target, scale: number, power: number, movePhase: number)
+			setAnim(ctx, "Idle")
+			if name ~= "Sweep" and name ~= "Vine" then
+				face(ctx, pick.Root.Position - origin(ctx))
+			end
+			if not ctx.IsAlive() then return end
 			local ok, err = pcall(runMoveUnsafe, name, pick, scale, power, movePhase)
 			if not ok then
 				warn("[BossAttacks]", name, err)
@@ -503,6 +585,7 @@ function BossAttacks.Run(ctx: Context)
 			task.wait(0.25)
 			local list = aliveTargets(ctx)
 			if #list == 0 or os.clock() < ctx.State.IntroUntil then
+				setAnim(ctx, "Idle")
 				continue
 			end
 			-- Studio only: set the attribute DebugAttack (Sweep/Slam/Bombs/Vine/Pulse/Rain) on the BigBoss part to fire a move
@@ -525,9 +608,23 @@ function BossAttacks.Run(ctx: Context)
 				end
 				local debugScale = ctx.Part:GetAttribute("DebugScale") -- slow telegraphs down to inspect them
 				local forcedScale = if type(debugScale) == "number" then debugScale else attacks.WindupScale[usePhase]
-				runMove(forced, list[1], forcedScale, attacks.DamageScale[usePhase], usePhase)
+				local forcedTarget = nearestTarget(ctx)
+				if forcedTarget then runMove(forced, forcedTarget, forcedScale, attacks.DamageScale[usePhase], usePhase) end
 				continue
 			end
+			-- The open arena needs no pathfinding. Reacquire the nearest eligible
+			-- character every frame; no stale target survives travel, death or respawn.
+			local ready = false
+			while ctx.IsAlive() do
+				local dt = RunService.Heartbeat:Wait()
+				local target = nearestTarget(ctx)
+				if not target then setAnim(ctx, "Idle"); break end
+				if chaseStep(ctx, target, dt) then
+					ready = true
+					break
+				end
+			end
+			if not ready or not ctx.IsAlive() then continue end
 			local newPhase = phaseOf(ctx.HealthFraction())
 			if newPhase > phase then
 				phase = newPhase
@@ -544,7 +641,6 @@ function BossAttacks.Run(ctx: Context)
 			end
 			local scale = attacks.WindupScale[phase] * (if ctx.State.Enraged then 0.92 else 1)
 			local power = attacks.DamageScale[phase]
-			local from = origin(ctx)
 			local chain = 1
 			local chance = attacks.ChainChance[phase]
 			if math.random() < chance then
@@ -554,18 +650,8 @@ function BossAttacks.Run(ctx: Context)
 				if not ctx.IsAlive() then
 					break
 				end
-				local current = aliveTargets(ctx)
-				if #current == 0 then
-					break
-				end
-				local pick = current[1]
-				local pickDistance = math.huge
-				for _, candidate in current do
-					local distance = flat(candidate.Root.Position - from).Magnitude
-					if distance < pickDistance then
-						pick, pickDistance = candidate, distance
-					end
-				end
+				local pick, pickDistance = nearestTarget(ctx)
+				if not pick or pickDistance > math.max(Config.Boss.AttackRange, (ctx.MoveRadius or ctx.BodyRadius) + PLAYER_RADIUS + 3) + 0.05 then break end
 				local name = choose(pick, pickDistance)
 				last = name
 				runMove(name, pick, scale, power, phase)

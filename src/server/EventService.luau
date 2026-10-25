@@ -94,6 +94,15 @@ end
 
 -- The authored Pumpkin Titan (imported into ServerStorage.BossModels): a scaled, grounded clone that faces the plaza,
 -- plus its height and body radius. Returns nil when the model is not in the place, and the plain cube is used instead.
+local function spawnFacing(ground: Vector3): CFrame
+	local toward = if ArenaConfig.IsArenaBoss(ground)
+		then ArenaConfig.Origin:PointToWorldSpace(ArenaConfig.ArrivalCenter) - ground
+		else Vector3.new(Config.Map.PlazaMinX + 40 - ground.X, 0, 0)
+	toward = Vector3.new(toward.X, 0, toward.Z)
+	local direction = if toward.Magnitude > 0.001 then toward else Vector3.new(-1, 0, 0)
+	return CFrame.lookAt(ground, ground + direction)
+end
+
 local function cloneBossModel(): (Model?, number, number, CFrame?)
 	local settings = Config.Boss
 	local storage = ServerStorage:FindFirstChild(settings.ModelFolder)
@@ -124,9 +133,7 @@ local function cloneBossModel(): (Model?, number, number, CFrame?)
 	local boxCFrame, boxSize = model:GetBoundingBox()
 	local pivotOffset = boxCFrame:ToObjectSpace(model:GetPivot())
 	local ground = settings.Position
-	local toward = if ArenaConfig.IsArenaBoss(ground) then Vector3.new(0, 0, 1) else Vector3.new(Config.Map.PlazaMinX + 40 - ground.X, 0, 0)
-	local direction = if toward.Magnitude > 1 then toward else Vector3.new(-1, 0, 0)
-	local facing = CFrame.lookAt(ground, ground + direction) * CFrame.Angles(0, math.rad(settings.ModelYaw), 0)
+	local facing = spawnFacing(ground) * CFrame.Angles(0, math.rad(settings.ModelYaw), 0)
 	local standing = facing * CFrame.new(0, boxSize.Y / 2, 0) * pivotOffset
 	model:PivotTo(standing)
 	if rigged then
@@ -143,6 +150,7 @@ function EventService.SpawnBoss()
 		return
 	end
 	local settings = Config.Boss
+	local arenaBoss = ArenaConfig.IsArenaBoss(settings.Position)
 	local maxHealth = math.max(settings.MinHealth, settings.HealthPerPlayer * #Players:GetPlayers())
 	local model, modelHeight, modelRadius, standing = cloneBossModel()
 	local part: BasePart
@@ -187,6 +195,9 @@ function EventService.SpawnBoss()
 		fire.Parent = part
 	end
 
+	part.CFrame = CFrame.new(part.Position) * spawnFacing(settings.Position).Rotation
+	part:SetAttribute("HalloweenArenaBoss", arenaBoss)
+	local modelOffset = if standing then part.CFrame:ToObjectSpace(standing) else nil
 	local gui, label = Build.MakeBillboard(part, UDim2.fromScale(30, 8), Vector3.new(0, labelHeight, 0), 400)
 	gui.AlwaysOnTop = false
 	label.Size = UDim2.fromScale(1, 0.55)
@@ -231,7 +242,9 @@ function EventService.SpawnBoss()
 				end
 				local character = player.Character
 				local attackerRoot = character and character:FindFirstChild("HumanoidRootPart")
-				if ArenaConfig.IsArenaBoss(settings.Position) and (not attackerRoot or not ArenaConfig.IsCombatPosition(attackerRoot.Position)) then
+				local attackerHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if arenaBoss and (not attackerRoot or not attackerRoot:IsA("BasePart") or not attackerHumanoid
+					or attackerHumanoid.Health <= 0 or not ArenaConfig.IsCombatPosition(attackerRoot.Position)) then
 					return -- the arrival courtyard is outside the encounter in both directions
 				end
 				current.Health -= damage * (if os.clock() < state.VulnerableUntil then Config.Boss.Attacks.PulseExposedBonus else 1)
@@ -287,6 +300,9 @@ function EventService.SpawnBoss()
 		Part = part,
 		Model = model,
 		BodyRadius = bodyRadius,
+		MoveRadius = if model then modelRadius else bodyRadius,
+		ModelOffset = modelOffset,
+		ArenaBoss = arenaBoss,
 		Ground = settings.Position.Y,
 		IsAlive = function()
 			return not current.Dead

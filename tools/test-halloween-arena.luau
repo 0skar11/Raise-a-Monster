@@ -69,6 +69,85 @@ local function localBounds(part)
 	end end
 	return minX,minZ,maxX,maxZ
 end
+local walls={}
+local wallNames={VoidBarrier_RimWall=true,VoidBarrier_ConnectorWall=true,VoidBarrier_ArrivalShoulder=true,VoidBarrier_ArrivalRail=true,VoidBarrier_ArrivalBackWall=true}
+check(model:FindFirstChild("VoidBarriers")~=nil,"Invisible void barrier folder missing")
+for _,item in model.VoidBarriers:GetChildren() do
+	if wallNames[item.Name] then
+		table.insert(walls,item)
+		local pos=config.Origin:PointToObjectSpace(item.CFrame.Position)
+		check(item.Anchored and item.CanCollide and item.CanQuery and not item.CanTouch and item.Transparency==1,"Void boundary must be invisible and physically solid")
+		check(item.Size.Y>=32 and math.abs(pos.Y-item.Size.Y/2)<.001,"Void boundary is jumpable or has a ground gap")
+		if item.Name=="VoidBarrier_RimWall" then
+			local cf=config.Origin:ToObjectSpace(item.CFrame)
+			local center=cf:PointToObjectSpace(r.Vector3.zero)
+			local dx=math.max(math.abs(center.X)-item.Size.X/2,0)
+			local dz=math.max(math.abs(center.Z)-item.Size.Z/2,0)
+			check(math.sqrt(dx*dx+dz*dz)>=config.CombatRadius-.002,"Invisible barrier consumes combat floor")
+		end
+	end
+end
+local decorativeHeights={RimWall=4,RimCoping=.65,LanternPier=6.4,ArrivalRail=3.5,ArrivalPillar=5.5}
+for _,item in model.Perimeter:GetChildren() do
+	local height=decorativeHeights[item.Name]
+	check(height~=nil and math.abs(item.Size.Y-height)<.001,"Visible perimeter gained a tall wall")
+	local pos=config.Origin:PointToObjectSpace(item.CFrame.Position)
+	check(pos.Y+item.Size.Y/2<=6.401,"Decorative perimeter floats above its approved low height")
+end
+check(#walls==55,"Continuous circle, entry, shoulders, reception or rear wall is missing")
+local function inWall(position)
+	local world=config.Origin:PointToWorldSpace(position)
+	for _,wall in walls do
+		local p=wall.CFrame:PointToObjectSpace(world)
+		local half=wall.Size/2
+		if math.abs(p.X)<=half.X+.002 and math.abs(p.Y)<=half.Y+.002 and math.abs(p.Z)<=half.Z+.002 then return true end
+	end
+	return false
+end
+local function covered(a,b,outward)
+	local distance=(b-a).Magnitude
+	for step=0,math.ceil(distance*4) do
+		local pos=a:Lerp(b,step/math.ceil(distance*4))+outward*.1
+		for _,height in {.25,7.5,24,31.75} do
+			check(inWall(pos+r.Vector3.new(0,height,0)),"Hole or jumpable section in perimeter at "..tostring(pos))
+		end
+	end
+end
+-- Sample every authored tangent face, including both shoulders of the circular entry.
+local gap=math.asin(12/config.CombatRadius)
+local angularStep=(2*math.pi-2*gap)/47
+for index=0,47 do
+	local angle=gap+index*angularStep
+	local normal=r.Vector3.new(math.sin(angle),0,math.cos(angle))
+	local tangent=r.Vector3.new(math.cos(angle),0,-math.sin(angle))
+	local halfLength=config.CombatRadius*math.tan(angularStep/2)
+	covered(normal*90-tangent*(index==0 and 0 or halfLength),normal*90+tangent*(index==47 and 0 or halfLength),normal)
+	if index<47 then
+		-- Test the shared corner itself, rather than only separated panel interiors.
+		local corner=normal*90+tangent*halfLength
+		check(inWall(corner+r.Vector3.new(0,31.75,0)),"Gap between circular wall panels")
+	end
+end
+for _,side in {-1,1} do
+	covered(r.Vector3.new(side*12,0,math.sqrt(90^2-12^2)),r.Vector3.new(side*12,0,108),r.Vector3.new(side,0,0))
+	covered(r.Vector3.new(side*12,0,108),r.Vector3.new(side*20,0,108),r.Vector3.new(0,0,-1))
+	covered(r.Vector3.new(side*20,0,108),r.Vector3.new(side*20,0,143),r.Vector3.new(side,0,0))
+end
+covered(r.Vector3.new(-20,0,143),r.Vector3.new(20,0,143),r.Vector3.new(0,0,1))
+for z=87,109 do
+	for _,x in {-11.99,-6,0,6,11.99} do
+		check(not inWall(r.Vector3.new(x,3,z)),"Wall narrows the 24-stud entry")
+	end
+end
+for _,position in points do
+	local pos=config.Origin:PointToObjectSpace(position)
+	for _,offset in {r.Vector3.zero,r.Vector3.new(-2.5,0,0),r.Vector3.new(2.5,0,0),r.Vector3.new(0,0,-2.5),r.Vector3.new(0,0,2.5)} do
+		check(not inWall(pos+offset),"Wall blocks an arrival landing")
+	end
+end
+for z=portalPos.Z-3,portalPos.Z+3 do
+	for _,x in {-8,0,8} do check(not inWall(r.Vector3.new(x,3,z)),"Rear wall blocks the return portal trigger") end
+end
 for _,item in model:GetDescendants() do
 	if item:IsA("BasePart") then
 		parts+=1
@@ -76,7 +155,7 @@ for _,item in model:GetDescendants() do
 		local pos=config.Origin:PointToObjectSpace(item.CFrame.Position)
 		if item.Name=="RimWall" or item.Name=="RimCoping" or item.Name=="LanternPier" then
 			local minX,minZ,maxX,maxZ=localBounds(item)
-			check(not (maxZ>87 and minZ<108 and minX<12 and maxX> -12),"Perimeter blocks the 24-stud entrance")
+			check(not (maxZ>87 and minZ<108 and minX<11.998 and maxX> -11.998),"Perimeter blocks the 24-stud entrance")
 		end
 		if item.Name=="FloorTile" then
 			local minX,minZ,maxX,maxZ=localBounds(item)
@@ -101,4 +180,4 @@ local a,b=model:GetDescendants(),second:GetDescendants()
 for i,item in a do
 	if item:IsA("BasePart") then check(item.CFrame==b[i].CFrame and item.Color==b[i].Color,"Studio/export geometry differs between builds") end
 end
-print(string.format("PASS: %d arena geometry checks; %d anchored parts, %d canonical pumpkins, 6 separated arrivals, open 180-stud floor and 24-stud entrance",checks,parts,pumpkins))
+print(string.format("PASS: %d arena geometry checks; %d anchored parts, %d canonical pumpkins, 6 separated arrivals, open 180-stud floor, 24-stud entrance, original low decor and continuous invisible 32-stud barriers",checks,parts,pumpkins))

@@ -22,6 +22,7 @@ function Builder.Build(config): Model
 	model:SetAttribute("PlayerCapacity", config.Capacity or 6)
 	local floor = Instance.new("Folder"); floor.Name = "FloorDetail"; floor.Parent = model
 	local rim = Instance.new("Folder"); rim.Name = "Perimeter"; rim.Parent = model
+	local barriers = Instance.new("Folder"); barriers.Name = "VoidBarriers"; barriers.Parent = model
 	local scenery = Instance.new("Folder"); scenery.Name = "Scenery"; scenery.Parent = model
 	local stone = Color3.fromRGB(68, 57, 79)
 	local ember = Color3.fromRGB(255, 104, 22)
@@ -93,7 +94,30 @@ function Builder.Build(config): Model
 		line("EmergenceCrack",a,b,.13,Color3.fromRGB(168,71,24),Enum.Material.Neon,floor)
 		line("EmergenceCrack",b,c,.11,Color3.fromRGB(145,59,19),Enum.Material.SmoothPlastic,floor)
 	end
-	-- Low battlement ring has a 28-stud southern break aligned with the 24-stud connector.
+	-- Invisible tangent panels prevent void falls while preserving the low scenic rim.
+	-- Thirty-two studs also prevents jumping over the barrier from nearby props.
+	local wallHeight, wallThickness = 32, 3.5
+	local entranceHalf = entranceWidth/2
+	local gapAngle = math.asin(entranceHalf/radius)
+	local wallStep = (2*math.pi-2*gapAngle)/47
+	local function boundaryWall(name, a, b, outward, thickness)
+		local center = (a+b)/2 + outward*(thickness/2) + Vector3.new(0,wallHeight/2,0)
+		local delta = b-a
+		local cf = CFrame.new(center)*CFrame.Angles(0,math.atan2(-delta.X,-delta.Z),0)
+		local wall = part("VoidBarrier_"..name,Vector3.new(thickness,wallHeight,(b-a).Magnitude),cf,stone,Enum.Material.SmoothPlastic,true,barriers)
+		wall.Transparency = 1
+		return wall
+	end
+	for i=0,47 do
+		local angle=gapAngle+i*wallStep
+		local normal=Vector3.new(math.sin(angle),0,math.cos(angle))
+		local tangent=Vector3.new(math.cos(angle),0,-math.sin(angle))
+		local halfLength=radius*math.tan(wallStep/2)
+		local a=normal*radius-tangent*(i==0 and 0 or halfLength)
+		local b=normal*radius+tangent*(i==47 and 0 or halfLength)
+		boundaryWall("RimWall",a,b,normal,wallThickness)
+	end
+	-- Restore the approved short stone battlements and their grounded lantern piers.
 	local wallRadius = radius+1.7
 	for i=0,47 do
 		local angle=(i+.5)*math.pi/24
@@ -120,6 +144,12 @@ function Builder.Build(config): Model
 		end
 	end
 	for _,side in {-1,1} do
+		local entryZ=math.sqrt(radius*radius-entranceHalf*entranceHalf)
+		local frontZ=arrival.Z-arrivalSize.Z/2
+		local rearZ=143
+		boundaryWall("ConnectorWall",Vector3.new(side*entranceHalf,0,entryZ),Vector3.new(side*entranceHalf,0,frontZ),Vector3.new(side,0,0),wallThickness)
+		boundaryWall("ArrivalShoulder",Vector3.new(side*entranceHalf,0,frontZ),Vector3.new(side*arrivalSize.X/2,0,frontZ),Vector3.new(0,0,-1),wallThickness)
+		boundaryWall("ArrivalRail",Vector3.new(side*arrivalSize.X/2,0,frontZ-wallThickness),Vector3.new(side*arrivalSize.X/2,0,rearZ+wallThickness),Vector3.new(side,0,0),2.8)
 		part("ArrivalRail",Vector3.new(2.8,3.5,arrivalSize.Z+8),CFrame.new(side*21.4,1.75,arrival.Z+2),stone,Enum.Material.Slate,true,rim)
 		for _,z in {106,124,139} do
 			local x=side*21.4
@@ -128,6 +158,8 @@ function Builder.Build(config): Model
 			lamp(fire,ember,1.6,22)
 		end
 	end
+	-- Behind the plinth and arch: walking through the portal still reaches its trigger.
+	boundaryWall("ArrivalBackWall",Vector3.new(-arrivalSize.X/2,0,143),Vector3.new(arrivalSize.X/2,0,143),Vector3.new(0,0,1),wallThickness)
 	-- Individually spaced arrival points are metadata, never a second spawn system.
 	local points = config.ArrivalPoints or { CFrame.new(-10,3.5,115),CFrame.new(0,3.5,115),CFrame.new(10,3.5,115),CFrame.new(-10,3.5,123),CFrame.new(0,3.5,123),CFrame.new(10,3.5,123) }
 	for index, cf in points do
