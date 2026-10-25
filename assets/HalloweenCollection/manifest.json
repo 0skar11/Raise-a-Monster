@@ -1,0 +1,234 @@
+{
+  "title": "Halloween Collection",
+  "version": 1,
+  "static": true,
+  "rigged": false,
+  "coordinate_system": "Blender Z-up; front is -Y; origins centered at ground",
+  "material_workflow": "Flat PBR vertex geometry with solid-color materials and emissive eyes",
+  "models": [
+    {
+      "name": "GhostSlime",
+      "components": 13,
+      "triangles": 1276,
+      "vertices": 664,
+      "dimensions": [
+        3.4736,
+        1.736,
+        3.19
+      ],
+      "bounds_min": [
+        -1.7368,
+        -0.893,
+        0.0
+      ],
+      "bounds_max": [
+        1.7368,
+        0.843,
+        3.19
+      ],
+      "files": [
+        "GhostSlime.blend",
+        "GhostSlime.glb",
+        "GhostSlime.fbx",
+        "GhostSlime_Front.png",
+        "GhostSlime_Back.png"
+      ]
+    },
+    {
+      "name": "SkeletonImp",
+      "components": 97,
+      "triangles": 2658,
+      "vertices": 1523,
+      "dimensions": [
+        2.7952,
+        1.6006,
+        4.2466
+      ],
+      "bounds_min": [
+        -1.3976,
+        -0.635,
+        0.0
+      ],
+      "bounds_max": [
+        1.3976,
+        0.9656,
+        4.2466
+      ],
+      "files": [
+        "SkeletonImp.blend",
+        "SkeletonImp.glb",
+        "SkeletonImp.fbx",
+        "SkeletonImp_Front.png",
+        "SkeletonImp_Back.png"
+      ]
+    },
+    {
+      "name": "CountFang",
+      "components": 67,
+      "triangles": 2038,
+      "vertices": 1153,
+      "dimensions": [
+        4.4898,
+        1.4713,
+        4.0867
+      ],
+      "bounds_min": [
+        -2.2449,
+        -0.8169,
+        0.0
+      ],
+      "bounds_max": [
+        2.2449,
+        0.6545,
+        4.0867
+      ],
+      "files": [
+        "CountFang.blend",
+        "CountFang.glb",
+        "CountFang.fbx",
+        "CountFang_Front.png",
+        "CountFang_Back.png"
+      ]
+    },
+    {
+      "name": "HexCat",
+      "components": 65,
+      "triangles": 2736,
+      "vertices": 1496,
+      "dimensions": [
+        2.5089,
+        2.3589,
+        3.7397
+      ],
+      "bounds_min": [
+        -1.35,
+        -1.0894,
+        0.0
+      ],
+      "bounds_max": [
+        1.1589,
+        1.2695,
+        3.7397
+      ],
+      "files": [
+        "HexCat.blend",
+        "HexCat.glb",
+        "HexCat.fbx",
+        "HexCat_Front.png",
+        "HexCat_Back.png"
+      ]
+    },
+    {
+      "name": "CryptMummy",
+      "components": 113,
+      "triangles": 10604,
+      "vertices": 5442,
+      "dimensions": [
+        2.78,
+        1.2358,
+        3.53
+      ],
+      "bounds_min": [
+        -1.39,
+        -0.71,
+        0.0
+      ],
+      "bounds_max": [
+        1.39,
+        0.5258,
+        3.53
+      ],
+      "files": [
+        "CryptMummy.blend",
+        "CryptMummy.glb",
+        "CryptMummy.fbx",
+        "CryptMummy_Front.png",
+        "CryptMummy_Back.png"
+      ]
+    },
+    {
+      "name": "GraveGolem",
+      "components": 108,
+      "triangles": 3114,
+      "vertices": 1773,
+      "dimensions": [
+        3.7386,
+        1.3281,
+        3.92
+      ],
+      "bounds_min": [
+        -1.8693,
+        -0.77,
+        0.0
+      ],
+      "bounds_max": [
+        1.8693,
+        0.5581,
+        3.92
+      ],
+      "files": [
+        "GraveGolem.blend",
+        "GraveGolem.glb",
+        "GraveGolem.fbx",
+        "GraveGolem_Front.png",
+        "GraveGolem_Back.png"
+      ]
+    },
+    {
+      "name": "WraithReaper",
+      "components": 94,
+      "triangles": 3531,
+      "vertices": 1939,
+      "dimensions": [
+        2.8465,
+        1.5239,
+        4.9879
+      ],
+      "bounds_min": [
+        -1.3065,
+        -0.79,
+        0.0
+      ],
+      "bounds_max": [
+        1.54,
+        0.7339,
+        4.9879
+      ],
+      "files": [
+        "WraithReaper.blend",
+        "WraithReaper.glb",
+        "WraithReaper.fbx",
+        "WraithReaper_Front.png",
+        "WraithReaper_Back.png"
+      ]
+    },
+    {
+      "name": "PumpkinKing",
+      "components": 59,
+      "triangles": 6484,
+      "vertices": 3379,
+      "dimensions": [
+        3.1997,
+        1.9463,
+        4.65
+      ],
+      "bounds_min": [
+        -1.5999,
+        -0.9732,
+        0.0
+      ],
+      "bounds_max": [
+        1.5999,
+        0.9732,
+        4.65
+      ],
+      "files": [
+        "PumpkinKing.blend",
+        "PumpkinKing.glb",
+        "PumpkinKing.fbx",
+        "PumpkinKing_Front.png",
+        "PumpkinKing_Back.png"
+      ]
+    }
+  ]
+}

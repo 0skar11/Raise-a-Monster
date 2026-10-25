@@ -1,0 +1,185 @@
+{
+  "passed": true,
+  "independent_imports": [
+    {
+      "file": "GhostSlime.glb",
+      "meshes": 13,
+      "triangles": 1276,
+      "dimensions": [
+        3.473571300506592,
+        1.7360318899154663,
+        3.18999981880188
+      ],
+      "bytes": 108548
+    },
+    {
+      "file": "GhostSlime.fbx",
+      "meshes": 13,
+      "triangles": 1276,
+      "dimensions": [
+        3.473571300506592,
+        1.7360323071479797,
+        3.190000194567773
+      ],
+      "bytes": 77964
+    },
+    {
+      "file": "SkeletonImp.glb",
+      "meshes": 97,
+      "triangles": 2658,
+      "dimensions": [
+        2.795219659805298,
+        1.6005950570106506,
+        4.246557235717773
+      ],
+      "bytes": 244644
+    },
+    {
+      "file": "SkeletonImp.fbx",
+      "meshes": 97,
+      "triangles": 2658,
+      "dimensions": [
+        2.795219659805298,
+        1.6005948781967163,
+        4.24655725905505
+      ],
+      "bytes": 284188
+    },
+    {
+      "file": "PumpkinKing.glb",
+      "meshes": 59,
+      "triangles": 6484,
+      "dimensions": [
+        3.199732780456543,
+        1.9463006258010864,
+        4.650000095367432
+      ],
+      "bytes": 398408
+    },
+    {
+      "file": "PumpkinKing.fbx",
+      "meshes": 59,
+      "triangles": 6484,
+      "dimensions": [
+        3.199732780456543,
+        1.9463009238243103,
+        4.6500001621649005
+      ],
+      "bytes": 243756
+    },
+    {
+      "file": "CountFang.glb",
+      "meshes": 67,
+      "triangles": 2038,
+      "dimensions": [
+        4.489806175231934,
+        1.4713432788848877,
+        4.086662292480469
+      ],
+      "bytes": 165256
+    },
+    {
+      "file": "CountFang.fbx",
+      "meshes": 67,
+      "triangles": 2038,
+      "dimensions": [
+        4.489806175231934,
+        1.4713431000709534,
+        4.0866623084017295
+      ],
+      "bytes": 193484
+    },
+    {
+      "file": "HexCat.glb",
+      "meshes": 65,
+      "triangles": 2736,
+      "dimensions": [
+        2.508918881416321,
+        2.358907699584961,
+        3.7396721839904785
+      ],
+      "bytes": 226832
+    },
+    {
+      "file": "HexCat.fbx",
+      "meshes": 65,
+      "triangles": 2736,
+      "dimensions": [
+        2.508918881416321,
+        2.358907699584961,
+        3.7396725560040096
+      ],
+      "bytes": 216028
+    },
+    {
+      "file": "CryptMummy.glb",
+      "meshes": 113,
+      "triangles": 10604,
+      "dimensions": [
+        2.7799999713897705,
+        1.2357586026191711,
+        3.5299999713897705
+      ],
+      "bytes": 730228
+    },
+    {
+      "file": "CryptMummy.fbx",
+      "meshes": 113,
+      "triangles": 10604,
+      "dimensions": [
+        2.7799999713897705,
+        1.2357587218284607,
+        3.530000017007552
+      ],
+      "bytes": 465628
+    },
+    {
+      "file": "GraveGolem.glb",
+      "meshes": 108,
+      "triangles": 3114,
+      "dimensions": [
+        3.738647937774658,
+        1.328051209449768,
+        3.9200000762939453
+      ],
+      "bytes": 298500
+    },
+    {
+      "file": "GraveGolem.fbx",
+      "meshes": 108,
+      "triangles": 3114,
+      "dimensions": [
+        3.738647937774658,
+        1.3280516862869263,
+        3.9200001447206247
+      ],
+      "bytes": 328668
+    },
+    {
+      "file": "WraithReaper.glb",
+      "meshes": 94,
+      "triangles": 3531,
+      "dimensions": [
+        2.8464964628219604,
+        1.5238592028617859,
+        4.987940788269043
+      ],
+      "bytes": 293328
+    },
+    {
+      "file": "WraithReaper.fbx",
+      "meshes": 94,
+      "triangles": 3531,
+      "dimensions": [
+        2.8464964628219604,
+        1.5238593816757202,
+        4.987940844971558
+      ],
+      "bytes": 296684
+    }
+  ],
+  "limits": [
+    "Static models, no skeletal animation",
+    "Roblox import and runtime performance not tested"
+  ]
+}
