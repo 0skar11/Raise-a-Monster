@@ -1,0 +1,1247 @@
+{
+  "source": "../<character>.glb",
+  "static": true,
+  "rigged": false,
+  "coordinate_system": "Blender Z-up, front -Y; FBX Y-up, front -Z",
+  "mesh_triangle_limit": 9000,
+  "models": [
+    {
+      "name": "GhostSlime",
+      "root_name": "GhostSlime_ROOT",
+      "source_file": "GhostSlime.glb",
+      "source_meshes": 13,
+      "mesh_count": 5,
+      "triangles": 1276,
+      "source_local_bounds": [
+        [
+          -1.736785650253296,
+          -0.8930000066757202,
+          0.0
+        ],
+        [
+          1.736785650253296,
+          0.8430318832397461,
+          3.18999981880188
+        ]
+      ],
+      "preview_translation_blender": [
+        -10.5,
+        0.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "GhostSlime__GhostGlow",
+          "material": "GhostGlow",
+          "triangles": 24
+        },
+        {
+          "name": "GhostSlime__Pearl",
+          "material": "Pearl",
+          "triangles": 709
+        },
+        {
+          "name": "GhostSlime__PearlLight",
+          "material": "PearlLight",
+          "triangles": 367
+        },
+        {
+          "name": "GhostSlime__PearlShade",
+          "material": "PearlShade",
+          "triangles": 60
+        },
+        {
+          "name": "GhostSlime__Void",
+          "material": "Void",
+          "triangles": 116
+        }
+      ]
+    },
+    {
+      "name": "SkeletonImp",
+      "root_name": "SkeletonImp_ROOT",
+      "source_file": "SkeletonImp.glb",
+      "source_meshes": 97,
+      "mesh_count": 6,
+      "triangles": 2658,
+      "source_local_bounds": [
+        [
+          -1.397609829902649,
+          -0.6349999904632568,
+          0.0
+        ],
+        [
+          1.397609829902649,
+          0.9655950665473938,
+          4.246557235717773
+        ]
+      ],
+      "preview_translation_blender": [
+        -3.5,
+        0.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "SkeletonImp__Amber",
+          "material": "Amber",
+          "triangles": 24
+        },
+        {
+          "name": "SkeletonImp__Bone",
+          "material": "Bone",
+          "triangles": 804
+        },
+        {
+          "name": "SkeletonImp__GhostGlow",
+          "material": "GhostGlow",
+          "triangles": 120
+        },
+        {
+          "name": "SkeletonImp__Ivory",
+          "material": "Ivory",
+          "triangles": 1276
+        },
+        {
+          "name": "SkeletonImp__Violet",
+          "material": "Violet",
+          "triangles": 326
+        },
+        {
+          "name": "SkeletonImp__Void",
+          "material": "Void",
+          "triangles": 108
+        }
+      ]
+    },
+    {
+      "name": "PumpkinKing",
+      "root_name": "PumpkinKing_ROOT",
+      "source_file": "PumpkinKing.glb",
+      "source_meshes": 59,
+      "mesh_count": 12,
+      "triangles": 6484,
+      "source_local_bounds": [
+        [
+          -1.5998663902282715,
+          -0.9731503129005432,
+          0.0
+        ],
+        [
+          1.5998663902282715,
+          0.9731503129005432,
+          4.650000095367432
+        ]
+      ],
+      "preview_translation_blender": [
+        3.5,
+        0.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "PumpkinKing__Amber",
+          "material": "Amber",
+          "triangles": 532
+        },
+        {
+          "name": "PumpkinKing__Bronze",
+          "material": "Bronze",
+          "triangles": 12
+        },
+        {
+          "name": "PumpkinKing__Gold",
+          "material": "Gold",
+          "triangles": 66
+        },
+        {
+          "name": "PumpkinKing__Leaf",
+          "material": "Leaf",
+          "triangles": 36
+        },
+        {
+          "name": "PumpkinKing__Orange",
+          "material": "Orange",
+          "triangles": 3735
+        },
+        {
+          "name": "PumpkinKing__Purple",
+          "material": "Purple",
+          "triangles": 22
+        },
+        {
+          "name": "PumpkinKing__PurpleLight",
+          "material": "PurpleLight",
+          "triangles": 6
+        },
+        {
+          "name": "PumpkinKing__Vine",
+          "material": "Vine",
+          "triangles": 568
+        },
+        {
+          "name": "PumpkinKing__Violet",
+          "material": "Violet",
+          "triangles": 200
+        },
+        {
+          "name": "PumpkinKing__Void",
+          "material": "Void",
+          "triangles": 175
+        },
+        {
+          "name": "PumpkinKing__Wood",
+          "material": "Wood",
+          "triangles": 564
+        },
+        {
+          "name": "PumpkinKing__WoodLight",
+          "material": "WoodLight",
+          "triangles": 568
+        }
+      ]
+    },
+    {
+      "name": "CountFang",
+      "root_name": "CountFang_ROOT",
+      "source_file": "CountFang.glb",
+      "source_meshes": 67,
+      "mesh_count": 10,
+      "triangles": 2038,
+      "source_local_bounds": [
+        [
+          -2.244903087615967,
+          -0.8168790340423584,
+          0.0
+        ],
+        [
+          2.244903087615967,
+          0.6544642448425293,
+          4.086662292480469
+        ]
+      ],
+      "preview_translation_blender": [
+        10.5,
+        0.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "CountFang__Amber",
+          "material": "Amber",
+          "triangles": 24
+        },
+        {
+          "name": "CountFang__BlackFur",
+          "material": "BlackFur",
+          "triangles": 20
+        },
+        {
+          "name": "CountFang__Gold",
+          "material": "Gold",
+          "triangles": 6
+        },
+        {
+          "name": "CountFang__Indigo",
+          "material": "Indigo",
+          "triangles": 966
+        },
+        {
+          "name": "CountFang__IndigoLight",
+          "material": "IndigoLight",
+          "triangles": 440
+        },
+        {
+          "name": "CountFang__Ivory",
+          "material": "Ivory",
+          "triangles": 288
+        },
+        {
+          "name": "CountFang__Magenta",
+          "material": "Magenta",
+          "triangles": 124
+        },
+        {
+          "name": "CountFang__Red",
+          "material": "Red",
+          "triangles": 56
+        },
+        {
+          "name": "CountFang__Ruby",
+          "material": "Ruby",
+          "triangles": 6
+        },
+        {
+          "name": "CountFang__Void",
+          "material": "Void",
+          "triangles": 108
+        }
+      ]
+    },
+    {
+      "name": "HexCat",
+      "root_name": "HexCat_ROOT",
+      "source_file": "HexCat.glb",
+      "source_meshes": 65,
+      "mesh_count": 15,
+      "triangles": 2736,
+      "source_local_bounds": [
+        [
+          -1.350000023841858,
+          -1.0893776416778564,
+          0.0
+        ],
+        [
+          1.158918857574463,
+          1.2695300579071045,
+          3.7396721839904785
+        ]
+      ],
+      "preview_translation_blender": [
+        -10.5,
+        7.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "HexCat__Amber",
+          "material": "Amber",
+          "triangles": 60
+        },
+        {
+          "name": "HexCat__BlackFur",
+          "material": "BlackFur",
+          "triangles": 740
+        },
+        {
+          "name": "HexCat__Bone",
+          "material": "Bone",
+          "triangles": 72
+        },
+        {
+          "name": "HexCat__Gold",
+          "material": "Gold",
+          "triangles": 286
+        },
+        {
+          "name": "HexCat__Indigo",
+          "material": "Indigo",
+          "triangles": 300
+        },
+        {
+          "name": "HexCat__IndigoLight",
+          "material": "IndigoLight",
+          "triangles": 184
+        },
+        {
+          "name": "HexCat__Ivory",
+          "material": "Ivory",
+          "triangles": 16
+        },
+        {
+          "name": "HexCat__Lime",
+          "material": "Lime",
+          "triangles": 24
+        },
+        {
+          "name": "HexCat__Magenta",
+          "material": "Magenta",
+          "triangles": 16
+        },
+        {
+          "name": "HexCat__OrangeLight",
+          "material": "OrangeLight",
+          "triangles": 230
+        },
+        {
+          "name": "HexCat__Purple",
+          "material": "Purple",
+          "triangles": 194
+        },
+        {
+          "name": "HexCat__Violet",
+          "material": "Violet",
+          "triangles": 374
+        },
+        {
+          "name": "HexCat__Void",
+          "material": "Void",
+          "triangles": 152
+        },
+        {
+          "name": "HexCat__WoodDark",
+          "material": "WoodDark",
+          "triangles": 44
+        },
+        {
+          "name": "HexCat__WoodLight",
+          "material": "WoodLight",
+          "triangles": 44
+        }
+      ]
+    },
+    {
+      "name": "CryptMummy",
+      "root_name": "CryptMummy_ROOT",
+      "source_file": "CryptMummy.glb",
+      "source_meshes": 113,
+      "mesh_count": 11,
+      "triangles": 10604,
+      "source_local_bounds": [
+        [
+          -1.3899999856948853,
+          -0.7100000381469727,
+          0.0
+        ],
+        [
+          1.3899999856948853,
+          0.5257585644721985,
+          3.5299999713897705
+        ]
+      ],
+      "preview_translation_blender": [
+        -3.5,
+        7.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "CryptMummy__Bandage",
+          "material": "Bandage",
+          "triangles": 2908
+        },
+        {
+          "name": "CryptMummy__BandageDark",
+          "material": "BandageDark",
+          "triangles": 2556
+        },
+        {
+          "name": "CryptMummy__BandageLight",
+          "material": "BandageLight",
+          "triangles": 3604
+        },
+        {
+          "name": "CryptMummy__Bronze",
+          "material": "Bronze",
+          "triangles": 572
+        },
+        {
+          "name": "CryptMummy__Cyan",
+          "material": "Cyan",
+          "triangles": 24
+        },
+        {
+          "name": "CryptMummy__Gold",
+          "material": "Gold",
+          "triangles": 210
+        },
+        {
+          "name": "CryptMummy__Ivory",
+          "material": "Ivory",
+          "triangles": 264
+        },
+        {
+          "name": "CryptMummy__PurpleLight",
+          "material": "PurpleLight",
+          "triangles": 80
+        },
+        {
+          "name": "CryptMummy__Scarab",
+          "material": "Scarab",
+          "triangles": 120
+        },
+        {
+          "name": "CryptMummy__Violet",
+          "material": "Violet",
+          "triangles": 58
+        },
+        {
+          "name": "CryptMummy__Void",
+          "material": "Void",
+          "triangles": 208
+        }
+      ]
+    },
+    {
+      "name": "GraveGolem",
+      "root_name": "GraveGolem_ROOT",
+      "source_file": "GraveGolem.glb",
+      "source_meshes": 108,
+      "mesh_count": 10,
+      "triangles": 3114,
+      "source_local_bounds": [
+        [
+          -1.869323968887329,
+          -0.7699999809265137,
+          0.0
+        ],
+        [
+          1.869323968887329,
+          0.5580512285232544,
+          3.9200000762939453
+        ]
+      ],
+      "preview_translation_blender": [
+        3.5,
+        7.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "GraveGolem__Mint",
+          "material": "Mint",
+          "triangles": 224
+        },
+        {
+          "name": "GraveGolem__Moss",
+          "material": "Moss",
+          "triangles": 488
+        },
+        {
+          "name": "GraveGolem__MossLight",
+          "material": "MossLight",
+          "triangles": 160
+        },
+        {
+          "name": "GraveGolem__Pearl",
+          "material": "Pearl",
+          "triangles": 80
+        },
+        {
+          "name": "GraveGolem__PearlLight",
+          "material": "PearlLight",
+          "triangles": 240
+        },
+        {
+          "name": "GraveGolem__Purple",
+          "material": "Purple",
+          "triangles": 18
+        },
+        {
+          "name": "GraveGolem__PurpleLight",
+          "material": "PurpleLight",
+          "triangles": 134
+        },
+        {
+          "name": "GraveGolem__Stone",
+          "material": "Stone",
+          "triangles": 576
+        },
+        {
+          "name": "GraveGolem__StoneDark",
+          "material": "StoneDark",
+          "triangles": 434
+        },
+        {
+          "name": "GraveGolem__StoneLight",
+          "material": "StoneLight",
+          "triangles": 760
+        }
+      ]
+    },
+    {
+      "name": "WraithReaper",
+      "root_name": "WraithReaper_ROOT",
+      "source_file": "WraithReaper.glb",
+      "source_meshes": 94,
+      "mesh_count": 13,
+      "triangles": 3531,
+      "source_local_bounds": [
+        [
+          -1.306510090827942,
+          -0.7900000214576721,
+          0.0
+        ],
+        [
+          1.5399863719940186,
+          0.7338591814041138,
+          4.987940788269043
+        ]
+      ],
+      "preview_translation_blender": [
+        10.5,
+        7.0,
+        0.0
+      ],
+      "meshes": [
+        {
+          "name": "WraithReaper__Bone",
+          "material": "Bone",
+          "triangles": 600
+        },
+        {
+          "name": "WraithReaper__Cyan",
+          "material": "Cyan",
+          "triangles": 254
+        },
+        {
+          "name": "WraithReaper__Gold",
+          "material": "Gold",
+          "triangles": 6
+        },
+        {
+          "name": "WraithReaper__Indigo",
+          "material": "Indigo",
+          "triangles": 120
+        },
+        {
+          "name": "WraithReaper__Ivory",
+          "material": "Ivory",
+          "triangles": 336
+        },
+        {
+          "name": "WraithReaper__PearlLight",
+          "material": "PearlLight",
+          "triangles": 18
+        },
+        {
+          "name": "WraithReaper__Purple",
+          "material": "Purple",
+          "triangles": 60
+        },
+        {
+          "name": "WraithReaper__PurpleLight",
+          "material": "PurpleLight",
+          "triangles": 270
+        },
+        {
+          "name": "WraithReaper__Scarab",
+          "material": "Scarab",
+          "triangles": 6
+        },
+        {
+          "name": "WraithReaper__StoneDark",
+          "material": "StoneDark",
+          "triangles": 720
+        },
+        {
+          "name": "WraithReaper__Violet",
+          "material": "Violet",
+          "triangles": 1033
+        },
+        {
+          "name": "WraithReaper__Void",
+          "material": "Void",
+          "triangles": 32
+        },
+        {
+          "name": "WraithReaper__WoodDark",
+          "material": "WoodDark",
+          "triangles": 76
+        }
+      ]
+    }
+  ],
+  "materials": {
+    "PearlLight": {
+      "linear_rgba": [
+        0.7484140992164612,
+        0.4919050335884094,
+        0.9774019122123718,
+        1.0
+      ],
+      "color_rgb_255": [
+        224,
+        186,
+        252
+      ],
+      "metallic": 0.07999999821186066,
+      "roughness": 0.3799999952316284,
+      "emission_strength": 0.0
+    },
+    "GhostGlow": {
+      "linear_rgba": [
+        0.6209158897399902,
+        0.059253521263599396,
+        1.0,
+        1.0
+      ],
+      "color_rgb_255": [
+        207,
+        69,
+        255
+      ],
+      "metallic": 0.0,
+      "roughness": 0.30000001192092896,
+      "emission_strength": 3.0
+    },
+    "Void": {
+      "linear_rgba": [
+        0.0017801857320591807,
+        0.0009287925786338747,
+        0.003758403705433011,
+        1.0
+      ],
+      "color_rgb_255": [
+        6,
+        3,
+        12
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "emission_strength": 0.0
+    },
+    "Pearl": {
+      "linear_rgba": [
+        0.4338795244693756,
+        0.2049017697572708,
+        0.7677687406539917,
+        1.0
+      ],
+      "color_rgb_255": [
+        176,
+        125,
+        227
+      ],
+      "metallic": 0.07000000029802322,
+      "roughness": 0.4300000071525574,
+      "emission_strength": 0.0
+    },
+    "PearlShade": {
+      "linear_rgba": [
+        0.17064493894577026,
+        0.03968190774321556,
+        0.4200332760810852,
+        1.0
+      ],
+      "color_rgb_255": [
+        115,
+        56,
+        173
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6000000238418579,
+      "emission_strength": 0.0
+    },
+    "Bone": {
+      "linear_rgba": [
+        0.5704815983772278,
+        0.38005632162094116,
+        0.16264718770980835,
+        1.0
+      ],
+      "color_rgb_255": [
+        199,
+        166,
+        112
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6499999761581421,
+      "emission_strength": 0.0
+    },
+    "Violet": {
+      "linear_rgba": [
+        0.03968190774321556,
+        0.004400849808007479,
+        0.11928018927574158,
+        1.0
+      ],
+      "color_rgb_255": [
+        56,
+        14,
+        97
+      ],
+      "metallic": 0.05000000074505806,
+      "roughness": 0.6700000166893005,
+      "emission_strength": 0.0
+    },
+    "Ivory": {
+      "linear_rgba": [
+        0.911407470703125,
+        0.6559306979179382,
+        0.33034372329711914,
+        1.0
+      ],
+      "color_rgb_255": [
+        245,
+        212,
+        156
+      ],
+      "metallic": 0.0,
+      "roughness": 0.5799999833106995,
+      "emission_strength": 0.0
+    },
+    "Amber": {
+      "linear_rgba": [
+        1.0,
+        0.17064493894577026,
+        0.001934984466060996,
+        1.0
+      ],
+      "color_rgb_255": [
+        255,
+        115,
+        6
+      ],
+      "metallic": 0.0,
+      "roughness": 0.4000000059604645,
+      "emission_strength": 3.0
+    },
+    "Leaf": {
+      "linear_rgba": [
+        0.08353512734174728,
+        0.1473190039396286,
+        0.004400849808007479,
+        1.0
+      ],
+      "color_rgb_255": [
+        82,
+        107,
+        14
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8299999833106995,
+      "emission_strength": 0.0
+    },
+    "WoodLight": {
+      "linear_rgba": [
+        0.15487249195575714,
+        0.036306485533714294,
+        0.005642319563776255,
+        1.0
+      ],
+      "color_rgb_255": [
+        110,
+        54,
+        17
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8799999952316284,
+      "emission_strength": 0.0
+    },
+    "Vine": {
+      "linear_rgba": [
+        0.027211781591176987,
+        0.059253521263599396,
+        0.0035010159481316805,
+        1.0
+      ],
+      "color_rgb_255": [
+        46,
+        69,
+        11
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8500000238418579,
+      "emission_strength": 0.0
+    },
+    "Gold": {
+      "linear_rgba": [
+        0.8900054097175598,
+        0.19599418342113495,
+        0.004400849808007479,
+        1.0
+      ],
+      "color_rgb_255": [
+        242,
+        122,
+        14
+      ],
+      "metallic": 0.6499999761581421,
+      "roughness": 0.3100000023841858,
+      "emission_strength": 0.0
+    },
+    "Wood": {
+      "linear_rgba": [
+        0.05497173219919205,
+        0.010816383175551891,
+        0.0027089782524853945,
+        1.0
+      ],
+      "color_rgb_255": [
+        66,
+        27,
+        9
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "emission_strength": 0.0
+    },
+    "Purple": {
+      "linear_rgba": [
+        0.10653922706842422,
+        0.007194409146904945,
+        0.27383843064308167,
+        1.0
+      ],
+      "color_rgb_255": [
+        92,
+        20,
+        143
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6000000238418579,
+      "emission_strength": 0.0
+    },
+    "PurpleLight": {
+      "linear_rgba": [
+        0.24286681413650513,
+        0.021980946883559227,
+        0.4919050335884094,
+        1.0
+      ],
+      "color_rgb_255": [
+        135,
+        41,
+        186
+      ],
+      "metallic": 0.05000000074505806,
+      "roughness": 0.550000011920929,
+      "emission_strength": 0.0
+    },
+    "Bronze": {
+      "linear_rgba": [
+        0.2632734179496765,
+        0.059253521263599396,
+        0.005422868765890598,
+        1.0
+      ],
+      "color_rgb_255": [
+        140,
+        69,
+        17
+      ],
+      "metallic": 0.6000000238418579,
+      "roughness": 0.4000000059604645,
+      "emission_strength": 0.0
+    },
+    "Orange": {
+      "linear_rgba": [
+        0.868899405002594,
+        0.043233636766672134,
+        0.001934984466060996,
+        1.0
+      ],
+      "color_rgb_255": [
+        240,
+        59,
+        6
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6000000238418579,
+      "emission_strength": 0.0
+    },
+    "IndigoLight": {
+      "linear_rgba": [
+        0.027211781591176987,
+        0.0134117491543293,
+        0.08353512734174728,
+        1.0
+      ],
+      "color_rgb_255": [
+        46,
+        31,
+        82
+      ],
+      "metallic": 0.0,
+      "roughness": 0.800000011920929,
+      "emission_strength": 0.0
+    },
+    "Magenta": {
+      "linear_rgba": [
+        0.38005632162094116,
+        0.0027089782524853945,
+        0.03310476616024971,
+        1.0
+      ],
+      "color_rgb_255": [
+        166,
+        9,
+        51
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6000000238418579,
+      "emission_strength": 0.0
+    },
+    "Red": {
+      "linear_rgba": [
+        0.24286681413650513,
+        0.0013931888388469815,
+        0.006571403704583645,
+        1.0
+      ],
+      "color_rgb_255": [
+        135,
+        5,
+        19
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6499999761581421,
+      "emission_strength": 0.0
+    },
+    "Indigo": {
+      "linear_rgba": [
+        0.010816383175551891,
+        0.006571403704583645,
+        0.036306485533714294,
+        1.0
+      ],
+      "color_rgb_255": [
+        27,
+        19,
+        54
+      ],
+      "metallic": 0.0,
+      "roughness": 0.800000011920929,
+      "emission_strength": 0.0
+    },
+    "BlackFur": {
+      "linear_rgba": [
+        0.003671423764899373,
+        0.0029411765281111,
+        0.007850573398172855,
+        1.0
+      ],
+      "color_rgb_255": [
+        12,
+        10,
+        22
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8700000047683716,
+      "emission_strength": 0.0
+    },
+    "Ruby": {
+      "linear_rgba": [
+        0.8900054097175598,
+        0.001934984466060996,
+        0.004400849808007479,
+        1.0
+      ],
+      "color_rgb_255": [
+        242,
+        6,
+        14
+      ],
+      "metallic": 0.25,
+      "roughness": 0.27000001072883606,
+      "emission_strength": 1.0
+    },
+    "OrangeLight": {
+      "linear_rgba": [
+        1.0,
+        0.1259673833847046,
+        0.0027089782524853945,
+        1.0
+      ],
+      "color_rgb_255": [
+        255,
+        99,
+        9
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6000000238418579,
+      "emission_strength": 0.0
+    },
+    "Lime": {
+      "linear_rgba": [
+        0.10653922706842422,
+        1.0,
+        0.001934984466060996,
+        1.0
+      ],
+      "color_rgb_255": [
+        92,
+        255,
+        6
+      ],
+      "metallic": 0.0,
+      "roughness": 0.4000000059604645,
+      "emission_strength": 2.0
+    },
+    "WoodDark": {
+      "linear_rgba": [
+        0.014349875040352345,
+        0.003254215233027935,
+        0.0013931888388469815,
+        1.0
+      ],
+      "color_rgb_255": [
+        32,
+        11,
+        5
+      ],
+      "metallic": 0.0,
+      "roughness": 0.949999988079071,
+      "emission_strength": 0.0
+    },
+    "Bandage": {
+      "linear_rgba": [
+        0.4919050335884094,
+        0.2846466898918152,
+        0.11928018927574158,
+        1.0
+      ],
+      "color_rgb_255": [
+        186,
+        145,
+        97
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8999999761581421,
+      "emission_strength": 0.0
+    },
+    "BandageLight": {
+      "linear_rgba": [
+        0.868899405002594,
+        0.6209158897399902,
+        0.3069993257522583,
+        1.0
+      ],
+      "color_rgb_255": [
+        240,
+        207,
+        150
+      ],
+      "metallic": 0.0,
+      "roughness": 0.8799999952316284,
+      "emission_strength": 0.0
+    },
+    "BandageDark": {
+      "linear_rgba": [
+        0.24286681413650513,
+        0.1259673833847046,
+        0.05087608844041824,
+        1.0
+      ],
+      "color_rgb_255": [
+        135,
+        99,
+        64
+      ],
+      "metallic": 0.0,
+      "roughness": 0.949999988079071,
+      "emission_strength": 0.0
+    },
+    "Cyan": {
+      "linear_rgba": [
+        0.0027089782524853945,
+        0.6382831931114197,
+        1.0,
+        1.0
+      ],
+      "color_rgb_255": [
+        9,
+        209,
+        255
+      ],
+      "metallic": 0.10000000149011612,
+      "roughness": 0.3499999940395355,
+      "emission_strength": 3.0
+    },
+    "Scarab": {
+      "linear_rgba": [
+        0.07828831672668457,
+        0.004400849808007479,
+        0.5870163440704346,
+        1.0
+      ],
+      "color_rgb_255": [
+        79,
+        14,
+        201
+      ],
+      "metallic": 0.5,
+      "roughness": 0.30000001192092896,
+      "emission_strength": 1.0
+    },
+    "Moss": {
+      "linear_rgba": [
+        0.03968190774321556,
+        0.07828831672668457,
+        0.0027089782524853945,
+        1.0
+      ],
+      "color_rgb_255": [
+        56,
+        79,
+        9
+      ],
+      "metallic": 0.0,
+      "roughness": 0.9700000286102295,
+      "emission_strength": 0.0
+    },
+    "Mint": {
+      "linear_rgba": [
+        0.003935939632356167,
+        1.0,
+        0.19599418342113495,
+        1.0
+      ],
+      "color_rgb_255": [
+        13,
+        255,
+        122
+      ],
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "emission_strength": 2.299999952316284
+    },
+    "StoneDark": {
+      "linear_rgba": [
+        0.02451501414179802,
+        0.027211781591176987,
+        0.036306485533714294,
+        1.0
+      ],
+      "color_rgb_255": [
+        43,
+        46,
+        54
+      ],
+      "metallic": 0.0,
+      "roughness": 0.9800000190734863,
+      "emission_strength": 0.0
+    },
+    "Stone": {
+      "linear_rgba": [
+        0.07323895394802094,
+        0.08353512734174728,
+        0.09462962299585342,
+        1.0
+      ],
+      "color_rgb_255": [
+        76,
+        82,
+        87
+      ],
+      "metallic": 0.0,
+      "roughness": 0.949999988079071,
+      "emission_strength": 0.0
+    },
+    "MossLight": {
+      "linear_rgba": [
+        0.1259673833847046,
+        0.17064493894577026,
+        0.005981059744954109,
+        1.0
+      ],
+      "color_rgb_255": [
+        99,
+        115,
+        18
+      ],
+      "metallic": 0.0,
+      "roughness": 0.949999988079071,
+      "emission_strength": 0.0
+    },
+    "StoneLight": {
+      "linear_rgba": [
+        0.15487249195575714,
+        0.16264718770980835,
+        0.17064493894577026,
+        1.0
+      ],
+      "color_rgb_255": [
+        110,
+        112,
+        115
+      ],
+      "metallic": 0.0,
+      "roughness": 0.949999988079071,
+      "emission_strength": 0.0
+    }
+  },
+  "mesh_count": 82,
+  "triangles": 32441
+}

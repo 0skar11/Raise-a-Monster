@@ -142,6 +142,14 @@ local function rarityColor(monster: any): Color3
 	return if rarity then rarity.Color else C.Violet
 end
 
+-- خلفية الكارت بلون الندرة (فاتحة فوق وأغمق تحت)، والـ Secret غامق عشان يبان سري
+local function cardGradient(color: Color3, rarity: string?): ColorSequence
+	if rarity == "Secret" then
+		return ColorSequence.new(Color3.fromRGB(78, 62, 126), Color3.fromRGB(16, 11, 34))
+	end
+	return ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.1), color:Lerp(C.Ink, 0.55))
+end
+
 -- A model is looked up by the exact species/stage, or the local player's exact
 -- monster ID. A similarly named monster belonging to another player is never used.
 local function findSource(monster: any): Model?
@@ -449,21 +457,39 @@ function Vault.Init(ui: UI.UI, remotes: { [string]: RemoteEvent }, getState: () 
 		shine.Parent = item
 		local backdrop = Instance.new("UIGradient")
 		backdrop.Color, backdrop.Rotation, backdrop.Parent = ColorSequence.new(C.Raised, C.Ink), 90, item
+		-- هالة فاتحة ورا الوحش وضل بيضاوي تحت رجليه، زي كروت المجموعة
+		local glow = Instance.new("Frame")
+		glow.Name, glow.BorderSizePixel, glow.Active = "Glow", 0, false
+		glow.AnchorPoint, glow.Position, glow.Size = Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0.5, -6), UDim2.fromScale(0.8, 0.6)
+		glow.BackgroundColor3, glow.BackgroundTransparency = Color3.new(1, 1, 1), 0.88
+		glow.Parent = item
+		corners(glow, 999)
+		local floorShadow = Instance.new("Frame")
+		floorShadow.Name, floorShadow.BorderSizePixel, floorShadow.Active = "FloorShadow", 0, false
+		floorShadow.AnchorPoint, floorShadow.Position, floorShadow.Size = Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 1, -56), UDim2.new(0.62, 0, 0, 14)
+		floorShadow.BackgroundColor3, floorShadow.BackgroundTransparency = Color3.new(0, 0, 0), 0.58
+		floorShadow.Parent = item
+		corners(floorShadow, 999)
 		local portraitHolder = surface(item, "PortraitArea", C.Ink)
 		portraitHolder.BackgroundTransparency = 1
-		portraitHolder.Position, portraitHolder.Size = UDim2.fromOffset(2, 2), UDim2.new(1, -4, 1, -55)
+		portraitHolder.Position, portraitHolder.Size = UDim2.fromOffset(2, 28), UDim2.new(1, -4, 1, -74)
 		local portrait = makePortrait(portraitHolder, "Card")
-		local name = text(item, "MonsterName", "", 16)
-		name.Position, name.Size = UDim2.new(0, 10, 1, -57), UDim2.new(1, -20, 0, 32)
-		name.TextYAlignment = Enum.TextYAlignment.Center
+		-- الاسم فوق بخط أبيض عريض وحدود غامقة
+		local name = text(item, "MonsterName", "", 18)
+		name.Position, name.Size = UDim2.new(0, 6, 0, 4), UDim2.new(1, -12, 0, 26)
+		name.TextXAlignment, name.TextYAlignment = Enum.TextXAlignment.Center, Enum.TextYAlignment.Center
+		name.TextWrapped, name.TextScaled = false, true
+		name.TextColor3, name.TextStrokeTransparency, name.TextStrokeColor3 = Color3.new(1, 1, 1), 0, Color3.fromRGB(18, 12, 44)
+		local nameLimit = Instance.new("UITextSizeConstraint")
+		nameLimit.MinTextSize, nameLimit.MaxTextSize, nameLimit.Parent = 11, 19, name
 		local level = text(item, "Level", "", 14, C.Cyan)
 		level.Position, level.Size = UDim2.new(0, 10, 1, -24), UDim2.new(0.40, 0, 0, 22)
 		local production = text(item, "Production", "", 14, C.Gold)
 		production.Position, production.Size = UDim2.new(0.40, 0, 1, -24), UDim2.new(0.60, -9, 0, 22)
 		production.TextXAlignment = Enum.TextXAlignment.Right
-		local badge = surface(item, "PlacementBadge", C.Panel)
-		badge.Position, badge.Size = UDim2.fromOffset(8, 8), UDim2.new(1, -16, 0, 25)
-		outline(badge, C.Line)
+		local badge = surface(item, "PlacementBadge", C.Ink)
+		badge.BackgroundTransparency = 0.4
+		badge.Position, badge.Size = UDim2.new(0, 8, 1, -49), UDim2.new(1, -16, 0, 21)
 		local badgeLabel = text(badge, "Status", "", 12, C.Mint)
 		badgeLabel.Position, badgeLabel.Size = UDim2.fromOffset(5, 0), UDim2.new(1, -10, 1, 0)
 		local connection = item.Activated:Connect(function() selectedId = id; controller.Refresh() end)
@@ -643,7 +669,7 @@ function Vault.Init(ui: UI.UI, remotes: { [string]: RemoteEvent }, getState: () 
 			card.Badge.Text = monsterStatus(monster) .. (if monster.Following then " · Following" else "")
 			card.Badge.TextColor3 = if (monster.Slot or 0) > 0 then C.Mint else C.Muted
 			card.Border.Color, card.Border.Thickness = if selectedId == monster.Id then C.Mint else rarityColor(monster):Lerp(C.Line, 0.45), if selectedId == monster.Id then 3 else 1.5
-			card.Gradient.Color = ColorSequence.new(rarityColor(monster):Lerp(C.Panel, 0.70), C.Ink)
+			card.Gradient.Color = cardGradient(rarityColor(monster), monster.Rarity)
 			-- the rarest cards glint every few seconds (one looping tween with a pause between sweeps)
 			local shiny = show and SHINY[monster.Rarity or ""] == true
 			card.Shine.Visible = shiny
@@ -675,7 +701,7 @@ function Vault.Init(ui: UI.UI, remotes: { [string]: RemoteEvent }, getState: () 
 			card.Time.Text = "⏱ " .. clock(egg.SecondsLeft or (definition and definition.HatchTime) or 0)
 			card.Egg.BackgroundColor3 = tint
 			card.Border.Color, card.Border.Thickness = if selectedId == egg.Id then C.Mint else tint:Lerp(C.Line, 0.45), if selectedId == egg.Id then 3 else 1.5
-			card.Gradient.Color = ColorSequence.new(tint:Lerp(C.Panel, 0.72), C.Ink)
+			card.Gradient.Color = cardGradient(tint)
 		end
 		empty.Visible = shown == 0
 		empty.Text = if #rows == 0 and #benchEggs == 0 then "Your next monster belongs here.\nCollect one in the zones and carry it home." else "No monsters here yet.\nTry another collection tab."

@@ -14,10 +14,11 @@ local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
 
 -- تشغيل صوت في مكان معين
-local function playSound(parent: Instance, soundId: string, volume: number?)
+local function playSound(parent: Instance, soundId: string, volume: number?, speed: number?)
 	local sound = Instance.new("Sound")
 	sound.SoundId = soundId
 	sound.Volume = volume or 1
+	sound.PlaybackSpeed = speed or 1
 	sound.Parent = parent
 	sound:Play()
 	Debris:AddItem(sound, 3)
@@ -203,7 +204,9 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 	-- أصوات الضرب
 	local handle = tool:FindFirstChild("Handle") :: BasePart?
 	if handle then
-		playSound(handle, Config.Combat.Sounds.Swing, 0.6)
+		-- السلاح الأتقل بنغمة أغلظ، وتنويع بسيط عشان الضرب المتكرر مايبقاش آلي
+		local pitch = math.clamp(1.12 - 0.04 * math.log(math.max(damageMultiplier, 1), 2), 0.85, 1.15)
+		playSound(handle, Config.Combat.Sounds.Swing, 0.7, pitch * (0.96 + math.random() * 0.08))
 	end
 
 	animateSwing(player, tool, humanoid)

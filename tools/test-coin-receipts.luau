@@ -20,8 +20,8 @@ local data = {
 }
 local signal = {Connect = function() end}
 local market = {PromptGamePassPurchaseFinished = signal}
-local modules = {Config = config, DataService = data, PlotService = {}, MonsterService = {Notify = function() end, PushState = function() end}, CharacterService = {}, CombatService = {}}
-local services = {MarketplaceService = market, Players = {GetPlayerByUserId = function(_, id) return if id == 1 then player else nil end}, ReplicatedStorage = {Shared = {Config = 'Config'}}, RunService = {}}
+local modules = {Config = config, DataService = data, PlotService = {}, MonsterService = {Notify = function() end, PushState = function() end, GetIncomePerSecond = function() return 0 end}, MonsterMath = {FormatNumber = tostring}, CharacterService = {}, CombatService = {}}
+local services = {MarketplaceService = market, Players = {GetPlayerByUserId = function(_, id) return if id == 1 then player else nil end}, ReplicatedStorage = {Shared = {Config = 'Config', MonsterMath = 'MonsterMath'}}, RunService = {}}
 local parent = {}
 for k in modules do parent[k] = k end
 local enums = {ProductPurchaseDecision = {PurchaseGranted = 'granted', NotProcessedYet = 'retry'}}

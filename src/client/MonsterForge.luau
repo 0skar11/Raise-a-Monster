@@ -277,25 +277,33 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 		offer.Card, offer.Preview, offer.TitleLabel, offer.DescriptionLabel, offer.PriceLabel, offer.Action, offer.Outline = card, preview, titleLabel, description, price, action, outline
 		table.insert(offers, offer)
 	end
-	local preferred = { "Bat", "IronSword", "ForestSword", "DesertSword", "IceSword", "LavaSword" }
-	local weaponKeys = table.clone(preferred)
-	local extraWeapons = {}
-	for key in Config.WeaponStats do if not table.find(preferred, key) then table.insert(extraWeapons, key) end end
-	table.sort(extraWeapons, function(a, b) return Config.WeaponCoinPrices[a] < Config.WeaponCoinPrices[b] end)
-	for _, key in extraWeapons do table.insert(weaponKeys, key) end
+	-- السيوف مترتبة بقوتها (ضرر الضربة) من الأضعف للأقوى، والـ Bat الأول
+	local weaponKeys = { "Bat" }
+	local sortedWeapons = {}
+	for key in Config.WeaponStats do table.insert(sortedWeapons, key) end
+	table.sort(sortedWeapons, function(a, b)
+		local damageA, damageB = Config.WeaponStats[a].DamageMultiplier, Config.WeaponStats[b].DamageMultiplier
+		if damageA ~= damageB then return damageA < damageB end
+		return a < b
+	end)
+	for _, key in sortedWeapons do table.insert(weaponKeys, key) end
 	for _, key in weaponKeys do
 		local info = Config.WeaponStats[key]
 		local pass = Config.Gamepasses[key]
 		add({ Key = key, Kind = "Weapon", Category = "Weapons", Title = if key == "Bat" then "Bat" else pass.Name,
 			Description = if key == "Bat" then "Your starter weapon" else pass.Description,
-			Price = Config.WeaponCoinPrices[key] or 0, Template = if info then info.Template else "WoodenBat", Stats = info })
+			Price = Config.WeaponCoinPrices[key] or 0, Template = if info then info.Template else "WoodenBat", Stats = info,
+			-- سيف الـ VIP مش بيتباع في الشوب: بيظهر في Owned بس لو اللاعب عنده الـ VIP
+			OwnedOnly = Config.WeaponCoinPrices[key] == nil and key ~= "Bat" })
 	end
 	local accessoryKeys = {}
 	for key in Config.SpeedAccessories do table.insert(accessoryKeys, key) end
 	table.sort(accessoryKeys, function(a, b) return Config.SpeedAccessories[a].Price < Config.SpeedAccessories[b].Price end)
 	for _, key in accessoryKeys do
 		local info = Config.SpeedAccessories[key]
-		add({ Key = key, Kind = "Accessory", Category = "Accessories", Title = info.Name, Description = info.Description, Price = info.Price, Stats = info })
+		add({ Key = key, Kind = "Accessory", Category = "Accessories", Title = info.Name, Description = info.Description, Price = info.Price, Stats = info,
+			-- boss-loot gear is never sold: it only shows up under Owned once a boss drop gave it to you
+			OwnedOnly = info.LootOnly == true })
 	end
 	local passKeys = { "DoubleDamage", "VIP", "AutoCollect", "ExtraSlots", "AutoFeeder", "AutoMinigame" }
 	for _, key in passKeys do
@@ -307,17 +315,24 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 		end
 	end
 	-- Keep future configured perks reachable without changing the approved six-card hierarchy.
+	-- مترتبة بـ Order عشان الترتيب يبقى ثابت مش عشوائي.
+	local extraPasses = {}
 	for key, info in Config.Gamepasses do
-		if not Config.WeaponStats[key] and not info.Hidden and not table.find(passKeys, key) then
-			add({ Key = key, Kind = "Pass", Category = "Gamepasses", Title = info.Name, Description = info.Description, Price = info.Price, Id = info.Id })
-		end
+		if not Config.WeaponStats[key] and not info.Hidden and not table.find(passKeys, key) then table.insert(extraPasses, key) end
+	end
+	table.sort(extraPasses, function(a, b) return Config.Gamepasses[a].Order < Config.Gamepasses[b].Order end)
+	for _, key in extraPasses do
+		local info = Config.Gamepasses[key]
+		add({ Key = key, Kind = "Pass", Category = "Gamepasses", Title = info.Name, Description = info.Description, Price = info.Price, Id = info.Id })
 	end
 	local productKeys = {}
 	for key in Config.Products do table.insert(productKeys, key) end
 	table.sort(productKeys, function(a, b) return Config.Products[a].Order < Config.Products[b].Order end)
 	for _, key in productKeys do
 		local info = Config.Products[key]
-		add({ Key = key, Kind = "Product", Category = "Coins & Growth", Title = info.Name, Description = info.Description, Price = info.Price, Id = info.Id })
+		if not info.Hidden then
+			add({ Key = key, Kind = "Product", Category = "Coins & Growth", Title = info.Name, Description = info.Description, Price = info.Price, Id = info.Id })
+		end
 	end
 	local function token(offer: any): string return offer.Kind .. ":" .. offer.Key end
 	local function available(offer: any): boolean
@@ -475,7 +490,7 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 		local state = options.GetState() or {}
 		local visible = {}
 		for _, offer in offers do
-			offer.Card.Visible = offer.Category == selectedCategory or (selectedCategory == "Owned" and (offer.Kind == "Weapon" or offer.Kind == "Accessory") and owned(offer, state))
+			offer.Card.Visible = (offer.Category == selectedCategory and not offer.OwnedOnly) or (selectedCategory == "Owned" and (offer.Kind == "Weapon" or offer.Kind == "Accessory") and owned(offer, state))
 			if offer.Card.Visible then table.insert(visible, offer) end
 		end
 		local bottom = if stacked then dh + gap else 0
@@ -484,7 +499,10 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 			local featuredHeight = if compact then 230 else math.floor(contentHeight * 0.58)
 			local featuredWidth = math.floor((gridWidth - 6 - (columns - 1) * gap) / columns)
 			local featuredCount, smallCount = 0, 0
-			local smallColumns = if compact then (if gridWidth < 370 then 1 else 2) else 4
+			-- الكروت الصغيرة كلها في صف واحد على الديسكتوب (4 أو أكتر لما تتضاف جيمباسات جديدة)
+				local plainCount = 0
+				for _, offer in visible do if not offer.Featured then plainCount += 1 end end
+				local smallColumns = if compact then (if gridWidth < 370 then 1 else 2) else math.clamp(plainCount, 4, 6)
 			local smallWidth = math.floor((gridWidth - 6 - (smallColumns - 1) * gap) / smallColumns)
 			local smallHeight = if compact then 173 else contentHeight - featuredHeight - gap
 			for _, offer in visible do

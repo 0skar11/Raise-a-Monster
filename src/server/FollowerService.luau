@@ -123,6 +123,23 @@ function FollowerService.Toggle(player: Player, id: unknown): (boolean, string)
 	return true, "Monster is now following you!"
 end
 
+-- Auto Place: بيستبدل الـ followers بأول وحوش مؤهلة في الترتيب (الأعلى دخلاً)، لحد MaxCount. بيرجّع عددهم.
+function FollowerService.SetBest(player: Player, ranked: { Monster }): number
+	local ids: { string } = {}
+	for _, monster in ranked do
+		if #ids >= Config.Followers.MaxCount then break end
+		if FollowerService.IsEligible(player, monster) and not table.find(ids, monster.Id) then
+			table.insert(ids, monster.Id)
+		end
+	end
+	for _, id in FollowerService.GetIds(player) do
+		if not table.find(ids, id) then removeVisual(player, id) end
+	end
+	equipped[player] = ids
+	persist(player, ids)
+	return #ids
+end
+
 function FollowerService.GetDamageBonus(player: Player): number
 	local ids = FollowerService.GetIds(player)
 	local profile = DataService.Get(player)

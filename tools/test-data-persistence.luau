@@ -83,7 +83,6 @@ profile.Data.EquippedWeapon = "IronSword"
 profile.Data.SpeedAccessories.SwiftSneakers = true
 profile.Data.EquippedSpeedAccessory = "SwiftSneakers"
 profile.Data.SlotUpgrades = 2
-profile.Data.Daily = { LastClaim = now, Streak = 5 }
 profile.Data.LastSpin = now
 profile.Data.ProcessedReceipts["purchase-1"] = true
 profile.Data.SpeedBoostUntil = now + 600
@@ -103,7 +102,7 @@ profile = second.Load(rival)
 check(not profile.LoadFailed and profile.Data.Coins == 7654, "Rejoin reads the saved balance")
 check(profile.Data.Monsters["7"].Hat == "saved-hat" and profile.Data.Monsters["7"].Level == 13 and profile.Data.Eggs["8"].EggType == "Rare", "Monsters, accessories, XP and eggs survive rejoin")
 check(profile.Data.Weapons.IronSword and profile.Data.EquippedWeapon == "IronSword" and profile.Data.SpeedAccessories.SwiftSneakers and profile.Data.EquippedSpeedAccessory == "SwiftSneakers", "Gear ownership and both selections survive rejoin")
-check(profile.Data.Daily.Streak == 5 and profile.Data.LastSpin == now - config.AutosaveInterval and profile.Data.ProcessedReceipts["purchase-1"] and profile.Data.NextId == 9, "Rewards, receipt deduplication and ID sequence survive rejoin")
+check(profile.Data.LastSpin == now - config.AutosaveInterval and profile.Data.ProcessedReceipts["purchase-1"] and profile.Data.NextId == 9, "Rewards, receipt deduplication and ID sequence survive rejoin")
 before = reads
 profile.Data.Coins += 1
 failures = 2
@@ -140,11 +139,30 @@ local damaged = player(3)
 check(first.Load(damaged).LoadFailed and not first.Save(damaged) and stored.Player_3 == "damaged-record", "Invalid stored root fails closed without replacement")
 stored.Player_4 = { Coins = 99, Monsters = "invalid-collection" }
 check(first.Load(player(4)).LoadFailed and stored.Player_4.Monsters == "invalid-collection", "Invalid collections fail closed before locking or reconciling")
-stored.Player_5 = { Coins = 555, SpeedAccessories = { SwiftSneakers = true, GoldenWings = true } }
+stored.Player_5 = { WipeVersion = config.ProgressWipeVersion, Coins = 555, SpeedAccessories = { SwiftSneakers = true, GoldenWings = true } }
 local legacyPlayer = player(5)
 local legacy = first.Load(legacyPlayer)
 check(not legacy.LoadFailed and legacy.Data.Coins == 555 and legacy.Data.Weapons.Bat and legacy.Data.Stats.Hatched == 0, "Legacy fields reconcile without discarding existing progress")
 check(legacy.Data.EquippedSpeedAccessory == "GoldenWings" and legacy.Data.Version == 2, "Missing legacy version still migrates its best owned accessory")
+-- ريسيت البروجريس: سجل قديم من غير WipeVersion بيبدأ من الأول مرة واحدة، وبيحتفظ بسجل الإيصالات
+stored.Player_11 = {
+	Coins = 987654, TotalEarned = 5e9, Monsters = { ["1"] = { Id = "1", Species = "Void_10", Slot = 1, Level = 60, Xp = 0, Hunger = 100, Happiness = 100 } },
+	Eggs = { ["2"] = { Id = "2", EggType = "Mythic", Slot = 2, HatchAt = now + 100 } }, SlotUpgrades = 5, NextId = 40,
+	Weapons = { Bat = true, LavaSword = true }, EquippedWeapon = "LavaSword", LastSpin = now,
+	ProcessedReceipts = { ["old-purchase"] = true }, Halloween = { Candy = 500, TotalCandy = 900, BoostUntil = 0, Converted = 0, Owned = {}, Equipped = {} },
+}
+local wipedPlayer = player(11)
+local wipedProfile = first.Load(wipedPlayer)
+check(not wipedProfile.LoadFailed and wipedProfile.Data.Coins == config.StartingCoins and next(wipedProfile.Data.Monsters) == nil and next(wipedProfile.Data.Eggs) == nil, "Progress wipe resets coins, monsters and eggs for a pre-wipe save")
+check(wipedProfile.Data.SlotUpgrades == 0 and wipedProfile.Data.NextId == 1 and wipedProfile.Data.LastSpin == 0 and wipedProfile.Data.Halloween.Candy == 0 and wipedProfile.Data.TotalEarned == 0, "Progress wipe resets upgrades, ids, spin timer, candy and earnings")
+check(wipedProfile.Data.EquippedWeapon == "Bat" and wipedProfile.Data.Weapons.LavaSword == nil and wipedProfile.Data.Weapons.Bat, "Progress wipe resets purchased weapons")
+check(wipedProfile.Data.ProcessedReceipts["old-purchase"] and wipedProfile.Data.WipeVersion == config.ProgressWipeVersion, "Progress wipe keeps receipt deduplication and stamps the wipe version")
+wipedProfile.Data.Coins = 4242
+check(first.Save(wipedPlayer) and stored.Player_11.Coins == 4242 and stored.Player_11.WipeVersion == config.ProgressWipeVersion, "Wiped profile persists its fresh state and version")
+first.Release(wipedPlayer)
+local wipedAgain = second.Load(player(11))
+check(not wipedAgain.LoadFailed and wipedAgain.Data.Coins == 4242, "A wiped player is not wiped again on the next join")
+second.Release(player(11))
 local unavailable = server(true)
 local offlineProduction = unavailable.Load(player(6))
 check(offlineProduction.LoadFailed and not offlineProduction.Temporary, "Unavailable DataStore in production fails closed")

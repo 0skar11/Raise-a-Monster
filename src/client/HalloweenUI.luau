@@ -56,11 +56,10 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		{ Name = "Boosts", Icon = "⚡", Kinds = { Boost = true } },
 		{ Name = "Cosmetics", Icon = "🎩", Kinds = { Hat = true, Trail = true, Aura = true, Title = true } },
 		{ Name = "Eggs", Icon = "🥚", Kinds = { Egg = true } },
-		{ Name = "Monsters", Icon = "👹", Kinds = { Monster = true } },
 	}
 	local ICONS = {
 		Boost = "⚡", Hat = "🎩", Trail = "👻", Aura = "✨", Title = "🏷️", Egg = "🥚",
-		HalloweenGhostSlime = "👻", HalloweenSkeletonImp = "💀", HalloweenPumpkinKing = "🎃",
+		HalloweenGhostSlime = "👻", HalloweenSkeletonImp = "💀", HalloweenPumpkinKing = "🎃", HalloweenHexCat = "🐈‍⬛", HalloweenCryptMummy = "🧟", HalloweenCountFang = "🧛", HalloweenGraveGolem = "🗿", HalloweenWraithReaper = "☠️",
 	}
 	local GREETINGS = {
 		"Boo! Got any Candy for me?",

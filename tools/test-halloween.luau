@@ -17,36 +17,49 @@ local Config = load("src/shared/Config.luau")
 local Logic = load("src/shared/HalloweenLogic.luau")
 local H = Config.Halloween
 local items = H.Items
+-- The Candy shop no longer sells monsters (they hatch from the Halloween Monster Egg), but HalloweenLogic still
+-- supports Monster items, so the purchase rules are exercised with these local stand-ins.
+local logicItems = table.clone(items)
+logicItems.GhostSlime = { Name = "Ghost Slime", Kind = "Monster", Cost = 1500, Order = 7, Description = "", Color = false, Species = "HalloweenGhostSlime" }
+logicItems.SkeletonImp = { Name = "Skeleton Imp", Kind = "Monster", Cost = 3000, Order = 8, Description = "", Color = false, Species = "HalloweenSkeletonImp" }
+logicItems.PumpkinKing = { Name = "Pumpkin King", Kind = "Monster", Cost = 12000, Order = 9, Description = "", Color = false, Species = "HalloweenPumpkinKing", Unique = true }
 
 -- Config -----------------------------------------------------------------------------------------------
 check(H.Enabled == true and H.Name == "Halloween 2026" and H.EndsAt == 0, "Event is on by default and has no scheduled end")
 check(H.CandyToCoinRate > 0, "Leftover Candy converts to cash at a positive configurable rate")
-check(H.Invasion.Interval == 3600 and H.Invasion.AnnounceBefore == 60 and H.Invasion.MinCount == 3, "Invasion: hourly, 1 minute warning, min 3")
-check(H.Pumpkins.Interval == 1800 and H.Pumpkins.CountMin == 5 and H.Pumpkins.CountMax == 20 and H.Pumpkins.Lifetime == 120, "Pumpkin hunt: 30 min, 5-20 pumpkins, 2 minute life")
+check(H.Invasion.Interval == 1800 and H.Pumpkins.Interval == 900 and H.Invasion.AnnounceBefore == 60 and H.Invasion.MinCount == 3, "Invasion every 30 min, Candy hunt every 15 min, 1 minute warning, min 3")
+check(H.Pumpkins.Interval == 900 and H.Pumpkins.CountMin == 5 and H.Pumpkins.CountMax == 20 and H.Pumpkins.Lifetime == 120, "Pumpkin hunt: 15 min, 5-20 pumpkins, 2 minute life")
 check(H.Pumpkins.ZonesShare > 0 and H.Pumpkins.ZonesShare < 1 and H.Pumpkins.ZoneArea.MaxX > H.Pumpkins.ZoneArea.MinX, "Pumpkins hide in the plaza or the monster zones")
 check(fs.readFile("src/server/HalloweenService.luau"):find("a nest Mother roams around her own nest", 1, true), "Nest Mothers are not clamped back into the plaza (no teleport when they notice a player)")
 check(not fs.readFile("src/server/HalloweenService.luau"):find("sendHints", 1, true) and not fs.readFile("src/client/HalloweenUI.luau"):find("PumpkinHint", 1, true), "The pumpkin hint GUI is gone")
 check(not fs.readFile("src/client/AdminPanel.luau"):find("AdminLauncher", 1, true), "The admin launcher button is gone (F4 only)")
 check(H.Pumpkins.CandyMin == 3 and H.Pumpkins.CandyMax == 10 and H.Pumpkins.GoldenCandy == 50, "Pumpkin rewards 3-10, golden 50")
 check(H.Invasion.ParticipationFraction == 0.05 and H.Invasion.CandyPerLevel == 5, "5% HP threshold and level x 5 Candy")
-check(H.Pumpkins.Offset % H.Invasion.Interval ~= 0, "Hunt and invasion never start on the same second")
+check(H.Pumpkins.Offset == 0 and H.Invasion.Offset == 0, "Hunt and invasion share the same wall-clock slots")
 for id, item in items do
 	check(item.Cost > 0 and item.Order > 0 and item.Name ~= "" and item.Kind ~= "", id .. " is fully described")
 end
-for _, id in { "CandyBoost", "PumpkinHat", "GhostTrail", "CandyAura", "HalloweenTitle", "HauntedEgg", "GhostSlime", "SkeletonImp", "PumpkinKing" } do
+for _, id in { "CandyBoost", "PumpkinHat", "GhostTrail", "CandyAura", "HalloweenTitle", "HauntedEgg" } do
 	check(items[id] ~= nil, "Shop sells " .. id)
 end
-local mostExpensive = 0
-for _, item in items do mostExpensive = math.max(mostExpensive, item.Cost) end
-check(items.PumpkinKing.Cost == mostExpensive and items.PumpkinKing.Unique == true, "Pumpkin King is the most expensive and one per player")
+for id, item in items do check(item.Kind ~= "Monster", id .. ": the Candy shop no longer sells monsters") end
 check(items.CandyBoost.Multiplier == 2 and items.CandyBoost.Duration == 600, "Candy Boost is 2x for 10 minutes")
-for id, item in items do
-	if item.Kind == "Monster" then
-		local species = Config.Species[item.Species]
-		check(species ~= nil and Config.Rarities[species.Rarity] ~= nil and Config.Followers.DamagePerRarity[species.Rarity] ~= nil, id .. " species is a valid game monster")
-		for eggName, egg in Config.Eggs do check(egg.Weights[item.Species] == nil, id .. " is exclusive, not in egg " .. eggName) end
+-- The eight Halloween monsters: valid species, only in the Halloween Monster Egg, Pumpkin King rarest and strongest.
+local halloweenEgg = Config.Eggs.HalloweenMonster
+check(halloweenEgg ~= nil and halloweenEgg.AllowSecret == false and halloweenEgg.Cost == 0, "The Halloween Monster Egg exists, is not sold and never rolls a Secret")
+local species8, strongest, rarest = 0, nil, nil
+for key, weight in halloweenEgg.Weights do
+	local species = Config.Species[key]
+	check(species ~= nil and species.EventOnly == true and Config.Rarities[species.Rarity] ~= nil and Config.Followers.DamagePerRarity[species.Rarity] ~= nil, key .. " is a valid event-only game monster")
+	for eggName, egg in Config.Eggs do
+		if eggName ~= "HalloweenMonster" then check(egg.Weights[key] == nil, key .. " is exclusive to the Halloween Monster Egg, not in " .. eggName) end
 	end
+	species8 += 1
+	if not strongest or species.BaseProduction > Config.Species[strongest].BaseProduction then strongest = key end
+	if not rarest or weight < halloweenEgg.Weights[rarest] then rarest = key end
 end
+check(species8 == 8, "The Halloween Monster Egg holds exactly the eight monsters")
+check(strongest == "HalloweenPumpkinKing" and rarest == "HalloweenPumpkinKing", "The Pumpkin King is the strongest and the rarest Halloween monster")
 local total, rare, mythic = 0, Config.Eggs.Rare.Order, Config.Eggs.Mythic.Order
 for eggType, weight in items.HauntedEgg.EggWeights do
 	local egg = Config.Eggs[eggType]
@@ -169,15 +182,15 @@ check(eggs.Rare and eggs.Mythic and eggs.Rare > eggs.Mythic and (eggs.Lucky or 0
 -- monsters, undo, and Pumpkin King uniqueness
 data = fresh(100000)
 local before = data.Candy
-local _, _, king = Logic.ApplyPurchase(data, "PumpkinKing", items, now, 0.5)
-check(king.Species == "HalloweenPumpkinKing" and data.Owned.PumpkinKing and data.Candy == before - items.PumpkinKing.Cost, "Pumpkin King is charged and recorded")
-check(select(2, Logic.ApplyPurchase(data, "PumpkinKing", items, now, 0.5)) == "Owned", "Pumpkin King is one per player")
+local _, _, king = Logic.ApplyPurchase(data, "PumpkinKing", logicItems, now, 0.5)
+check(king.Species == "HalloweenPumpkinKing" and data.Owned.PumpkinKing and data.Candy == before - logicItems.PumpkinKing.Cost, "Pumpkin King is charged and recorded")
+check(select(2, Logic.ApplyPurchase(data, "PumpkinKing", logicItems, now, 0.5)) == "Owned", "Pumpkin King is one per player")
 king.Undo()
 check(data.Candy == before and data.Owned.PumpkinKing == nil, "A failed delivery fully refunds and un-owns")
-local _, _, slime = Logic.ApplyPurchase(data, "GhostSlime", items, now, 0.5)
-local _, _, again = Logic.ApplyPurchase(data, "GhostSlime", items, now, 0.5)
+local _, _, slime = Logic.ApplyPurchase(data, "GhostSlime", logicItems, now, 0.5)
+local _, _, again = Logic.ApplyPurchase(data, "GhostSlime", logicItems, now, 0.5)
 check(slime.Species == "HalloweenGhostSlime" and again ~= nil and data.Owned.GhostSlime == nil, "Non-unique monsters can be bought repeatedly")
-local _, _, imp = Logic.ApplyPurchase(data, "SkeletonImp", items, now, 0.5)
+local _, _, imp = Logic.ApplyPurchase(data, "SkeletonImp", logicItems, now, 0.5)
 check(imp.Species == "HalloweenSkeletonImp", "Skeleton Imp sells the exclusive imp")
 -- Candy ledger and conversion
 data = fresh(5)
@@ -224,30 +237,30 @@ end
 local function player(id) return { UserId = id, Name = "P" .. id, Kick = function() end } end
 local ds = dataService()
 -- a pre-event save has no Halloween key at all
-stored.Player_1 = { Version = 2, Coins = 4321, Monsters = {}, Eggs = {}, Weapons = { Bat = true } }
+stored.Player_1 = { WipeVersion = Config.ProgressWipeVersion, Version = 2, Coins = 4321, Monsters = {}, Eggs = {}, Weapons = { Bat = true } }
 local profile = ds.Load(player(1))
 check(not profile.LoadFailed and profile.Data.Coins == 4321, "Legacy save still loads")
 local h = profile.Data.Halloween
 check(h and h.Candy == 0 and h.TotalCandy == 0 and h.BoostUntil == 0 and h.Converted == 0 and next(h.Owned) == nil and next(h.Equipped) == nil, "Legacy save gets the Halloween defaults")
 -- garbage in the Halloween block is cleaned, not trusted
-stored.Player_2 = { Version = 2, Coins = 1, Halloween = { Candy = -50, TotalCandy = "lots", BoostUntil = 0 / 0, Owned = { PumpkinHat = true, Fake = true, GhostTrail = "yes" }, Equipped = { Hat = "PumpkinHat", Trail = "GhostTrail", Aura = "Nope" } } }
+stored.Player_2 = { WipeVersion = Config.ProgressWipeVersion, Version = 2, Coins = 1, Halloween = { Candy = -50, TotalCandy = "lots", BoostUntil = 0 / 0, Owned = { PumpkinHat = true, Fake = true, GhostTrail = "yes" }, Equipped = { Hat = "PumpkinHat", Trail = "GhostTrail", Aura = "Nope" } } }
 local cleaned = ds.Load(player(2)).Data.Halloween
 check(cleaned.Candy == 0 and cleaned.TotalCandy == 0 and cleaned.BoostUntil == 0, "Negative, NaN and wrong-type numbers reset to zero")
 check(cleaned.Owned.PumpkinHat and not cleaned.Owned.Fake and not cleaned.Owned.GhostTrail, "Unknown and non-true ownership entries are dropped")
 check(cleaned.Equipped.Hat == "PumpkinHat" and cleaned.Equipped.Trail == nil and cleaned.Equipped.Aura == nil, "Only owned items in the right slot stay equipped")
-stored.Player_3 = { Version = 2, Coins = 1, Halloween = "broken" }
+stored.Player_3 = { WipeVersion = Config.ProgressWipeVersion, Version = 2, Coins = 1, Halloween = "broken" }
 check(not ds.Load(player(3)).LoadFailed, "A non-table Halloween value cannot block a load")
 -- candy persists across a save/load
 local p4 = player(4)
 local profile4 = ds.Load(p4)
 profile4.Data.Halloween.Candy = 777
 profile4.Data.Halloween.TotalCandy = 900
-profile4.Data.Halloween.Owned.PumpkinKing = true
+profile4.Data.Halloween.Owned.PumpkinHat = true
 profile4.Data.Halloween.BoostUntil = 1700000600
 check(ds.Save(p4), "Save with Candy succeeds")
 ds.Release(p4)
 local reload = dataService().Load(player(4)).Data.Halloween
-check(reload.Candy == 777 and reload.TotalCandy == 900 and reload.Owned.PumpkinKing == true and reload.BoostUntil == 1700000600, "Candy, purchases and boost time persist")
+check(reload.Candy == 777 and reload.TotalCandy == 900 and reload.Owned.PumpkinHat == true and reload.BoostUntil == 1700000600, "Candy, purchases and boost time persist")
 
 -- wiring and source contracts ------------------------------------------------------------------------------
 local function read(path) return fs.readFile(path) end
@@ -326,7 +339,7 @@ do
 	check(read("src/client/init.client.luau"):find("task.spawn(HalloweenDecor.Init)", 1, true), "Client starts the decor animations on their own thread")
 end
 -- The shop monsters have real rigged models (MonsterModels region 6 "Halloween") and never spawn in the wild.
-for index, species in { "HalloweenGhostSlime", "HalloweenSkeletonImp", "HalloweenPumpkinKing" } do
+for index, species in { "HalloweenGhostSlime", "HalloweenSkeletonImp", "HalloweenPumpkinKing", "HalloweenHexCat", "HalloweenCryptMummy", "HalloweenCountFang", "HalloweenGraveGolem", "HalloweenWraithReaper" } do
 	local definition = Config.Species[species]
 	check(definition and definition.Model and definition.Model.Region == 6 and definition.Model.Index == index and definition.EventOnly == true, species .. " has a rigged model and is event-only")
 end

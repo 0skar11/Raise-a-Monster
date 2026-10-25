@@ -20,6 +20,7 @@ local MonetizationService = require(script.MonetizationService)
 local EventService = require(script.EventService)
 local LeaderboardService = require(script.LeaderboardService)
 local RewardService = require(script.RewardService)
+local AdChestService = require(script.AdChestService)
 local MonsterPortraits = require(script.MonsterPortraits)
 local TradeService = require(script.TradeService)
 local ArenaService = require(script.ArenaService)
@@ -40,10 +41,9 @@ MonsterService.ExtraState = function(player: Player): { [string]: any }
 	return {
 		Passes = MonetizationService.GetOwnedPasses(player),
 		BoostLeft = MonetizationService.BoostLeft(player),
-		DailyReadyIn = RewardService.DailyReadyIn(player),
 		SpinReadyIn = RewardService.SpinReadyIn(player),
-		DailyStreak = if profile then profile.Data.Daily.Streak else 0,
-		DailyNextDay = RewardService.NextDailyDay(player),
+		AdChestReadyIn = AdChestService.ReadyIn(player),
+		AdRewardCoins = AdChestService.RewardAmount(player),
 		Carrying = CarryService.IsCarrying(player),
 		CanSave = profile ~= nil and profile.CanSave,
 		TemporarySession = profile ~= nil and profile.Temporary == true,
@@ -69,6 +69,7 @@ HalloweenService.Init(remotes)
 PumpkinDecor.Init()
 LeaderboardService.Init()
 RewardService.Init(remotes)
+AdChestService.Init(remotes)
 TradeService.Init(remotes)
 ArenaService.Init(remotes)
 AdminService.Init(remotes)

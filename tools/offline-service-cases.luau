@@ -51,7 +51,10 @@ return function(Config, MonsterMath, loadService)
 		return remote
 	end })
 	service.Init(remotes)
-	local expected = MonsterMath.AdvanceProgress(copy(placed), now, true, 2)
+	-- الأوفلاين بياخد Config.OfflineIncomeShare (20%) بس من الدخل العادي
+	local full = MonsterMath.AdvanceProgress(copy(placed), now, true, 2)
+	local expected = MonsterMath.AdvanceProgress(copy(placed), now, true, 2 * Config.OfflineIncomeShare)
+	check(Config.OfflineIncomeShare == 0.2 and math.abs(expected - full * 0.2) < 0.001, "Offline income is exactly 20% of the normal income")
 	service.SetupPlayer(player)
 	check(math.abs(profile.Data.PendingCoins - expected - 0.25) < 0.001, "Only saved active slots earn offline income with the saved multiplier")
 	check(profile.Data.Coins == 50, "Viewing offline earnings never claims the wallet")

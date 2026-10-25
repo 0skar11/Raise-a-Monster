@@ -1182,7 +1182,7 @@ function HalloweenService.StartInvasion(forcedCount: number?): number
 			end
 			setNight("Invasion", false)
 			if left > 0 then
-				announce("The Mothers retreated into the fog... see you next hour!", Color3.fromRGB(200, 200, 200))
+				announce("The Mothers retreated into the fog... see you in half an hour!", Color3.fromRGB(200, 200, 200))
 				pushAll()
 			end
 		end)
@@ -1417,7 +1417,7 @@ local function claimPumpkin(player: Player, current: Hunt, pumpkin: Pumpkin)
 		notify(player, string.format("🎃 Pumpkin found! +%d Candy (%d left)", granted, current.Remaining), "success")
 	end
 	if current.Remaining <= 0 then
-		endHunt(current, "🎃 All the pumpkins have been found! See you in half an hour.")
+		endHunt(current, "🎃 All the pumpkins have been found! See you in 15 minutes.")
 	else
 		pushAll()
 	end
@@ -1545,7 +1545,7 @@ function HalloweenService.StartPumpkinHunt(): number
 	pushAll()
 	task.delay(pumpkinSettings.Lifetime, function()
 		if hunt == current then
-			endHunt(current, "The pumpkins rotted away... next hunt in 30 minutes!")
+			endHunt(current, "The pumpkins rotted away... next hunt in 15 minutes!")
 		end
 	end)
 	return current.Remaining

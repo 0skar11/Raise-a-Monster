@@ -42,3 +42,11 @@ The decorations and the merchant are real objects saved in the place, visible in
 ## Checks
 `lune run tools/test-halloween` (config, rules, DataService migration/persistence, wiring) and `lune run tools/check-source`.
 Needs a Studio playtest: merchant prompt/shop, moving props in Edit then Play, prop look, Lighting look, the shop panel position, a real Mother fight, trails/hat on the R6 character, and the Monster Rain/Big Boss events running alongside.
+
+## Pumpkin Titan loot (added 2026-10-26)
+
+- The boss no longer drops a guaranteed Secret Egg. Damage per player is tracked (`EventService`), and a background-free damage board under the boss lists each fighter's damage and % of the boss's max HP.
+- When it dies, everyone with at least 1% of its max HP gets 1-3 loot rolls (`Config.BossLoot`, `BossLootMath`, `BossLoot`). More damage means more rolls and a bigger weight on rare entries. Fixed odds per roll: Halloween Monster Egg 5%, Secret Egg 3%.
+- The eight Halloween monsters (`Config.Species.Halloween*`, MonsterModels region 6, index 1-8) only hatch from `Config.Eggs.HalloweenMonster` (45s). Weights: Ghost Slime 20, Skeleton Imp 20, Hex Cat 15, Crypt Mummy 15, Count Fang 10, Grave Golem 10, Wraith Reaper 7, Pumpkin King 3 (strongest). The Candy shop no longer sells monsters.
+- Boss-loot-only speed gear (`LootOnly`, never sold, listed under Owned): Hexed Witch Boots x1.18, Phantom Shroud x1.32, Pumpkin King Wings x1.45.
+- Tests: `tools/test-boss-loot.luau`, `tools/test-halloween.luau`.

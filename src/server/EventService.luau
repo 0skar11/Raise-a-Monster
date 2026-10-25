@@ -2,7 +2,7 @@
 -- أحداث الماب:
 --  • Monster Rain كل ساعة: وحش نادر بيقع في نص الماب، وأول واحد يمسكه ويوصله قاعدته ياخده.
 --  • Big Boss كل شوية (عشوائي): وحش ضخم دمه وضربته عاليين، لازم الكل يتجمع يقتله،
---    ولما يموت بيسيب بيضة Secret. اللي يشيلها بيمشي أبطأ شوية لحد ما يوصلها قاعدته.
+--    ولما يموت كل واحد ضربه بما يكفي ياخد لوت حسب نسبة ضرره (BossLoot).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,6 +18,7 @@ local CombatService = require(script.Parent.CombatService)
 local CarryService = require(script.Parent.CarryService)
 local BossAttacks = require(script.Parent.BossAttacks)
 local HalloweenService = require(script.Parent.HalloweenService)
+local BossLoot = require(script.Parent.BossLoot)
 local ArenaConfig = require(ReplicatedStorage.Shared.HalloweenArenaConfig)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -35,6 +36,8 @@ type Boss = {
 	Text: TextLabel,
 	Target: CombatService.Target,
 	Dead: boolean,
+	Contributors: { [number]: BossLoot.Contributor }, -- by UserId: everyone who damaged it and how much
+	BoardDirty: boolean,
 }
 
 local eventsFolder: Folder
@@ -70,8 +73,32 @@ local function removeBoss(current: Boss)
 	current.Part:Destroy()
 	if boss == current then
 		boss = nil
+		workspace:SetAttribute("BossAlive", false)
 		HalloweenService.SetBossNight(false) -- day returns once the boss is gone
 	end
+end
+
+-- Damage board under the boss: one small line per fighter, strongest first (no background, outlined text).
+local function boardText(current: Boss): string
+	local rows: { BossLoot.Contributor } = {}
+	for _, contributor in current.Contributors do
+		table.insert(rows, contributor)
+	end
+	table.sort(rows, function(a, b)
+		if a.Damage ~= b.Damage then
+			return a.Damage > b.Damage
+		end
+		return a.Name < b.Name
+	end)
+	local lines = {}
+	for index = 1, math.min(#rows, Config.BossLoot.BoardRows) do
+		local row = rows[index]
+		local name = row.Name:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+		lines[index] = string.format('<font color="%s">%d. %s</font>  <font color="#FFD36B">%s</font>  <font color="#FF9A3C">%.1f%%</font>',
+			if index == 1 then "#FFFFFF" else "#D9D2E9", index, name, MonsterMath.FormatNumber(row.Damage),
+			row.Damage / current.MaxHealth * 100)
+	end
+	return table.concat(lines, "\n")
 end
 
 local function killBoss(current: Boss, killer: Player)
@@ -80,15 +107,18 @@ local function killBoss(current: Boss, killer: Player)
 	current.Dead = true
 	CombatService.Unregister(current.Target)
 	remotes.BossFx:FireAllClients("Death", { Position = position })
-	MonsterService.Announce("💀 " .. killer.DisplayName .. " landed the final hit on the BIG BOSS! A SECRET EGG is dropping!", Color3.fromRGB(200, 120, 255))
+	MonsterService.Announce("💀 " .. killer.DisplayName .. " landed the final hit on the BIG BOSS! Loot is shared out by damage!", Color3.fromRGB(200, 120, 255))
+	-- the final blow always counts as a fight, even for an admin test kill with no recorded damage
+	if next(current.Contributors) == nil then
+		current.Contributors[killer.UserId] = { Player = killer, Name = killer.DisplayName, Damage = current.MaxHealth }
+	end
+	local fighters: { BossLoot.Contributor } = {}
+	for _, contributor in current.Contributors do
+		table.insert(fighters, contributor)
+	end
 	task.delay(Config.Boss.DeathSeconds, function()
 		removeBoss(current)
-		CarryService.SpawnPickup(
-			{ Kind = "Egg", EggType = "Secret" },
-			Vector3.new(position.X, 0.2, position.Z),
-			Config.Boss.Lifetime,
-			"🌌 SECRET EGG! Carry it home (it's heavy)"
-		)
+		BossLoot.Distribute(fighters, current.MaxHealth)
 	end)
 end
 
@@ -223,6 +253,31 @@ function EventService.SpawnBoss()
 	text.ZIndex = 2
 	text.Parent = bar
 
+	-- damage board: sits below the boss, no background
+	local board = Instance.new("BillboardGui")
+	board.Name = "DamageBoard"
+	board.Size = UDim2.fromScale(22, 6)
+	board.StudsOffset = Vector3.new(0, -(part.Size.Y / 2) + 3, 0)
+	board.AlwaysOnTop = true
+	board.LightInfluence = 0
+	board.MaxDistance = 260
+	board.Adornee = part
+	board.Parent = part
+	local boardLabel = Instance.new("TextLabel")
+	boardLabel.Name = "Rows"
+	boardLabel.Size = UDim2.fromScale(1, 1)
+	boardLabel.BackgroundTransparency = 1
+	boardLabel.Font = Enum.Font.GothamBold
+	boardLabel.RichText = true
+	boardLabel.TextScaled = true
+	boardLabel.TextXAlignment = Enum.TextXAlignment.Center
+	boardLabel.TextYAlignment = Enum.TextYAlignment.Top
+	boardLabel.TextColor3 = Color3.new(1, 1, 1)
+	boardLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+	boardLabel.TextStrokeTransparency = 0.15
+	boardLabel.Text = ""
+	boardLabel.Parent = board
+
 	local state = { VulnerableUntil = 0, Enraged = false, IntroUntil = if model then os.clock() + settings.IntroBuildUp + settings.IntroRise + settings.IntroRoar else 0 }
 	local current: Boss
 	current = {
@@ -233,6 +288,8 @@ function EventService.SpawnBoss()
 		Fill = fill,
 		Text = text,
 		Dead = false,
+		Contributors = {},
+		BoardDirty = false,
 		Target = CombatService.Register({
 			Part = part,
 			Radius = bodyRadius,
@@ -247,7 +304,15 @@ function EventService.SpawnBoss()
 					or attackerHumanoid.Health <= 0 or not ArenaConfig.IsCombatPosition(attackerRoot.Position)) then
 					return -- the arrival courtyard is outside the encounter in both directions
 				end
-				current.Health -= damage * (if os.clock() < state.VulnerableUntil then Config.Boss.Attacks.PulseExposedBonus else 1)
+				local dealt = math.min(current.Health, damage * (if os.clock() < state.VulnerableUntil then Config.Boss.Attacks.PulseExposedBonus else 1))
+				current.Health -= dealt
+				local contributor = current.Contributors[player.UserId]
+				if not contributor then
+					contributor = { Player = player, Name = player.DisplayName, Damage = 0 }
+					current.Contributors[player.UserId] = contributor
+				end
+				contributor.Damage += dealt
+				current.BoardDirty = true
 				if highlight then
 					highlight.FillTransparency = 0.45
 					task.delay(0.1, function()
@@ -272,9 +337,19 @@ function EventService.SpawnBoss()
 		}),
 	}
 	boss = current
+	task.spawn(function()
+		while not current.Dead and boardLabel.Parent do
+			if current.BoardDirty then
+				current.BoardDirty = false
+				boardLabel.Text = boardText(current)
+			end
+			task.wait(0.4)
+		end
+	end)
+	workspace:SetAttribute("BossAlive", true)
 	HalloweenService.SetBossNight(true) -- night falls the moment it appears
 	updateBossBar(current)
-	MonsterService.Announce("💀 The PUMPKIN TITAN appeared! Enter the Halloween portal at the end of the Void road to battle for a SECRET EGG!", Color3.fromRGB(200, 120, 255))
+	MonsterService.Announce("💀 The PUMPKIN TITAN appeared! Enter the Halloween portal at the end of the Void road and fight for epic loot!", Color3.fromRGB(200, 120, 255))
 
 	if model and standing then
 		remotes.BossFx:FireAllClients("Entrance", { Position = part.Position, BuildUp = settings.IntroBuildUp, Rise = settings.IntroRise, Roar = settings.IntroRoar, Height = modelHeight, Part = part })
@@ -379,8 +454,13 @@ function EventService.Init()
 	end)
 	task.spawn(function()
 		while true do
-			task.wait(math.random(Config.Boss.MinInterval, Config.Boss.MaxInterval))
+			-- wall-clock slots: every server spawns the boss at the same moment, and the portal timer reads BossNextSpawnAt
+			local now = workspace:GetServerTimeNow()
+			local nextAt = (math.floor(now / Config.Boss.Interval) + 1) * Config.Boss.Interval
+			workspace:SetAttribute("BossNextSpawnAt", nextAt)
+			task.wait(math.max(0, nextAt - now))
 			EventService.SpawnBoss()
+			task.wait(1)
 		end
 	end)
 

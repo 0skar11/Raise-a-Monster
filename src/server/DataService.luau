@@ -19,6 +19,7 @@ export type EggData = {
 
 export type PlayerData = {
 	Version: number,
+	WipeVersion: number, -- آخر ريسيت للبروجريس اتطبق على اللاعب (Config.ProgressWipeVersion)
 	Coins: number,
 	PendingCoins: number,
 	IncomeMultiplier: number,
@@ -36,8 +37,8 @@ export type PlayerData = {
 	EquippedWeapon: string,
 	Followers: { string }, -- adult monsters chosen to follow the player; restored on respawn and rejoin
 	EquippedSpeedAccessory: string?,
-	Daily: { LastClaim: number, Streak: number },
 	LastSpin: number,
+	LastAdChest: number, -- آخر مرة اتدّت فيها جايزة صندوق الإعلان (os.time)
 	ProcessedReceipts: { [string]: boolean },
 	PendingAdultPurchase: {
 		Token: string, ProductName: string, ProductId: number, Status: string,
@@ -67,6 +68,7 @@ export type Profile = {
 
 local DEFAULT_DATA: PlayerData = {
 	Version = 2,
+	WipeVersion = Config.ProgressWipeVersion,
 	Coins = Config.StartingCoins,
 	PendingCoins = 0,
 	IncomeMultiplier = 1,
@@ -83,8 +85,8 @@ local DEFAULT_DATA: PlayerData = {
 	Weapons = { Bat = true },
 	EquippedWeapon = "Bat",
 	Followers = {},
-	Daily = { LastClaim = 0, Streak = 0 },
 	LastSpin = 0,
+	LastAdChest = 0,
 	ProcessedReceipts = {},
 	SpeedBoostUntil = 0,
 	Halloween = { Candy = 0, TotalCandy = 0, BoostUntil = 0, Converted = 0, Owned = {}, Equipped = {} },
@@ -252,6 +254,16 @@ local function sanitizeHalloween(data: PlayerData)
 end
 DataService.SanitizeHalloween = sanitizeHalloween
 
+-- ريسيت البروجريس: بداية جديدة بالكامل، مع الاحتفاظ بسجل الإيصالات عشان أي شراء Robux قديم ماينفذش تاني.
+local function wipeProgress(old: PlayerData): PlayerData
+	local fresh: PlayerData = deepCopy(DEFAULT_DATA)
+	if type(old.ProcessedReceipts) == "table" then
+		fresh.ProcessedReceipts = old.ProcessedReceipts
+	end
+	return fresh
+end
+DataService.WipeProgress = wipeProgress
+
 function DataService.Load(player: Player): Profile
 	while loading[player] do task.wait() end
 	if profiles[player] then return profiles[player] end
@@ -260,6 +272,7 @@ function DataService.Load(player: Player): Profile
 	local loadFailed = false
 	local sessionId = HttpService:GenerateGUID(false)
 	local rejectedRecord = false
+	local wiped = false
 
 	if store then
 		local dataStore = store :: DataStore
@@ -282,8 +295,15 @@ function DataService.Load(player: Player): Profile
 			(data :: any)._SessionLock = nil
 			-- Keep the old version until the gear migration has inspected it.
 			local version = (data :: any).Version
+			-- لازم نقراه قبل reconcile، لأنه بيملا WipeVersion الناقص بالرقم الحالي
+			local storedWipe = (data :: any).WipeVersion
 			reconcile(data :: any, DEFAULT_DATA :: any)
 			if version == nil then data.Version = 1 end
+			if Config.ProgressWipeVersion > 0 and (type(storedWipe) ~= "number" or storedWipe < Config.ProgressWipeVersion) then
+				data = wipeProgress(data)
+				wiped = true
+				warn("[DataService] Progress wipe", Config.ProgressWipeVersion, "applied to", player.Name)
+			end
 		else
 			loadFailed = true
 			warn("[DataService] Failed to load or acquire session for", player.Name, if ok then "profile locked or invalid" else result)
@@ -312,6 +332,8 @@ function DataService.Load(player: Player): Profile
 	}
 	profiles[player] = profile
 	loading[player] = nil
+	-- الريسيت يتحفظ فوراً، عشان لو السيرفر وقع ماينفعش اللاعب يرجع لبروجريسه القديم
+	if wiped then DataService.QueueSave(player) end
 	return profile
 end
 

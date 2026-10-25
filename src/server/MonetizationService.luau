@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
 local MonsterService = require(script.Parent.MonsterService)
@@ -171,8 +172,17 @@ local function grantProduct(player: Player, name: string): boolean
 		if not DataService.Get(player) then
 			return false
 		end
-		DataService.AddCoins(player, product.Coins)
-		MonsterService.Notify(player, "💰 +" .. tostring(product.Coins) .. " coins!", "success")
+		-- الأكبر بين الحد الأدنى الثابت ودقايق الدخل الحالي، فالحزمة تفضل مفيدة في أي منطقة
+		local amount = product.Coins
+		if product.Minutes then
+			amount = math.max(amount, math.floor(MonsterService.GetIncomePerSecond(player) * product.Minutes * 60))
+		end
+		DataService.AddCoins(player, amount)
+		if name == "AdChest" then
+			local profile = DataService.Get(player)
+			if profile then profile.Data.LastAdChest = os.time() end
+		end
+		MonsterService.Notify(player, "💰 +" .. MonsterMath.FormatNumber(amount) .. " coins!", "success")
 		return true
 	end
 	if name == "InstantHatch" then
@@ -201,6 +211,8 @@ local function grantProduct(player: Player, name: string): boolean
 	end
 	return false
 end
+-- الصندوق المجاني بيستخدمها في وضع الاختبار (Studio) لما Id المنتج لسه 0
+MonetizationService.GrantProduct = grantProduct
 
 local function buyPass(player: Player, name: unknown)
 	if type(name) ~= "string" then
@@ -282,7 +294,7 @@ local function buyProduct(player: Player, name: unknown, selectedId: unknown)
 		return
 	end
 	local product = Config.Products[name]
-	if not product then
+	if not product or product.Hidden then -- الصندوق بيتدّي بالإعلان بس، مش بالشراء
 		return
 	end
 	local profile = DataService.Get(player)

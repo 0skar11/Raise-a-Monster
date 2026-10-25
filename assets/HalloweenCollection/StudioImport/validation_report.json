@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "independent_reimports": [
+    {
+      "file": "HalloweenCollection_Studio.fbx",
+      "bytes": 1265196,
+      "character_roots": 8,
+      "meshes": 82,
+      "triangles": 32441
+    },
+    {
+      "file": "HalloweenCollection_Studio.glb",
+      "bytes": 2586008,
+      "character_roots": 8,
+      "meshes": 82,
+      "triangles": 32441
+    }
+  ],
+  "verified": [
+    "8 distinct named character roots",
+    "all source triangles preserved",
+    "all source bounds preserved",
+    "material base colors preserved",
+    "finite geometry",
+    "each mesh below 9000 triangles",
+    "no stage objects"
+  ],
+  "unverified": [
+    "Native Roblox import, asset upload, appearance and map placement"
+  ]
+}

@@ -696,6 +696,67 @@ function UI.GearPreview(parent: GuiObject, gearName: string)
 			local angle = i * math.pi / 3
 			add(Vector3.new(0.2, 0.5, 0.12), CFrame.new(math.cos(angle) * 2.6, 0.3 + i % 3 * 0.5, math.sin(angle) * 1.2) * CFrame.Angles(0, angle, math.rad(35)), color, Enum.Material.Neon)
 		end
+	elseif gearName == "WitchBoots" then
+		local violet, plum, gold = Color3.fromRGB(86, 38, 132), Color3.fromRGB(42, 18, 68), Color3.fromRGB(240, 184, 64)
+		for _, x in { -0.9, 0.9 } do
+			add(Vector3.new(1.1, 0.2, 2.3), CFrame.new(x, 0, 0), color, Enum.Material.Neon)
+			add(Vector3.new(1.05, 0.5, 1.7), CFrame.new(x, 0.35, -0.3), plum)
+			add(Vector3.new(1.05, 1.5, 1.1), CFrame.new(x, 1.0, 0.25), plum, Enum.Material.Fabric)
+			add(Vector3.new(1.5, 0.1, 1.5), CFrame.new(x, 1.8, 0.25), violet, Enum.Material.Fabric)
+			add(Vector3.new(1.15, 0.16, 1.15), CFrame.new(x, 1.68, 0.25), color, Enum.Material.Neon)
+			local toe = { Vector3.new(0, 0.42, -1.0), Vector3.new(0, 0.55, -1.5), Vector3.new(0, 0.9, -1.85), Vector3.new(0, 1.35, -1.8) }
+			for i = 1, #toe - 1 do segment(toe[i] + Vector3.new(x, 0, 0), toe[i + 1] + Vector3.new(x, 0, 0), 0.5 - i * 0.12, violet, Enum.Material.Fabric) end
+			add(Vector3.new(0.26, 0.26, 0.26), CFrame.new(x, 1.35, -1.8), color, Enum.Material.Neon, Enum.PartType.Ball)
+			add(Vector3.new(0.5, 0.5, 0.1), CFrame.new(x, 1.05, -0.32), gold, Enum.Material.Metal)
+			add(Vector3.new(0.22, 0.22, 0.12), CFrame.new(x, 1.05, -0.38), color, Enum.Material.Neon)
+		end
+	elseif gearName == "PhantomCloak" then
+		local pale = Color3.fromRGB(226, 255, 250)
+		for _, side in { -1, 1 } do
+			local mantle = add(Vector3.new(1.7, 0.3, 1.5), CFrame.new(side * 1, 1.6, 0) * CFrame.Angles(0, 0, side * math.rad(-14)), pale, Enum.Material.Glass)
+			mantle.Transparency = 0.22
+		end
+		for i = 0, 5 do
+			local x = -0.85 + i * 0.34
+			local length = 3.5 - math.abs(x) * 0.9 + (i % 2) * 0.55
+			local panel = add(Vector3.new(0.36, length, 0.1), CFrame.new(x, 1.5 - length / 2, 0.5), pale:Lerp(color, (i % 3) * 0.18), Enum.Material.Glass)
+			panel.Transparency = 0.3
+			add(Vector3.new(0.06, length, 0.13), CFrame.new(x + 0.19, 1.5 - length / 2, 0.5), color, Enum.Material.Neon)
+		end
+		add(Vector3.new(0.5, 0.5, 0.3), CFrame.new(0, 1.2, -0.7), Color3.fromRGB(72, 96, 112), Enum.Material.Metal, Enum.PartType.Ball)
+		add(Vector3.new(0.3, 0.3, 0.2), CFrame.new(0, 1.2, -0.78), color, Enum.Material.Neon, Enum.PartType.Ball)
+		for i = 0, 2 do
+			local angle = i * math.pi * 2 / 3
+			add(Vector3.new(0.42, 0.42, 0.42), CFrame.new(math.cos(angle) * 2.6, 0.2 + i * 0.7, math.sin(angle) * 1.3), color, Enum.Material.Neon, Enum.PartType.Ball)
+		end
+	elseif gearName == "PumpkinKingWings" then
+		local bone, boneDark, amber, ember = Color3.fromRGB(46, 24, 58), Color3.fromRGB(26, 14, 36), Color3.fromRGB(255, 176, 40), Color3.fromRGB(255, 76, 12)
+		add(Vector3.new(1.45, 1.6, 0.3), CFrame.new(0, 0.5, 0.2), boneDark, Enum.Material.Metal)
+		add(Vector3.new(1.05, 0.95, 0.4), CFrame.new(0, 0.5, 0.5), color, Enum.Material.Neon, Enum.PartType.Ball)
+		for _, side in { -1, 1 } do
+			add(Vector3.new(0.26, 0.26, 0.1), CFrame.new(side * 0.25, 0.68, 0.68) * CFrame.Angles(0, 0, math.rad(45)), boneDark)
+			local elbow, wrist = Vector3.new(side * 1.2, 1.5, 0), Vector3.new(side * 2.8, 2.3, 0.05)
+			local tips = { Vector3.new(side * 5.1, 3.1, 0.1), Vector3.new(side * 5.2, 1.5, 0.08), Vector3.new(side * 4.2, -0.2, 0.06), Vector3.new(side * 2.8, -1.2, 0.04), Vector3.new(side * 0.35, -1.5, 0) }
+			segment(Vector3.zero, elbow, 0.24, bone, Enum.Material.Metal)
+			segment(elbow, wrist, 0.2, bone, Enum.Material.Metal)
+			for index, tip in tips do
+				segment(wrist, tip, if index == #tips then 0.07 else 0.13 - index * 0.012, bone, Enum.Material.Metal)
+			end
+			for gap = 1, #tips - 1 do
+				for step = 1, 5 do
+					local t0, t1 = (step - 1) / 5 + 0.06, math.min(step / 5 + 0.06, 1)
+					local a0, b0 = wrist + (tips[gap] - wrist) * t0, wrist + (tips[gap + 1] - wrist) * t0
+					local a1, b1 = wrist + (tips[gap] - wrist) * t1, wrist + (tips[gap + 1] - wrist) * t1
+					local across, along = (b0 - a0) + (b1 - a1), (a1 - a0) + (b1 - b0)
+					if across.Magnitude > 0.01 and along.Magnitude > 0.01 then
+						local xAxis = across.Unit
+						local zAxis = xAxis:Cross(along).Unit
+						local piece = add(Vector3.new(across.Magnitude / 2 + 0.05, along.Magnitude / 2 + 0.04, 0.04), CFrame.fromMatrix((a0 + b0 + a1 + b1) / 4, xAxis, zAxis:Cross(xAxis), zAxis), ember:Lerp(amber, (step - 1) / 5), Enum.Material.Neon)
+						piece.Transparency = 0.2
+					end
+				end
+			end
+		end
 	else
 		add(Vector3.new(2, 2, 2), CFrame.new(), color, Enum.Material.Neon)
 	end

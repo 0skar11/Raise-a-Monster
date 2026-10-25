@@ -687,14 +687,13 @@ local function buildShopExtras()
 	refreshShopCatalog = function() controller:Refresh() end
 end
 
--- الهدية اليومية وعجلة الحظ في شباك واحد: اليومية على الشمال والعجلة على اليمين ----------------
+-- عجلة الحظ اليومية (فلوس أو Candy أو بيض) ----------------
 
 local function buildRewards()
 	local frame = newPanel("Rewards", UDim2.fromOffset(960, 720), "Rewards", COLORS.Yellow)
 	launcherActions.Rewards = function() UI.Toggle(ui, frame) end
 	rewardsController = RewardsArcade.Mount(frame, {
 		GetState = getState,
-		ClaimDaily = function() remotes.ClaimDaily:FireServer() end,
 		Spin = function() remotes.Spin:FireServer() end,
 	})
 	remotes.SpinResult.OnClientEvent:Connect(function(index: number)
@@ -1133,9 +1132,8 @@ function Features.Refresh()
 	end
 
 	if rewardsController then rewardsController:Refresh(state) end
-	local dailyIn = state.DailyReadyIn or 0
 	local spinIn = state.SpinReadyIn or 0
-	rewardsButton.Text = if dailyIn > 0 and spinIn > 0 then "Rewards" else "Rewards!"
+	rewardsButton.Text = if spinIn > 0 then "Rewards" else "Rewards!"
 
 
 	if accessoriesFrame.Visible then
@@ -1180,13 +1178,13 @@ function Features.Init(newUi: UI.UI, allRemotes: { [string]: RemoteEvent }, stat
 		announce(text, color)
 	end)
 
-	-- العدادات (Daily / Spin / Boost) بتعد كل ثانية
+	-- العدادات (Spin / Boost) بتعد كل ثانية
 	task.spawn(function()
 		while true do
 			task.wait(1)
 			local state = getState()
 			if state then
-				for _, key in { "DailyReadyIn", "SpinReadyIn", "BoostLeft" } do
+				for _, key in { "SpinReadyIn", "AdChestReadyIn", "BoostLeft" } do
 					if state[key] and state[key] > 0 then
 						state[key] = math.max(0, state[key] - 1)
 					end

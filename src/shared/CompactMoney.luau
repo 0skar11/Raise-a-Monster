@@ -2,7 +2,7 @@
 -- Display-only formatting. Never replace the stored balance with this text.
 
 local CompactMoney = {}
-local suffixes = { "", "k", "m", "b", "t" }
+local suffixes = { "", "k", "m", "b", "t", "qa", "qi", "sx" }
 
 local function decimal(value: number): string
 	return (string.format("%.2f", value):gsub("0+$", ""):gsub("%.$", ""))

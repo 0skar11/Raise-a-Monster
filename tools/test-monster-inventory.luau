@@ -21,6 +21,7 @@ local clock = 100
 local jobs = {}
 local players = { {UserId = 1, Name = "One", DisplayName = "One", Parent = true}, {UserId = 2, Name = "Two", DisplayName = "Two", Parent = true} }
 local saved, lastState, renders, removed = {}, {}, {}, {}
+local followerRanking: any = nil
 local store = {
 	GetAsync = function(_, key) return copy(saved[key]) end,
 	UpdateAsync = function(_, key, callback) saved[key] = copy(callback(copy(saved[key]))); return copy(saved[key]) end,
@@ -51,7 +52,11 @@ local modules = {
 	CharacterService = {GetSpeedAccessoryMultiplier = function() return 1 end},
 	FollowerService = { Init = function() end, CleanupPlayer = function() end, Remove = function() end,
 		GetIds = function() return {} end, IsEligible = function() return false end,
-		GetMinLevel = function() return 25 end, GetDamageBonus = function() return 0 end },
+		GetMinLevel = function() return 25 end, GetDamageBonus = function() return 0 end,
+		SetBest = function(_, ranked) -- Auto Place بيحط الـ followers من الوحوش اللي اتحطت (مفيش مؤهل في الموك)
+			followerRanking = ranked
+			return 0
+		end },
 }
 local parent = {Config = "Config", MonsterMath = "MonsterMath", DataService = "DataService", MonsterService = "MonsterService", PlotService = "PlotService", CharacterService = "CharacterService", FollowerService = "FollowerService"}
 local env = {
@@ -114,6 +119,10 @@ check(not monsters.PlaceMonster(p, "1", 1), "Trade offered target protected")
 check(not monsters.TakeMonsterData(p, "2"), "Arena cannot remove trade offer")
 check(monsters.AutoPlace(p), "Auto Place runs with unavailable monsters")
 check(bench.Slot == 2 and profile.Data.Monsters["2"].Slot == 1, "Auto Place preserves reserved carried/trade slots")
+check(followerRanking ~= nil and #followerRanking > 0, "Auto Place hands the placed monsters to the follower picker")
+for _, monster in followerRanking do
+	check(monster.Slot > 0, "Only placed monsters are offered as followers")
+end
 monsters.Carried[p], monsters.Trading[p] = nil, nil
 local eggType = "Basic"
 check(monsters.AddEgg(p, eggType), "Full base accepts collected egg")
@@ -244,7 +253,7 @@ profile.Data.Eggs = {}
 profile.Data.IncomeMultiplier, profile.Data.IncomeUnlockedSlots = 1, config.BaseSlots
 profile.Data.PendingCoins = 0.25
 local expectedMonster = copy(profile.Data.Monsters.offline)
-local expectedOffline = mathModule.AdvanceProgress(expectedMonster, env.os.time() + 9000, true, 1)
+local expectedOffline = mathModule.AdvanceProgress(expectedMonster, env.os.time() + 9000, true, 1 * config.OfflineIncomeShare)
 monsters.CleanupPlayer(p)
 data.Release(p)
 clock += 9000

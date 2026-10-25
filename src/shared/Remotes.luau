@@ -25,8 +25,8 @@ local EVENT_NAMES = {
 	"BuyWeapon", -- (weaponName), paid with in-game coins
 	"EquipWeapon", -- (weaponName), server checks coin/pass ownership; "Bat" is free
 	"BuyProduct", -- (productName)
-	"ClaimDaily", -- ()
 	"Spin", -- ()
+	"RequestAdChest", -- (), بعد ما الكلاينت يتأكد إن فيه إعلان؛ السيرفر يتحقق من المسافة والـ cooldown
 	"BuyAccessory", -- (accessoryName, monsterId)
 	"BuySpeedAccessory", -- (accessoryName)
 	"EquipSpeedAccessory", -- (accessoryName?), nil removes the selected player accessory

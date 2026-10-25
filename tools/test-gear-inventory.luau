@@ -157,13 +157,13 @@ local function fire(name, argument, who, sameTime)
 end
 local profile = data.Load(player)
 check(profile.Data.Weapons.Bat and profile.Data.EquippedWeapon == "Bat" and profile.Data.EquippedSpeedAccessory == nil, "New profile starts with Bat and no player accessory")
-saved.Player_2 = { Version = 1, Coins = 99999, Weapons = { IronSword = true, IceSword = true }, SpeedAccessories = { SwiftSneakers = true, GoldenWings = true } }
+saved.Player_2 = { WipeVersion = config.ProgressWipeVersion, Version = 1, Coins = 99999, Weapons = { IronSword = true, IceSword = true }, SpeedAccessories = { SwiftSneakers = true, GoldenWings = true } }
 local legacyPlayer = makePlayer(2)
 local legacy = data.Load(legacyPlayer)
 check(legacy.Data.Weapons.IronSword and legacy.Data.Weapons.IceSword and legacy.Data.Weapons.Bat, "Migration preserves old weapon purchases")
 check(legacy.Data.SpeedAccessories.SwiftSneakers and legacy.Data.SpeedAccessories.GoldenWings, "Migration preserves old accessory purchases")
 check(legacy.Data.EquippedSpeedAccessory == "GoldenWings", "Legacy automatic accessory choice becomes an explicit selection")
-saved.Player_3 = { Version = 2, Weapons = "bad", SpeedAccessories = { SwiftSneakers = 1, ShadowCloak = true, Invalid = true }, EquippedWeapon = {}, EquippedSpeedAccessory = "SwiftSneakers" }
+saved.Player_3 = { WipeVersion = config.ProgressWipeVersion, Version = 2, Weapons = "bad", SpeedAccessories = { SwiftSneakers = 1, ShadowCloak = true, Invalid = true }, EquippedWeapon = {}, EquippedSpeedAccessory = "SwiftSneakers" }
 local malformed = data.Load(makePlayer(3))
 check(malformed.Data.EquippedWeapon == "Bat" and malformed.Data.Weapons.Bat, "Malformed saved weapon fields recover safely")
 check(malformed.Data.EquippedSpeedAccessory == nil and malformed.Data.SpeedAccessories.ShadowCloak and not malformed.Data.SpeedAccessories.Invalid, "Malformed accessory fields cannot equip or grant unknown gear")
@@ -182,7 +182,7 @@ foreign.Name = "Iron Sword"
 foreign.Parent = player:FindFirstChildOfClass("Backpack")
 combat.GiveWeapons(player, {}, profile.Data.Weapons, profile.Data.EquippedWeapon)
 check(#gameTools(player) == 1 and gameTools(player)[1]:GetAttribute("GameWeaponKey") == "Bat", "Only the selected Bat is instantiated")
-profile.Data.Coins = 1000000
+profile.Data.Coins = 300000000 -- GoldenWings بقت بـ 250M
 local beforeCoins = profile.Data.Coins
 fire("BuyWeapon", "IronSword")
 check(profile.Data.Coins == beforeCoins - config.WeaponCoinPrices.IronSword and profile.Data.Weapons.IronSword, "Weapon purchase charges once and persists ownership")

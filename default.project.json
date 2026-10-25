@@ -29,6 +29,9 @@
       }
     },
     "ServerStorage": {
+      "AdChest": {
+        "$path": "assets/AdChest.rbxmx"
+      },
       "MonsterModels": {
         "$path": "assets/MonsterModels.rbxmx"
       }

@@ -5,6 +5,10 @@ local Config = {}
 
 Config.StartingCoins = 150
 Config.DataStoreName = "RaiseAMonster_v1"
+-- ريسيت للبروجريس: كل لاعب محفوظ عنده WipeVersion أقل من الرقم ده بيبدأ من الأول مرة واحدة أول ما يدخل.
+-- مش بيمسح السجل نفسه، وبيحتفظ بسجل المشتريات (ProcessedReceipts) عشان مفيش اتحسب مرتين.
+-- 0 = مفيش ريسيت. عشان تعمل ريسيت تاني في المستقبل زوّد الرقم بواحد.
+Config.ProgressWipeVersion = 1
 Config.AutosaveInterval = 60 -- ثواني
 Config.DataSave = {
 	MaxRetries = 3,
@@ -190,12 +194,12 @@ Config.BaseThemes = {
 
 Config.BaseSlots = 3 -- عدد أماكن الوحوش في البداية
 Config.MaxSlots = 10
-Config.SlotUpgradeCosts = { 650, 1950, 5200, 13000, 32500, 78000, 195000 } -- تكلفة كل slot زيادة
+Config.SlotUpgradeCosts = { 650, 5000, 40000, 400000, 4000000, 40000000, 400000000 } -- تكلفة كل slot زيادة
 
 Config.LockDuration = 45 -- مدة قفل القاعدة (ثواني)
 Config.LockCooldown = 90 -- لازم تستنى قد إيه بعد ما القفل يخلص
 Config.LockDurationPerUpgrade = 10
-Config.LockUpgradeCosts = { 1040, 3900, 11700, 32500 }
+Config.LockUpgradeCosts = { 3000, 50000, 1000000, 25000000 }
 
 -- الاحتياجات ----------------------------------------------------------------
 Config.NeedsTickInterval = 1 -- كل قد إيه السيرفر يحدّث الوحوش
@@ -206,7 +210,8 @@ Config.LowNeedsThreshold = 25 -- تحت الرقم ده الإنتاج يقل
 Config.LowNeedsProductionMultiplier = 0.4
 
 Config.Food = {
-	Cost = 13, -- ثابت حسب المرحلة، عشان أكل الوحوش يفضل في متناول البداية
+	Cost = 13, -- أقل تمن (Grassland)، × المرحلة
+	CostPerBaseProduction = 12, -- بعد كده التمن = 12 × دخل Baby للنوع، عشان الأكل يكبر مع المناطق
 	Hunger = 35,
 	Xp = 15,
 }
@@ -226,6 +231,7 @@ Config.Play = {
 -- المستويات والتطور -------------------------------------------------------------
 Config.MaxLevel = 60
 Config.AdultGrowthSeconds = 2 * 60 * 60 + 30 * 60 -- Natural Baby -> Adult growth, including offline time.
+Config.OfflineIncomeShare = 0.2 -- الأوفلاين بياخد 20% بس من دخله العادي (النمو والـ XP مش متأثرين)
 Config.ProductionLevelBonusPerLevel = 0.05
 Config.SellLevelBonusPerLevel = 0.1
 
@@ -297,9 +303,9 @@ Config.RegionMonsters = {
 }
 -- الندرة بالترتيب جوه كل منطقة (زي الملف بالظبط)
 Config.RegionRarities = { "Common", "Common", "Uncommon", "Uncommon", "Rare", "Rare", "Epic", "Epic", "Legendary", "Mythic" }
--- الإنتاج بيعلى مع الندرة، ومن Ice (Hard) بيبدأ بالملايين في الثانية.
-local REGION_PRODUCTION = { 1, 1.3, 2.5, 3, 6, 7.5, 18, 22, 60, 150 }
-Config.RegionProductionMultipliers = { 1, 3, 1000000, 3000000, 10000000 }
+-- الفرق بين وحوش المنطقة الواحدة صغير (×1 لحد ×2.5)، والقفزة الكبيرة بين المناطق (×10 ثم ×15 ثم ×20 ثم ×33).
+local REGION_PRODUCTION = { 1, 1.1, 1.2, 1.3, 1.45, 1.6, 1.75, 1.9, 2.2, 2.5 }
+Config.RegionProductionMultipliers = { 1, 10, 150, 3000, 100000 }
 local REGION_COLORS = {
 	Color3.fromRGB(90, 205, 95),
 	Color3.fromRGB(238, 205, 145),
@@ -344,7 +350,7 @@ export type Egg = {
 Config.Eggs = {
 	Basic = {
 		DisplayName = "Basic Egg",
-		Cost = 130,
+		Cost = 200,
 		HatchTime = 20,
 		Color = Color3.fromRGB(235, 225, 200),
 		Order = 1,
@@ -352,7 +358,7 @@ Config.Eggs = {
 	},
 	Rare = {
 		DisplayName = "Rare Egg",
-		Cost = 1560,
+		Cost = 12000,
 		HatchTime = 45,
 		Color = Color3.fromRGB(80, 160, 255),
 		Order = 2,
@@ -360,7 +366,7 @@ Config.Eggs = {
 	},
 	Mythic = {
 		DisplayName = "Mythic Egg",
-		Cost = 19500,
+		Cost = 2700000,
 		HatchTime = 90,
 		Color = Color3.fromRGB(255, 60, 120),
 		Order = 3,
@@ -405,9 +411,9 @@ export type Mutation = {
 
 -- مترتبة من الأندر للأشهر؛ أول واحدة تنجح هي اللي بتتطبق.
 Config.Mutations = {
-	{ Name = "Rainbow", Chance = 0.01, Multiplier = 5, Color = nil },
-	{ Name = "Toxic", Chance = 0.03, Multiplier = 3, Color = Color3.fromRGB(110, 255, 40) },
-	{ Name = "Golden", Chance = 0.06, Multiplier = 2, Color = Color3.fromRGB(255, 205, 50) },
+	{ Name = "Rainbow", Chance = 0.01, Multiplier = 3, Color = nil },
+	{ Name = "Toxic", Chance = 0.03, Multiplier = 2, Color = Color3.fromRGB(110, 255, 40) },
+	{ Name = "Golden", Chance = 0.06, Multiplier = 1.5, Color = Color3.fromRGB(255, 205, 50) },
 } :: { Mutation }
 
 -- السرقة -------------------------------------------------------------------
@@ -458,8 +464,8 @@ Config.Zones = {
 		AccentColor = Color3.fromRGB(255, 190, 80),
 		Decoration = "Desert",
 		Species = { "Desert_1", "Desert_2", "Desert_3", "Desert_4", "Desert_5", "Desert_6", "Desert_7", "Desert_8", "Desert_9", "Desert_10" },
-		MotherHealth = 2500,
-		MotherDamage = 10,
+		MotherHealth = 3500,
+		MotherDamage = 12,
 	},
 	{
 		Name = "Ice",
@@ -470,8 +476,8 @@ Config.Zones = {
 		AccentColor = Color3.fromRGB(120, 200, 255),
 		Decoration = "Ice",
 		Species = { "Ice_1", "Ice_2", "Ice_3", "Ice_4", "Ice_5", "Ice_6", "Ice_7", "Ice_8", "Ice_9", "Ice_10" },
-		MotherHealth = 20000,
-		MotherDamage = 18,
+		MotherHealth = 35000,
+		MotherDamage = 24,
 	},
 	{
 		Name = "Volcano",
@@ -482,8 +488,8 @@ Config.Zones = {
 		AccentColor = Color3.fromRGB(255, 120, 30),
 		Decoration = "Lava",
 		Species = { "Volcano_1", "Volcano_2", "Volcano_3", "Volcano_4", "Volcano_5", "Volcano_6", "Volcano_7", "Volcano_8", "Volcano_9", "Volcano_10" },
-		MotherHealth = 150000,
-		MotherDamage = 30,
+		MotherHealth = 70000, -- ≈ دقيقة بسلاح Ice (400 ضرر × ~170 ضربة)
+		MotherDamage = 42,
 	},
 	{
 		Name = "Void",
@@ -494,8 +500,8 @@ Config.Zones = {
 		AccentColor = Color3.fromRGB(170, 70, 255),
 		Decoration = "Crystals",
 		Species = { "Void_1", "Void_2", "Void_3", "Void_4", "Void_5", "Void_6", "Void_7", "Void_8", "Void_9", "Void_10" },
-		MotherHealth = 1000000,
-		MotherDamage = 72, -- was 90; trimmed 20%
+		MotherHealth = 310000, -- ≈ دقيقة بسلاح Lava (1800 ضرر × ~170 ضربة)
+		MotherDamage = 90,
 	},
 } :: { Zone }
 
@@ -516,14 +522,18 @@ Config.WalkSpeed = 25 -- سرعة المشي ثابتة (الافتراضي في
 
 Config.SpeedAccessories = {
 	SwiftSneakers = { Name = "Neon Dash Sneakers", Description = "Neon sneakers that leave a streak and pulse as you run", Price = 650, Multiplier = 1.05, HealthBonus = 15, Order = 1, Color = Color3.fromRGB(70, 180, 255) },
-	FlameBoots = { Name = "Ember Stompers", Description = "Boots that ignite while you run", Price = 1950, Multiplier = 1.08, HealthBonus = 30, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
-	IceSkates = { Name = "Frost Glide Skates", Description = "Frozen skates that shed snow sparkles as you glide", Price = 4550, Multiplier = 1.10, HealthBonus = 50, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
-	WindScarf = { Name = "Zephyr Scarf", Description = "A scarf that ripples in the wind", Price = 9100, Multiplier = 1.12, HealthBonus = 75, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
-	LightningBoots = { Name = "Storm Strike Boots", Description = "Boots that crackle with lightning when you move", Price = 18200, Multiplier = 1.15, HealthBonus = 100, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
-	ShadowCloak = { Name = "Umbral Cloak", Description = "A cloak wrapped in orbiting shadow shards", Price = 227500, Multiplier = 1.40, HealthBonus = 350, Order = 9, Color = Color3.fromRGB(125, 75, 210) },
-	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 71500, Multiplier = 1.22, HealthBonus = 190, Order = 7, Color = Color3.fromRGB(255, 95, 225) },
-	GoldenWings = { Name = "Sunfeather Wings", Description = "Radiant wings that flap faster the quicker you go", Price = 130000, Multiplier = 1.30, HealthBonus = 250, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
-} :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, HealthBonus: number, Order: number, Color: Color3 } }
+	FlameBoots = { Name = "Ember Stompers", Description = "Boots that ignite while you run", Price = 5000, Multiplier = 1.08, HealthBonus = 30, Order = 2, Color = Color3.fromRGB(255, 100, 35) },
+	IceSkates = { Name = "Frost Glide Skates", Description = "Frozen skates that shed snow sparkles as you glide", Price = 40000, Multiplier = 1.10, HealthBonus = 50, Order = 3, Color = Color3.fromRGB(130, 230, 255) },
+	WindScarf = { Name = "Zephyr Scarf", Description = "A scarf that ripples in the wind", Price = 300000, Multiplier = 1.12, HealthBonus = 75, Order = 4, Color = Color3.fromRGB(220, 245, 255) },
+	LightningBoots = { Name = "Storm Strike Boots", Description = "Boots that crackle with lightning when you move", Price = 2500000, Multiplier = 1.15, HealthBonus = 100, Order = 5, Color = Color3.fromRGB(255, 225, 70) },
+	ShadowCloak = { Name = "Umbral Cloak", Description = "A cloak wrapped in orbiting shadow shards", Price = 2500000000, Multiplier = 1.40, HealthBonus = 350, Order = 9, Color = Color3.fromRGB(125, 75, 210) },
+	VoidHoverboard = { Name = "Void Hoverboard", Description = "A board that floats above the ground", Price = 25000000, Multiplier = 1.22, HealthBonus = 190, Order = 7, Color = Color3.fromRGB(255, 95, 225) },
+	GoldenWings = { Name = "Sunfeather Wings", Description = "Radiant wings that flap faster the quicker you go", Price = 250000000, Multiplier = 1.30, HealthBonus = 250, Order = 8, Color = Color3.fromRGB(255, 205, 60) },
+	-- Boss-loot-only gear (Config.BossLoot): never sold in the shop (Price 0, LootOnly) and only listed once owned.
+	WitchBoots = { Name = "Hexed Witch Boots", Description = "Curl-toed witch boots with glowing buckles that leave pumpkin runes behind. Dropped by the Pumpkin Titan.", Price = 0, Multiplier = 1.18, HealthBonus = 140, Order = 10, Color = Color3.fromRGB(255, 132, 28), LootOnly = true },
+	PhantomCloak = { Name = "Phantom Shroud", Description = "A ghostly hooded shroud with drifting wisps and an ectoplasm trail. Dropped by the Pumpkin Titan.", Price = 0, Multiplier = 1.32, HealthBonus = 260, Order = 11, Color = Color3.fromRGB(120, 255, 226), LootOnly = true },
+	PumpkinKingWings = { Name = "Pumpkin King Wings", Description = "Bat wings of the Pumpkin King: ember-lit membranes, a jack-o-lantern crest and a flaming crown. Dropped by the Pumpkin Titan.", Price = 0, Multiplier = 1.45, HealthBonus = 420, Order = 12, Color = Color3.fromRGB(255, 110, 18), LootOnly = true },
+} :: { [string]: { Name: string, Description: string, Price: number, Multiplier: number, HealthBonus: number, Order: number, Color: Color3, LootOnly: boolean? } }
 
 -- الوحش اللي شايله على ضهرك لحد ما توصل قاعدتك
 Config.Carry = {
@@ -578,7 +588,7 @@ Config.Combat = {
 	CritChance = 0.12, -- فرصة الضربة القاضية
 	CritMultiplier = 2,
 	Sounds = {
-		Swing = "rbxassetid://12222208",
+		Swing = "rbxassetid://5789211405", -- whoosh قصير (0.3 ثانية) يناسب فاصل الضربة 0.35
 		Hit = "rbxassetid://12222216",
 	},
 }
@@ -661,6 +671,8 @@ Config.Gamepasses = {
 	ExtraSlots = { Id = 2036429020, Name = "+2 Slots", Description = "Two more monster slots in your base", Price = 99, Order = 4 },
 	AutoFeeder = { Id = 2037406772, Name = "Auto-Feeder", Description = "Feeds hungry monsters using your coins and grants normal feeding XP", Price = 99, Order = 5 },
 	AutoMinigame = { Id = 2044616622, Name = "Auto Minigame", Description = "Automatically plays with your placed monsters and earns normal game XP", Price = 99, Order = 6 },
+	-- بعد ما تقتل الأم، الصغار بتدخل مجموعتك لوحدها من غير ما تشيلهم لقاعدتك (ZoneService.killMother)
+	AutoCollectBabies = { Id = 0, Name = "Baby Collector", Description = "Baby monsters go straight to your collection when you defeat their mother", Price = 149, Order = 8 },
 	DoubleDamage = { Id = 2052905177, Name = "x2 Damage", Description = "Double your player weapon damage against monsters, bosses and players", Price = 299, Order = 7 },
 	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
 	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
@@ -670,11 +682,15 @@ Config.Gamepasses = {
 	LavaSword = { Id = 0, Name = "Lava Sword", Description = "A blazing sword with maximum power", Price = 299, Order = 14 },
 } :: { [string]: Gamepass }
 
-export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number, Coins: number? }
+-- Coins = الحد الأدنى الثابت، Minutes = دقايق من دخلك الحالي (بيتدّي الأكبر من الاتنين)
+export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number, Coins: number?, Minutes: number?, Hidden: boolean? }
 Config.Products = {
-	Coins1000 = { Id = 3717867513, Name = "1,000 Coins", Description = "1,000 coins added to your wallet · repeatable", Price = 50, Order = 4, Coins = 1000 },
-	Coins5000 = { Id = 3717867716, Name = "5,000 Coins", Description = "5,000 coins added to your wallet · repeatable", Price = 100, Order = 5, Coins = 5000 },
-	Coins15000 = { Id = 3717867936, Name = "15,000 Coins", Description = "15,000 coins added to your wallet · repeatable", Price = 250, Order = 6, Coins = 15000 },
+	Coins1000 = { Id = 3717867513, Name = "Coin Pack S", Description = "15 minutes of your income added to your wallet · repeatable", Price = 50, Order = 4, Coins = 1000, Minutes = 15 },
+	Coins5000 = { Id = 3717867716, Name = "Coin Pack M", Description = "1 hour of your income added to your wallet · repeatable", Price = 100, Order = 5, Coins = 5000, Minutes = 60 },
+	Coins15000 = { Id = 3717867936, Name = "Coin Pack L", Description = "3 hours of your income added to your wallet · repeatable", Price = 250, Order = 6, Coins = 15000, Minutes = 180 },
+	-- جايزة صندوق الإعلان (Config.AdChest): منتج مطوّر بيتدّي بعد مشاهدة إعلان فيديو، مش بيتباع في الشوب.
+	-- حط هنا الـ Id بتاع المنتج اللي تعمله في Creator Hub (لازم يكون لنفس الـ Universe).
+	AdChest = { Id = 0, Name = "Free Chest", Description = "Reward for watching a video ad", Price = 0, Order = 99, Coins = 2000, Minutes = 30, Hidden = true },
 	InstantHatch = { Id = 0, Name = "Instant Hatch", Description = "All your eggs hatch right now", Price = 25, Order = 1 },
 	LuckyEgg = { Id = 0, Name = "Lucky Egg", Description = "A rare egg with better odds", Price = 49, Order = 2 },
 	SpeedBoost = { Id = 0, Name = "Speed Boost", Description = "Run faster for 10 minutes", Price = 29, Order = 3 },
@@ -689,7 +705,7 @@ Config.ExtraSlotsAmount = 2
 Config.VIPSword = { DamageMultiplier = 90, ExtraReach = 3 }
 Config.WeaponStats = {
 	-- Each weapon is a big step up: x2, x4, x8, x18, x40, x90, x180 (the starter bat is x1). The best sword can
-	-- solo a Void Mother (1M-4M HP) but only with careful dodging - she kills a player in about two hits.
+	-- solo a Void Mother (310K-1.2M HP) but only with careful dodging - she kills a player in about two hits.
 	IronBat = { Template = "IronBat", DamageMultiplier = 2, ExtraReach = 0.5 },
 	IronSword = { Template = "IronSword", DamageMultiplier = 4, ExtraReach = 1 },
 	ForestSword = { Template = "ForestSword", DamageMultiplier = 8, ExtraReach = 1.5 },
@@ -702,12 +718,11 @@ Config.WeaponStats = {
 -- Early upgrades are affordable; later tiers follow the five-zone economy.
 Config.WeaponCoinPrices = {
 	IronBat = 390,
-	IronSword = 1040,
-	ForestSword = 3250,
-	DesertSword = 9750,
-	IceSword = 26000,
-	VIPSword = 52000,
-	LavaSword = 104000,
+	IronSword = 1000,
+	ForestSword = 16000,
+	DesertSword = 160000,
+	IceSword = 2400000,
+	LavaSword = 48000000,
 } :: { [string]: number }
 Config.SpeedBoost = { Duration = 600, Multiplier = 1.4 }
 
@@ -722,15 +737,14 @@ Config.MonsterRain = {
 
 -- Big Boss: أوقات بينزل في الماب ومعاه بيضة Secret. لازم الكل يتجمع يقتله.
 Config.Boss = {
-	MinInterval = 10800, -- the Big Boss arrives every 3 hours
-	MaxInterval = 10800,
+	Interval = 3600, -- the Big Boss respawns every hour on the hour (server clock, same time in every server)
 	HealthPerPlayer = 0, -- the boss has a fixed health pool (MinHealth), whatever the player count
 	MinHealth = 3000000,
 	Damage = 40, -- base hit: every main move deals >= 50, so an unarmored player (100 HP) dies in two hits. كل ضربة، لكل اللي جنبه (شكلها في Config.MotherAttacks.Styles.Boss)
 	AttackRange = 30, -- لو حد قرّب أكتر من كده بيبدأ يضرب
+	ChaseSpeed = 14, -- server-owned pursuit; movement pauses for each attack and its recovery
 	Size = 18, -- the plain cube used when the Pumpkin Titan model is not in ServerStorage
 	-- The Pumpkin Titan: ServerStorage.BossModels.PumpkinTitan (import assets/PumpkinBossPreview/PumpkinTitan.fbx in Studio).
-	ChaseSpeed = 14, -- server-owned pursuit; movement pauses for each attack and its recovery
 	ModelFolder = "BossModels",
 	ModelName = "PumpkinTitan",
 	ModelHeight = 40, -- studs tall once placed (the source model is 28 units, about 5x a character)
@@ -780,26 +794,42 @@ Config.Leaderboards = {
 	TopCount = 10,
 }
 
--- الهدية اليومية وعجلة الحظ ---------------------------------------------------------------
-Config.Daily = {
-	Cooldown = 20 * 3600, -- تقدر تاخدها كل 20 ساعة
-	StreakReset = 48 * 3600, -- لو غبت أكتر من كده الـ Streak يبدأ من الأول
-	CoinsPerDay = 150, -- بتتضرب في يوم الـ Streak (لحد 7)
-	MaxStreak = 7,
-	Day7Egg = "Rare", -- اليوم السابع بيدّيك بيضة كمان
+-- محطة الصندوق المجاني (إعلان فيديو بمكافأة) بين لوحتين الـ Leaderboards ---------------------------------
+-- الجايزة = Config.Products.AdChest (الأكبر بين Coins ودقايق Minutes من دخلك)، ومش عشوائية (شرط Roblox).
+Config.AdChest = {
+	Position = Vector3.new(97.5, 0, 58), -- النص بين لوحة Richest (z=34) ولوحة Legendary (z=82)
+	Cooldown = 15 * 60, -- ثواني بين كل مشاهدتين للاعب الواحد
+	Reach = 20, -- أقصى مسافة للاعب من الصندوق عشان السيرفر يقبل الطلب
+	PlacementId = nil :: number?, -- اختياري: Placement ID من Creator Hub لتتبّع أداء الإعلان
 }
 
-export type SpinPrize = { Name: string, Weight: number, Coins: number?, Egg: string?, Color: Color3 }
+-- عجلة الحظ اليومية (بدل الهدية اليومية) ---------------------------------------------------------
+-- كل جايزة واحدة من التلاتة: Coins أو Candy أو Egg (Weight = الاحتمال النسبي).
+-- الفلوس = الأكبر بين Coins (حد أدنى ثابت) ودقايق من دخلك الحالي (Minutes)، عشان تفضل مفيدة في أي منطقة.
+-- Candy بيتدّي بس وقت حدث Halloween؛ لو الحدث واقف بتتحول فلوس بـ FallbackMinutes دقيقة دخل.
+export type SpinPrize = {
+	Name: string,
+	Weight: number,
+	Color: Color3,
+	Coins: number?,
+	Minutes: number?,
+	Candy: number?,
+	FallbackMinutes: number?,
+	Egg: string?,
+}
 Config.Spin = {
 	Cooldown = 24 * 3600, -- لفة مجانية كل يوم
 	Prizes = {
-		{ Name = "100 Coins", Weight = 30, Coins = 100, Color = Color3.fromRGB(255, 210, 70) },
-		{ Name = "Rare Egg", Weight = 16, Egg = "Rare", Color = Color3.fromRGB(80, 160, 255) },
-		{ Name = "400 Coins", Weight = 24, Coins = 400, Color = Color3.fromRGB(255, 160, 50) },
-		{ Name = "Lucky Egg", Weight = 6, Egg = "Lucky", Color = Color3.fromRGB(90, 230, 120) },
-		{ Name = "1500 Coins", Weight = 14, Coins = 1500, Color = Color3.fromRGB(255, 110, 60) },
-		{ Name = "Mythic Egg", Weight = 10, Egg = "Mythic", Color = Color3.fromRGB(255, 60, 120) },
+		{ Name = "5 Min Coins", Weight = 28, Coins = 500, Minutes = 5, Color = Color3.fromRGB(255, 210, 70) },
+		{ Name = "60 Candy", Weight = 20, Candy = 60, FallbackMinutes = 8, Color = Color3.fromRGB(255, 120, 200) },
+		{ Name = "Rare Egg", Weight = 12, Egg = "Rare", Color = Color3.fromRGB(80, 160, 255) },
+		{ Name = "20 Min Coins", Weight = 16, Coins = 2000, Minutes = 20, Color = Color3.fromRGB(255, 160, 50) },
+		{ Name = "250 Candy", Weight = 8, Candy = 250, FallbackMinutes = 30, Color = Color3.fromRGB(255, 90, 160) },
+		{ Name = "Lucky Egg", Weight = 4, Egg = "Lucky", Color = Color3.fromRGB(90, 230, 120) },
+		{ Name = "90 Min Coins", Weight = 5, Coins = 9000, Minutes = 90, Color = Color3.fromRGB(255, 110, 60) },
+		{ Name = "Mythic Egg", Weight = 3, Egg = "Mythic", Color = Color3.fromRGB(255, 60, 120) },
 	} :: { SpinPrize },
+	EggFallbackMinutes = 15, -- لو القاعدة مليانة البيضة بتتحول فلوس بدقايق الدخل دي
 }
 
 -- ألعاب صغيرة مع الوحش (بدل زرار Play) ------------------------------------------------------
@@ -958,7 +988,7 @@ Config.Halloween = {
 	CandyToCoinRate = 20, -- each leftover Candy becomes this many coins when the event is over
 	CandyCap = 1000000000, -- sanity cap on stored Candy
 	Invasion = {
-		Interval = 3600, -- Mother Invasion every hour on the hour (server clock, same time in every server)
+		Interval = 1800, -- Mother Invasion every 30 minutes on the :00 and :30 (server clock, same time in every server)
 		Offset = 0,
 		AnnounceBefore = 60, -- warn everyone this many seconds ahead
 		Lifetime = 900, -- invaders that survive this long run off
@@ -981,8 +1011,8 @@ Config.Halloween = {
 		LeashRange = 90,
 	},
 	Pumpkins = {
-		Interval = 1800, -- Pumpkin Hunt every 30 minutes
-		Offset = 900, -- :15 and :45 so it never lands on the Mother Invasion
+		Interval = 900, -- Pumpkin Hunt (Candy collect) every 15 minutes
+		Offset = 0, -- :00, :15, :30, :45 (shares the :00/:30 slots with the Mother Invasion and the Boss)
 		CountMin = 5, -- each hunt hides a random number of pumpkins from CountMin to CountMax
 		CountMax = 20,
 		ZonesShare = 0.5, -- chance that a pumpkin is hidden in the monster zones instead of the plaza
@@ -1043,16 +1073,79 @@ Config.Halloween = {
 		CandyAura = { Name = "Candy Aura", Kind = "Aura", Cost = 800, Order = 4, Description = "Sweet sparkles swirl around you.", Color = Color3.fromRGB(255, 120, 200) },
 		HalloweenTitle = { Name = "Halloween 2026 Title", Kind = "Title", Cost = 1000, Order = 5, Description = "Show 'Halloween 2026' above your head.", Color = Color3.fromRGB(190, 110, 255), TitleText = "Halloween 2026" },
 		HauntedEgg = { Name = "Haunted Egg", Kind = "Egg", Cost = 400, Order = 6, Description = "A real egg: Rare Egg (common) or Mythic Egg (rarer). Hatches into a real monster.", Color = Color3.fromRGB(150, 255, 160), EggWeights = { Rare = 70, Mythic = 30 } :: { [string]: number } },
-		GhostSlime = { Name = "Ghost Slime", Kind = "Monster", Cost = 1500, Order = 7, Description = "Exclusive spooky slime monster.", Color = Color3.fromRGB(200, 240, 255), Species = "HalloweenGhostSlime" },
-		SkeletonImp = { Name = "Skeleton Imp", Kind = "Monster", Cost = 3000, Order = 8, Description = "Exclusive rattling imp monster.", Color = Color3.fromRGB(235, 232, 215), Species = "HalloweenSkeletonImp" },
-		PumpkinKing = { Name = "Pumpkin King", Kind = "Monster", Cost = 12000, Order = 9, Description = "The ultimate Halloween monster. One per player.", Color = Color3.fromRGB(255, 120, 20), Species = "HalloweenPumpkinKing", Unique = true },
 	} :: { [string]: HalloweenItem },
 }
 
--- Event-exclusive monsters. They are not in any egg pool and use the generated body (no rig yet).
+-- Event-exclusive monsters. They only hatch from Config.Eggs.HalloweenMonster (a Pumpkin Titan loot drop) and use the
+-- generated Halloween rigs (MonsterModels region 6).
 -- Defined after the accessory table above on purpose: they have no per-species accessories.
 Config.Species.HalloweenGhostSlime = { DisplayName = "Ghost Slime", Rarity = "Epic", BaseProduction = 45, SellValue = 1800, Color = Color3.fromRGB(205, 235, 255), Horns = false, EventOnly = true, Model = { Region = 6, Index = 1 } }
 Config.Species.HalloweenSkeletonImp = { DisplayName = "Skeleton Imp", Rarity = "Legendary", BaseProduction = 140, SellValue = 5600, Color = Color3.fromRGB(238, 234, 214), Horns = true, EventOnly = true, Model = { Region = 6, Index = 2 } }
+Config.Species.HalloweenHexCat = { DisplayName = "Hex Cat", Rarity = "Legendary", BaseProduction = 150, SellValue = 6000, Color = Color3.fromRGB(122, 52, 190), Horns = false, EventOnly = true, Model = { Region = 6, Index = 4 } }
+Config.Species.HalloweenCryptMummy = { DisplayName = "Crypt Mummy", Rarity = "Legendary", BaseProduction = 160, SellValue = 6400, Color = Color3.fromRGB(232, 214, 170), Horns = false, EventOnly = true, Model = { Region = 6, Index = 5 } }
+Config.Species.HalloweenCountFang = { DisplayName = "Count Fang", Rarity = "Legendary", BaseProduction = 200, SellValue = 8000, Color = Color3.fromRGB(150, 24, 52), Horns = false, EventOnly = true, Model = { Region = 6, Index = 6 } }
+Config.Species.HalloweenGraveGolem = { DisplayName = "Grave Golem", Rarity = "Legendary", BaseProduction = 220, SellValue = 8800, Color = Color3.fromRGB(92, 100, 110), Horns = false, EventOnly = true, Model = { Region = 6, Index = 7 } }
+Config.Species.HalloweenWraithReaper = { DisplayName = "Wraith Reaper", Rarity = "Mythic", BaseProduction = 360, SellValue = 14400, Color = Color3.fromRGB(88, 232, 190), Horns = true, EventOnly = true, Model = { Region = 6, Index = 8 } }
 Config.Species.HalloweenPumpkinKing = { DisplayName = "Pumpkin King", Rarity = "Mythic", BaseProduction = 520, SellValue = 20800, Color = Color3.fromRGB(255, 125, 20), Horns = true, EventOnly = true, Model = { Region = 6, Index = 3 } }
+
+-- The Halloween monster egg: the only source of the eight Halloween monsters. The weights are the rarity ladder
+-- (Epic > Legendary > Mythic), and the Pumpkin King is the rarest and strongest of them.
+Config.Eggs.HalloweenMonster = {
+	DisplayName = "Halloween Monster Egg",
+	Cost = 0,
+	HatchTime = 45,
+	Color = Color3.fromRGB(255, 122, 24),
+	Order = 6,
+	AllowSecret = false,
+	Weights = {
+		HalloweenGhostSlime = 20, HalloweenSkeletonImp = 20,
+		HalloweenHexCat = 15, HalloweenCryptMummy = 15,
+		HalloweenCountFang = 10, HalloweenGraveGolem = 10,
+		HalloweenWraithReaper = 7, HalloweenPumpkinKing = 3,
+	},
+}
+
+-- Pumpkin Titan loot --------------------------------------------------------------------------------------------
+-- Everyone who dealt at least MinShare of the boss's max HP gets 1 to 3 loot rolls when it dies. The more of the
+-- fight was yours, the more rolls you tend to get (RollTable) and the more the rare entries are favoured
+-- (RareBoost). Entry weights are relative; "Rare = true" entries are multiplied by 1 + share * RareBoost.
+export type LootEntry = {
+	Kind: string, -- "Candy" | "Coins" | "Egg" | "Accessory"
+	Weight: number?,
+	Chance: number?, -- Fixed entries: probability of one roll
+	Rare: boolean?,
+	Egg: string?, -- Egg: a Config.Eggs key
+	Minutes: number?, -- Coins: minutes of the player's income
+	Floor: number?, -- Coins: minimum coins
+	Candy: number?, -- Candy: amount
+}
+Config.BossLoot = {
+	MinShare = 0.01,
+	RareBoost = 2,
+	-- { upper bound of the damage share, { chance of 1 roll, 2 rolls, 3 rolls } }
+	RollTable = {
+		{ 0.05, { 85, 15, 0 } },
+		{ 0.15, { 55, 35, 10 } },
+		{ 0.30, { 30, 45, 25 } },
+		{ 1.01, { 15, 40, 45 } },
+	} :: { { any } },
+	-- Fixed odds per roll, checked first, never changed by the damage share.
+	Fixed = {
+		{ Kind = "Egg", Chance = 0.05, Egg = "HalloweenMonster" },
+		{ Kind = "Egg", Chance = 0.03, Egg = "Secret" },
+	} :: { LootEntry },
+	-- Otherwise one of these, by weight.
+	Entries = {
+		{ Kind = "Candy", Weight = 25, Candy = 150 },
+		{ Kind = "Coins", Weight = 20, Minutes = 20, Floor = 5000 },
+		{ Kind = "Egg", Weight = 14, Egg = "Rare" },
+		{ Kind = "Egg", Weight = 6, Egg = "Lucky", Rare = true },
+		{ Kind = "Accessory", Weight = 12, Rare = true },
+		{ Kind = "Candy", Weight = 15, Candy = 500, Rare = true },
+	} :: { LootEntry },
+	AccessoryWeights = { WitchBoots = 50, PhantomCloak = 35, PumpkinKingWings = 15 } :: { [string]: number },
+	AccessoryCandy = 600, -- a duplicate accessory turns into this much Candy
+	BoardRows = 6, -- damage board under the boss
+}
 
 return Config

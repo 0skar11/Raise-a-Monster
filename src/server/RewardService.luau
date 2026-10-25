@@ -1,5 +1,5 @@
 --!strict
--- الهدية اليومية (بتكبر مع الـ Streak) وعجلة الحظ (لفة مجانية كل يوم وفيها بيض نادر).
+-- عجلة الحظ اليومية: لفة مجانية كل يوم، والجايزة فلوس أو Candy أو بيضة (Config.Spin).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -7,19 +7,12 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local DataService = require(script.Parent.DataService)
 local MonsterService = require(script.Parent.MonsterService)
+local HalloweenService = require(script.Parent.HalloweenService)
 
 local RewardService = {}
 
 local remotes: { [string]: RemoteEvent }
 local busy: { [Player]: boolean } = {}
-
-function RewardService.DailyReadyIn(player: Player): number
-	local profile = DataService.Get(player)
-	if not profile then
-		return 0
-	end
-	return math.max(0, profile.Data.Daily.LastClaim + Config.Daily.Cooldown - os.time())
-end
 
 function RewardService.SpinReadyIn(player: Player): number
 	local profile = DataService.Get(player)
@@ -29,50 +22,44 @@ function RewardService.SpinReadyIn(player: Player): number
 	return math.max(0, profile.Data.LastSpin + Config.Spin.Cooldown - os.time())
 end
 
-function RewardService.NextDailyDay(player: Player): number
-	local profile = DataService.Get(player)
-	if not profile then return 1 end
-	local daily = profile.Data.Daily
-	if daily.LastClaim > 0 and os.time() - daily.LastClaim <= Config.Daily.StreakReset then
-		return math.min(daily.Streak + 1, Config.Daily.MaxStreak)
+-- الأكبر بين الحد الأدنى الثابت ودقايق من دخلك الحالي، فالجايزة تكبر مع المناطق
+local function incomeCoins(player: Player, floor: number?, minutes: number?): number
+	local amount = floor or 0
+	if minutes then
+		amount = math.max(amount, math.floor(MonsterService.GetIncomePerSecond(player) * minutes * 60))
 	end
-	return 1
+	return amount
+end
+
+local function giveCoins(player: Player, amount: number, message: string)
+	DataService.AddCoins(player, amount)
+	MonsterService.Notify(player, message .. " 💰 " .. MonsterMath.FormatNumber(amount), "coins")
 end
 
 -- البيضة بتروح القاعدة، ولو مفيش مكان بتتحول فلوس
 local function giveEgg(player: Player, eggType: string)
 	if not MonsterService.AddEgg(player, eggType) then
-		local fallback = 1000
-		DataService.AddCoins(player, fallback)
-		MonsterService.Notify(player, "Your base is full, so you got 💰 " .. MonsterMath.FormatNumber(fallback) .. " instead!", "coins")
+		local fallback = math.max(1000, incomeCoins(player, nil, Config.Spin.EggFallbackMinutes))
+		giveCoins(player, fallback, "Your base is full, so you got")
 	end
 end
 
-local function claimDaily(player: Player)
-	local profile = DataService.Get(player)
-	if not profile or busy[player] then
-		return
-	end
-	if RewardService.DailyReadyIn(player) > 0 then
-		MonsterService.Notify(player, "Come back later for your next daily reward!", "info")
-		return
-	end
-	local daily = profile.Data.Daily
-	local now = os.time()
-	if daily.LastClaim > 0 and now - daily.LastClaim <= Config.Daily.StreakReset then
-		daily.Streak = math.min(daily.Streak + 1, Config.Daily.MaxStreak)
+local function grantPrize(player: Player, prize: Config.SpinPrize)
+	if prize.Egg then
+		MonsterService.Notify(player, "🎡 You won a " .. prize.Name .. "!", "success")
+		giveEgg(player, prize.Egg)
+	elseif prize.Candy then
+		-- الـ Candy بتشتغل بس وقت حدث Halloween، غير كده بتتحول فلوس
+		local granted = HalloweenService.AddCandy(player, prize.Candy)
+		if granted > 0 then
+			MonsterService.Notify(player, "🎡 You won 🍬 " .. tostring(granted) .. " Candy!", "success")
+		else
+			local fallback = math.max(prize.Candy * Config.Halloween.CandyToCoinRate, incomeCoins(player, nil, prize.FallbackMinutes))
+			giveCoins(player, fallback, "🎡 No Halloween event right now, so you got")
+		end
 	else
-		daily.Streak = 1
+		giveCoins(player, incomeCoins(player, prize.Coins, prize.Minutes), "🎡 You won " .. prize.Name .. ":")
 	end
-	daily.LastClaim = now
-	local coins = Config.Daily.CoinsPerDay * daily.Streak
-	DataService.AddCoins(player, coins)
-	MonsterService.Notify(player, string.format("🎁 Day %d reward: +%s coins!", daily.Streak, MonsterMath.FormatNumber(coins)), "coins")
-	if daily.Streak >= Config.Daily.MaxStreak then
-		giveEgg(player, Config.Daily.Day7Egg)
-		daily.Streak = 0 -- بعد اليوم السابع بتبدأ من الأول
-	end
-	MonsterService.PushState(player)
 end
 
 local function pickPrize(): number
@@ -112,13 +99,7 @@ local function spin(player: Player)
 		if not player.Parent then
 			return
 		end
-		if prize.Coins then
-			DataService.AddCoins(player, prize.Coins)
-			MonsterService.Notify(player, "🎡 You won " .. prize.Name .. "!", "coins")
-		elseif prize.Egg then
-			MonsterService.Notify(player, "🎡 You won a " .. prize.Name .. "!", "success")
-			giveEgg(player, prize.Egg)
-		end
+		grantPrize(player, prize)
 		MonsterService.PushState(player)
 	end)
 end
@@ -129,7 +110,6 @@ end
 
 function RewardService.Init(allRemotes: { [string]: RemoteEvent })
 	remotes = allRemotes
-	remotes.ClaimDaily.OnServerEvent:Connect(claimDaily)
 	remotes.Spin.OnServerEvent:Connect(spin)
 end
 

@@ -59,17 +59,17 @@ local gui = r.Instance.new("ScreenGui")
 local scale = r.Instance.new("UIScale"); scale.Scale, scale.Parent = 0.6, gui
 local panel = r.Instance.new("Frame"); panel.Parent, panel.Visible = gui, true
 local close = r.Instance.new("TextButton"); close.Name, close.Parent = "CloseButton", panel
-local state = { DailyReadyIn = 0, DailyStreak = 3, DailyNextDay = 4, SpinReadyIn = 0 }
-local claims, spins = 0, 0
+local state = { SpinReadyIn = 0 }
+local spins = 0
 local controller = module.Mount(panel, {
 	GetState = function() return state end,
-	ClaimDaily = function() claims += 1 end,
 	Spin = function() spins += 1 end,
 })
 local root = panel.RewardsArcade
 local content = root.RewardContent
-local daily, arcade = content.DailyRewards, content.SpinArcade
-local dailyButton, spinButton = daily.NextReward.ClaimDaily, arcade.SpinInfo.FreeSpin
+local arcade = content.SpinArcade
+local spinButton = arcade.SpinInfo.FreeSpin
+check(content:FindFirstChild("DailyRewards") == nil, "The daily streak panel is gone; only the spin wheel remains")
 local disc = arcade.WheelMount.PrizeDisc
 local function rect(item, width, height)
 	local w, h = item.Size.X.Scale * width + item.Size.X.Offset, item.Size.Y.Scale * height + item.Size.Y.Offset
@@ -82,19 +82,17 @@ for _, viewport in { r.Vector2.new(320, 568), r.Vector2.new(480, 320), r.Vector2
 	check(width <= viewport.X - 24 and height <= viewport.Y - 60, "Panel fits available inset viewport")
 	check(math.abs(scale.Scale * panel.NativeRewardsScale.Scale - 1) < 0.00001, "Parent scale is cancelled for native touch targets")
 	check(content.Position.Y.Offset >= 78 and content.Position.Y.Offset + content.Size.Y.Offset <= height, "Content fits below fixed header")
-	local dailyRect, arcadeRect = rect(daily, content.Size.X.Offset, content.Size.Y.Offset), rect(arcade, content.Size.X.Offset, content.Size.Y.Offset)
-	check(not (dailyRect.x < arcadeRect.x + arcadeRect.w and arcadeRect.x < dailyRect.x + dailyRect.w and dailyRect.y < arcadeRect.y + arcadeRect.h and arcadeRect.y < dailyRect.y + dailyRect.h), "Daily and spin regions do not overlap")
 	check(arcade.Position.Y.Offset + arcade.Size.Y.Offset <= content.CanvasSize.Y.Offset, "Spin region reachable through scroll canvas")
 	if viewport.X >= 1100 and viewport.Y >= 600 then
-		check(content.CanvasSize.Y.Offset <= content.Size.Y.Offset, "Desktop shows the full wheel and daily rewards without scrolling")
+		check(content.CanvasSize.Y.Offset <= content.Size.Y.Offset, "Desktop shows the full wheel without scrolling")
 		local wheel = arcade.WheelMount
 		check(arcade.Position.Y.Offset + wheel.Position.Y.Offset + wheel.Size.Y.Offset <= content.Size.Y.Offset, "Complete desktop wheel is visible on first open")
 		check(arcade.Position.Y.Offset + arcade.SpinInfo.Position.Y.Offset + spinButton.Position.Y.Offset + spinButton.Size.Y.Offset <= content.Size.Y.Offset, "Desktop free spin action is visible on first open")
 	end
-	for _, item in { close, dailyButton, spinButton } do
+	for _, item in { close, spinButton } do
 		check(item.Size.X.Offset >= 44 and item.Size.Y.Offset >= 44, "Every action retains native 44px target")
 	end
-	for _, region in { daily.NextReward, arcade.SpinInfo, arcade } do
+	for _, region in { arcade.SpinInfo, arcade } do
 		for _, child in region:GetChildren() do
 			if child:IsA("GuiObject") then
 				local box = rect(child, region.Size.X.Offset, region.Size.Y.Offset)
@@ -104,21 +102,21 @@ for _, viewport in { r.Vector2.new(320, 568), r.Vector2.new(480, 320), r.Vector2
 	end
 end
 check(panel.ZIndex == 30, "Rewards modal appears above sibling HUD elements")
-check(#daily.DayTrack:GetChildren() == modules.Config.Daily.MaxStreak, "Day track uses configured maximum")
-check(daily.NextReward.RewardValue.Text == "600 coins", "Upcoming coin amount uses authoritative day four")
-check(daily.DayTrack.Day3.Claimed.Visible and not daily.DayTrack.Day4.Claimed.Visible, "Only previously claimed days are checked")
-state.DailyNextDay = 1; controller:Refresh(state)
-check(not daily.DayTrack.Day3.Claimed.Visible and daily.NextReward.RewardValue.Text == "150 coins", "Expired saved streak resets display using server day")
-state.DailyNextDay, state.DailyReadyIn, state.SpinReadyIn = 7, 3661, 59
+-- كل جايزة نوع واحد بس (Coins أو Candy أو Egg) والأوزان كلها موجبة
+local totalWeight = 0
+for _, prize in modules.Config.Spin.Prizes do
+	local kinds = (if prize.Egg then 1 else 0) + (if prize.Candy then 1 else 0) + (if prize.Coins then 1 else 0)
+	check(kinds == 1 and prize.Weight > 0, "Prize " .. prize.Name .. " is exactly one of egg, candy or coins")
+	check(not prize.Egg or modules.Config.Eggs[prize.Egg] ~= nil, "Egg prize points at a real egg")
+	totalWeight += prize.Weight
+end
+check(totalWeight > 0, "Spin odds have positive total weight")
+state.SpinReadyIn = 59
 controller:Refresh(state)
-check(dailyButton.Text == "Ready in 1:01:01" and not dailyButton.Active and not spinButton.Active, "Cooldowns disable requests and format correctly")
-dailyButton.Activated:Fire(); spinButton.Activated:Fire()
-check(claims == 0 and spins == 0, "Disabled buttons cannot request rewards even if Activated fires")
-check(daily.NextReward.RewardValue.Text == "1.1K coins" and daily.NextReward.BonusEgg.Text:find(modules.Config.Eggs[modules.Config.Daily.Day7Egg].DisplayName, 1, true), "Final-day reward uses real configured coins and egg")
-state.DailyReadyIn, state.SpinReadyIn = 0, 0; controller:Refresh(state)
-dailyButton.Activated:Fire(); dailyButton.Activated:Fire(); spinButton.Activated:Fire()
-check(claims == 1 and spins == 0, "Pending daily request blocks duplicates and concurrent spin")
-state.DailyReadyIn = 72000; controller:Refresh(state)
+check(not spinButton.Active, "Cooldown disables the spin request")
+spinButton.Activated:Fire()
+check(spins == 0, "Disabled spin cannot request a reward even if Activated fires")
+state.SpinReadyIn = 0; controller:Refresh(state)
 spinButton.Activated:Fire(); spinButton.Activated:Fire()
 check(spins == 1, "Pending spin sends exactly one request")
 for index, prize in modules.Config.Spin.Prizes do

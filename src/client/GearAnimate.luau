@@ -189,6 +189,23 @@ local function footstep(character: Model, gear: string, direction: Vector3, side
 	elseif gear == "SwiftSneakers" then
 		ringAt(at, Color3.fromRGB(80, 220, 255), 1, 6, 0.35)
 		burst(at, SPARKLES, ColorSequence.new(Color3.fromRGB(190, 250, 255), Color3.fromRGB(60, 190, 255)), 12, NumberRange.new(6, 12))
+	elseif gear == "WitchBoots" then
+		-- a short-lived pumpkin-orange witch sigil (disc, ring and a crossed star) where the heel struck
+		local orange, violet = Color3.fromRGB(255, 132, 28), Color3.fromRGB(190, 110, 255)
+		local disc = effectPart(at, Vector3.new(0.06, 3.4, 3.4), orange, Enum.Material.Neon, Enum.PartType.Cylinder)
+		disc.CFrame = CFrame.new(at) * CFrame.Angles(0, 0, math.rad(90))
+		disc.Transparency = 0.55
+		TweenService:Create(disc, TweenInfo.new(1.1), { Transparency = 1 }):Play()
+		Debris:AddItem(disc, 1.2)
+		for i = 0, 2 do
+			local bar = effectPart(at + Vector3.new(0, 0.04, 0), Vector3.new(0.1, 0.05, 3.1), violet)
+			bar.CFrame = CFrame.new(at + Vector3.new(0, 0.04, 0)) * CFrame.Angles(0, math.rad(i * 60 + math.random(0, 20)), 0)
+			bar.Transparency = 0.2
+			TweenService:Create(bar, TweenInfo.new(0.9), { Transparency = 1 }):Play()
+			Debris:AddItem(bar, 1)
+		end
+		ringAt(at, orange, 0.8, 6.5, 0.45)
+		burst(at, SPARKLES, ColorSequence.new(Color3.fromRGB(255, 200, 100), violet), 12, NumberRange.new(4, 9))
 	elseif gear == "IceSkates" then
 		-- a thin frost line where the blade cut the ice
 		local line = effectPart(at, Vector3.new(0.12, 0.04, 3.2), Color3.fromRGB(215, 245, 255))
@@ -314,7 +331,7 @@ local function step(character: Model, cache: Cache, gear: string, dt: number)
 	local clock = os.clock()
 
 	-- Particles only run while the player moves (boots) or always (aura gear).
-	local alwaysOn = gear == "VoidHoverboard" or gear == "ShadowCloak" or gear == "GoldenWings" or gear == "WindScarf"
+	local alwaysOn = gear == "VoidHoverboard" or gear == "ShadowCloak" or gear == "GoldenWings" or gear == "WindScarf" or gear == "PhantomCloak" or gear == "PumpkinKingWings"
 	for _, emitter in cache.Emitters do
 		emitter.Rate = if alwaysOn then cache.Rates[emitter] * (1 + energy) elseif moving then cache.Rates[emitter] * (1 + energy * 1.5) else 0
 	end
@@ -325,7 +342,7 @@ local function step(character: Model, cache: Cache, gear: string, dt: number)
 	local pulse = 0.5 + 0.5 * sin(clock * 6)
 	for _, glow in cache.Glows do glow.Transparency = 0.25 * (1 - pulse) * (if moving then 1 else 0.4) end
 
-	if moving and (gear == "FlameBoots" or gear == "LightningBoots" or gear == "SwiftSneakers" or gear == "IceSkates") then
+	if moving and (gear == "FlameBoots" or gear == "LightningBoots" or gear == "SwiftSneakers" or gear == "IceSkates" or gear == "WitchBoots") then
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
 			cache.StepClock += dt
@@ -340,7 +357,7 @@ local function step(character: Model, cache: Cache, gear: string, dt: number)
 
 	if gear == "VoidHoverboard" then
 		hoverboard(character, cache, root, flat, energy, moving, clock, pulse)
-	elseif gear == "GoldenWings" then
+	elseif gear == "GoldenWings" or gear == "PumpkinKingWings" then
 		-- Materialise: the wings start folded up and white-hot, snap open, then cool to gold.
 		local born = clock - cache.Born
 		local open = ease(clamp(born / 0.9, 0, 1))
@@ -352,12 +369,12 @@ local function step(character: Model, cache: Cache, gear: string, dt: number)
 			for _, entry in cache.WingParts do entry.Part.Color = entry.Color end
 			cache.Born = -1 -- finished; colours are back to normal
 		end
-		local amplitude = 0.07 + energy * 0.3
+		local amplitude = (0.07 + energy * 0.3) * (if gear == "PumpkinKingWings" then 1.35 else 1)
 		-- Own, slower clock: about 0.25 flaps/s standing, rising to about 0.65 flaps/s at full speed.
 		cache.WingPhase += dt * (1.6 + energy * 2.5)
 		local flap = sin(cache.WingPhase) * amplitude
 		local lift = sin(clock * 1.1) * 0.03 -- slow breathing
-		local left, right = cache.Motors.WingMotorL, cache.Motors.WingMotorR
+		local left, right = cache.Motors.WingMotorL or cache.Motors.KingWingL, cache.Motors.WingMotorR or cache.Motors.KingWingR
 		if (not left or not right) and clock - cache.Born > 3 and not cache.Warned then
 			cache.Warned = true
 			local names = {}
@@ -387,6 +404,18 @@ local function step(character: Model, cache: Cache, gear: string, dt: number)
 		end
 		local swirl = cache.Motors.WindSwirlMotor
 		if swirl then drive(cache, swirl, CFrame.Angles(0, clock * (1.6 + energy * 3), 0)) end
+	elseif gear == "PhantomCloak" then
+		-- tails ripple one after another, the wisps circle, and the ground mist turns slowly
+		for i = 0, 5 do
+			local motor = cache.Motors["PhantomTail" .. i]
+			if motor then
+				local wave = t * 0.8 - i * 0.7
+				drive(cache, motor, CFrame.Angles(0.14 * sin(wave * 0.9) + energy * 0.5, 0.22 * sin(wave) * (0.5 + energy), 0.12 * cos(wave + i)))
+			end
+		end
+		local orbit, mist = cache.Motors.PhantomOrbitMotor, cache.Motors.PhantomMistMotor
+		if orbit then drive(cache, orbit, CFrame.Angles(0, clock * (1.4 + energy * 3), 0) * CFrame.new(0, 0.18 * sin(clock * 2.1), 0)) end
+		if mist then drive(cache, mist, CFrame.Angles(0, -clock * (0.8 + energy), 0)) end
 	elseif gear == "ShadowCloak" then
 		local shards, ribbons = cache.Motors.ShadowOrbitMotor, cache.Motors.ShadowRibbonMotor
 		if shards then drive(cache, shards, CFrame.Angles(0, clock * (1.3 + energy * 2), 0) * CFrame.new(0, 0.12 * sin(clock * 2), 0)) end

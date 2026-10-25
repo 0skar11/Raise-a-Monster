@@ -5,7 +5,6 @@ local TweenService = game:GetService("TweenService")
 local GuiService = game:GetService("GuiService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local GuiTheme = require(script.Parent.GuiTheme)
 
 local RewardsArcade = {}
@@ -19,7 +18,6 @@ local COLORS = {
 
 export type Options = {
 	GetState: () -> any,
-	ClaimDaily: () -> (),
 	Spin: () -> (),
 }
 export type Controller = {
@@ -153,7 +151,7 @@ end
 
 function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 	local connections: { RBXScriptConnection } = {}
-	local destroyed, spinning, pendingSpin, pendingDaily = false, false, false, false
+	local destroyed, spinning, pendingSpin = false, false, false
 	local lastState: any = nil
 	local spinTween: Tween? = nil
 	local spinTarget = 0
@@ -161,7 +159,6 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 	local animationVersion = 0
 	local prizes = Config.Spin.Prizes
 	local step = if #prizes > 0 then 360 / #prizes else 360
-	local maxDays = math.max(1, Config.Daily.MaxStreak)
 	local controller = {} :: any
 
 	panel.BackgroundColor3 = COLORS.Night
@@ -208,43 +205,6 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 	content.ScrollingDirection = Enum.ScrollingDirection.Y
 	content.CanvasSize = UDim2.new()
 	content.Parent = root
-	local daily = frame(content, "DailyRewards", COLORS.Panel)
-	rounded(daily, 10)
-	outline(daily, COLORS.Edge, 1)
-	local dailyHeading = text(daily, "DailyHeading", "DAILY REWARDS", 21, COLORS.Pale)
-	dailyHeading.TextXAlignment = Enum.TextXAlignment.Left
-	local dayStatus = text(daily, "DayStatus", "Loading rewards...", 14, COLORS.Muted)
-	dayStatus.TextXAlignment = Enum.TextXAlignment.Right
-
-	local track = Instance.new("ScrollingFrame")
-	track.Name, track.BackgroundTransparency, track.BorderSizePixel = "DayTrack", 1, 0
-	track.ScrollBarThickness, track.ScrollBarImageColor3 = 2, COLORS.Gold
-	track.ScrollingDirection, track.Parent = Enum.ScrollingDirection.X, daily
-	local dayCards: { any } = {}
-	for day = 1, maxDays do
-		local tile = frame(track, "Day" .. day, COLORS.Card)
-		rounded(tile, 8)
-		local border = outline(tile, COLORS.Edge, 1)
-		gradient(tile, Color3.fromRGB(40, 63, 106), COLORS.Card)
-		local art = if day == maxDays then egg(tile, "Egg", Color3.fromRGB(95, 170, 255)) else coin(tile, "Coins")
-		local check = text(tile, "Claimed", "✓", 34, COLORS.Green)
-		check.Size, check.Position, check.Visible = UDim2.new(1, 0, 0, 48), UDim2.fromOffset(0, 3), false
-		local caption = text(tile, "Caption", "Day " .. day, 14, COLORS.White)
-		caption.Size, caption.Position = UDim2.new(1, 0, 0, 22), UDim2.new(0, 0, 1, -24)
-		dayCards[day] = { Tile = tile, Border = border, Art = art, Check = check, Caption = caption }
-	end
-	local reward = frame(daily, "NextReward", COLORS.Night)
-	rounded(reward, 8)
-	outline(reward, COLORS.Edge, 1)
-	local rewardArt = coin(reward, "RewardCoins")
-	local rewardCaption = text(reward, "RewardCaption", "NEXT REWARD", 12, COLORS.Muted)
-	rewardCaption.TextXAlignment = Enum.TextXAlignment.Left
-	local rewardValue = text(reward, "RewardValue", "—", 24, COLORS.Gold)
-	rewardValue.TextXAlignment = Enum.TextXAlignment.Left
-	local rewardEgg = text(reward, "BonusEgg", "", 13, COLORS.Muted)
-	rewardEgg.TextXAlignment = Enum.TextXAlignment.Left
-	local dailyButton = button(reward, "ClaimDaily")
-
 	local arcade = frame(content, "SpinArcade", COLORS.Panel)
 	rounded(arcade, 10)
 	outline(arcade, COLORS.Edge, 1)
@@ -289,7 +249,16 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		labelGroup.AnchorPoint, labelGroup.Size = Vector2.new(0.5, 0.5), UDim2.fromScale(0.29, 0.27)
 		labelGroup.Position = UDim2.fromScale(0.5 + math.sin(angle) * 0.325, 0.5 - math.cos(angle) * 0.325)
 		table.insert(prizeLabels, labelGroup)
-		local art = if prize.Egg then egg(labelGroup, "Egg", prize.Color:Lerp(Color3.new(1, 1, 1), 0.25)) else coin(labelGroup, "Coins")
+		local art: GuiObject
+		if prize.Egg then
+			art = egg(labelGroup, "Egg", prize.Color:Lerp(Color3.new(1, 1, 1), 0.25))
+		elseif prize.Candy then
+			local candy = text(labelGroup, "Candy", "🍬", 30, COLORS.White)
+			candy.TextScaled, candy.TextStrokeTransparency = true, 1
+			art = candy
+		else
+			art = coin(labelGroup, "Coins")
+		end
 		art.Size, art.Position = UDim2.fromScale(0.54, 0.58), UDim2.fromScale(0.23, 0)
 		local caption = text(labelGroup, "PrizeName", prize.Name, 16, COLORS.Night)
 		caption.TextStrokeTransparency = 1
@@ -319,7 +288,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 	local spinStatus = text(spinInfo, "Status", "FREE SPIN", 12, COLORS.Muted)
 	local spinClock = text(spinInfo, "Cooldown", "Loading...", 27, COLORS.White)
 	local spinButton = button(spinInfo, "FreeSpin")
-	local spinResult = text(arcade, "SpinResult", "Coins or eggs. Your next prize awaits.", 14, COLORS.Muted)
+	local spinResult = text(arcade, "SpinResult", "Coins, candy or eggs. Your next prize awaits.", 14, COLORS.Muted)
 
 	local function layout()
 		if destroyed then return end
@@ -327,8 +296,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		if not activeCamera then return end
 		local topLeft, bottomRight = GuiService:GetGuiInset()
 		local available = activeCamera.ViewportSize - topLeft - bottomRight
-		local wideShort = available.X >= 1100 and activeCamera.ViewportSize.Y < 800 and available.Y >= 560
-		local width = math.min(if wideShort then 1080 else 790, math.max(240, available.X - 24))
+		local width = math.min(790, math.max(240, available.X - 24))
 		local height = math.min(760, math.max(180, available.Y - 24))
 		nativeScale.Scale = (if inheritedScale then 1 / math.max(0.01, inheritedScale.Scale) else 1) * GuiTheme.ModalShrink(activeCamera.ViewportSize)
 		panel.Size = UDim2.fromOffset(width, height)
@@ -340,50 +308,14 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		if close and close:IsA("TextButton") then position(close, width - 56, 13, 44, 44) end
 		position(content, 10, 78, width - 20, height - 88)
 		local inner = width - 28
-		local dailyWidth = if wideShort then math.max(350, inner * 0.36) else inner
-		local arcadeWidth = if wideShort then inner - dailyWidth - 14 else inner
+		local arcadeWidth = inner
 		local compact = arcadeWidth < 530
-		local sideWheelSize = math.min(340, arcadeWidth - 228, content.Size.Y.Offset - 112)
-		local dailyHeight = if wideShort then sideWheelSize + 104 elseif compact then 282 else 246
-		position(daily, 4, 4, dailyWidth, dailyHeight)
-		position(dailyHeading, 14, 11, dailyWidth - 28, 29)
-		position(dayStatus, 14, 40, dailyWidth - 28, 19)
-		local tileWidth = math.max(42, (dailyWidth - 28 - (maxDays - 1) * 6) / maxDays)
-		position(track, 14, 65, dailyWidth - 28, 78)
-		track.CanvasSize = UDim2.fromOffset(maxDays * (tileWidth + 6) - 6, 74)
-		for index, card in dayCards do
-			position(card.Tile, (index - 1) * (tileWidth + 6), 2, tileWidth, 70)
-			card.Art.Size, card.Art.Position = UDim2.fromOffset(36, 39), UDim2.new(0.5, -18, 0, 5)
-		end
-		position(reward, 12, 151, dailyWidth - 24, dailyHeight - 163)
-		local rewardAlignment = if wideShort then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
-		rewardCaption.TextXAlignment, rewardValue.TextXAlignment, rewardEgg.TextXAlignment = rewardAlignment, rewardAlignment, rewardAlignment
-		if wideShort then
-			local rewardWidth, rewardHeight = dailyWidth - 24, dailyHeight - 163
-			position(rewardArt, (rewardWidth - 100) / 2, 10, 100, 100)
-			position(rewardCaption, 12, 116, rewardWidth - 24, 19)
-			position(rewardValue, 12, 140, rewardWidth - 24, 36)
-			position(rewardEgg, 12, 177, rewardWidth - 24, 22)
-			position(dailyButton, 12, rewardHeight - 58, rewardWidth - 24, 46)
-		elseif compact then
-			position(rewardArt, 9, 5, 54, 54)
-			position(rewardCaption, 72, 4, dailyWidth - 110, 17)
-			position(rewardValue, 72, 20, dailyWidth - 110, 29)
-			position(rewardEgg, 12, 47, dailyWidth - 48, 17)
-			position(dailyButton, 10, 68, dailyWidth - 44, 44)
-		else
-			position(rewardArt, 11, 5, 58, 58)
-			position(rewardCaption, 80, 5, dailyWidth * 0.5 - 74, 18)
-			position(rewardValue, 80, 23, dailyWidth * 0.5 - 74, 29)
-			position(rewardEgg, 80, 50, dailyWidth * 0.5 - 74, 18)
-			position(dailyButton, dailyWidth * 0.61, 13, dailyWidth * 0.39 - 37, 48)
-		end
-		local wheelSize = if wideShort then sideWheelSize elseif compact then math.min(330, arcadeWidth - 26) else math.min(390, arcadeWidth * 0.61)
+		local wheelSize = if compact then math.min(330, arcadeWidth - 26) else math.min(390, arcadeWidth * 0.61)
 		-- Desktop keeps the complete disc visible; short / narrow screens retain native scroll.
-		local fittingWheelSize = content.Size.Y.Offset - dailyHeight - 26 - 104
-		if not wideShort and not compact and fittingWheelSize >= 240 then wheelSize = math.min(wheelSize, fittingWheelSize) end
+		local fittingWheelSize = content.Size.Y.Offset - 8 - 104
+		if not compact and fittingWheelSize >= 240 then wheelSize = math.min(wheelSize, fittingWheelSize) end
 		local arcadeHeight = if compact then wheelSize + 222 else wheelSize + 104
-		position(arcade, if wideShort then dailyWidth + 18 else 4, if wideShort then 4 else dailyHeight + 17, arcadeWidth, arcadeHeight)
+		position(arcade, 4, 4, arcadeWidth, arcadeHeight)
 		position(spinHeading, 16, 11, arcadeWidth - 32, 31)
 		position(spinSubtitle, 17, 43, arcadeWidth - 34, 18)
 		if compact then
@@ -403,7 +335,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 			position(spinButton, 10, 103, infoWidth - 20, 48)
 			position(spinResult, wheelSize + 25, infoY + 176, infoWidth + 8, 52)
 		end
-		content.CanvasSize = UDim2.fromOffset(0, if wideShort then math.max(dailyHeight, arcadeHeight) + 8 else dailyHeight + arcadeHeight + 26)
+		content.CanvasSize = UDim2.fromOffset(0, arcadeHeight + 8)
 		if content.CanvasSize.Y.Offset <= content.Size.Y.Offset then content.CanvasPosition = Vector2.zero end
 	end
 
@@ -415,7 +347,6 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 
 	-- Celebration: a short confetti burst from the claim button / the wheel. Pure decoration; never blocks input.
 	local confettiColors = { COLORS.Gold, COLORS.Green, Color3.fromRGB(255, 99, 132), Color3.fromRGB(80, 180, 255), COLORS.White }
-	local lastDailyIn: number? = nil
 	local function burst(origin: GuiObject)
 		if destroyed or not panel.Visible then return end
 		pcall(function()
@@ -450,35 +381,15 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		if destroyed then return end
 		lastState = state
 		if not state then
-			dailyButton.Text, spinButton.Text = "Loading...", "Loading..."
-			enabled(dailyButton, false); enabled(spinButton, false)
+			spinButton.Text = "Loading..."
+			enabled(spinButton, false)
 			return
 		end
-		local dailyIn, spinIn = math.max(0, state.DailyReadyIn or 0), math.max(0, state.SpinReadyIn or 0)
-		-- the cooldown jumping from "ready" to "waiting" means the daily reward was just claimed
-		if lastDailyIn and lastDailyIn <= 0 and dailyIn > 0 then burst(dailyButton) end
-		lastDailyIn = dailyIn
-		local savedStreak = math.clamp(math.floor(state.DailyStreak or 0), 0, maxDays)
-		local nextDay = math.clamp(math.floor(state.DailyNextDay or math.min(savedStreak + 1, maxDays)), 1, maxDays)
-		local streak = if state.DailyNextDay ~= nil then nextDay - 1 else savedStreak
-		if dailyIn > 0 then pendingDaily = false end
-		dayStatus.Text = string.format("Day %d / %d  ·  %s", nextDay, maxDays, if dailyIn > 0 then "NEXT UP" else "READY TO CLAIM")
-		for day, card in dayCards do
-			local claimed, selected = day <= streak, day == nextDay
-			card.Check.Visible, card.Art.Visible = claimed, not claimed
-			card.Tile.BackgroundColor3 = if claimed then Color3.fromRGB(22, 69, 63) elseif selected then Color3.fromRGB(96, 69, 26) else COLORS.Card
-			card.Border.Color, card.Border.Thickness = if selected then COLORS.Gold elseif claimed then COLORS.Green else COLORS.Edge, if selected then 2 else 1
-			card.Caption.TextColor3 = if selected then COLORS.Pale elseif claimed then COLORS.Green else COLORS.Muted
-		end
-		rewardValue.Text = MonsterMath.FormatNumber(Config.Daily.CoinsPerDay * nextDay) .. " coins"
-		local bonus = Config.Eggs[Config.Daily.Day7Egg]
-		rewardEgg.Text = if nextDay == maxDays and bonus then "+ " .. bonus.DisplayName else ""
-		dailyButton.Text = if pendingDaily then "Claiming..." elseif dailyIn > 0 then "Ready in " .. clock(dailyIn) else "CLAIM REWARD"
-		enabled(dailyButton, dailyIn <= 0 and not pendingDaily and not spinning and not pendingSpin)
+		local spinIn = math.max(0, state.SpinReadyIn or 0)
 		spinStatus.Text = if spinning then "CHOOSING YOUR PRIZE" elseif spinIn > 0 then "FREE SPIN IN" else "YOUR FREE SPIN IS READY"
 		spinClock.Text = if spinning then "GOOD LUCK!" elseif pendingSpin then "Starting..." elseif spinIn > 0 then clock(spinIn) else "LET'S GO!"
 		spinButton.Text = if spinning then "SPINNING..." elseif pendingSpin then "WAIT..." else "FREE SPIN"
-		enabled(spinButton, #prizes > 0 and spinIn <= 0 and not spinning and not pendingSpin and not pendingDaily)
+		enabled(spinButton, #prizes > 0 and spinIn <= 0 and not spinning and not pendingSpin)
 	end
 
 	local function finishSpin()
@@ -520,15 +431,8 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		end)
 	end
 
-	table.insert(connections, dailyButton.Activated:Connect(function()
-		if destroyed or not lastState or pendingDaily or pendingSpin or spinning or (lastState.DailyReadyIn or 0) > 0 then return end
-		pendingDaily = true
-		controller:Refresh(lastState)
-		options.ClaimDaily()
-		task.delay(3, function() if not destroyed then pendingDaily = false; controller:Refresh(options.GetState()) end end)
-	end))
 	table.insert(connections, spinButton.Activated:Connect(function()
-		if destroyed or not lastState or #prizes == 0 or spinning or pendingSpin or pendingDaily or (lastState.SpinReadyIn or 0) > 0 then return end
+		if destroyed or not lastState or #prizes == 0 or spinning or pendingSpin or (lastState.SpinReadyIn or 0) > 0 then return end
 		pendingSpin = true
 		controller:Refresh(lastState)
 		options.Spin()

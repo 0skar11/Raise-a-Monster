@@ -9,9 +9,9 @@ local function rect(item,w,h)
 end
 local function overlap(a,b) return a.x<b.x+b.w and b.x<a.x+a.w and a.y<b.y+b.h and b.y<a.y+a.h end
 local expected={Weapons=1,Accessories=0,Gamepasses=0,["Coins & Growth"]=0,Owned=3}
-for _ in h.Config.WeaponStats do expected.Weapons+=1 end
-for _ in h.Config.SpeedAccessories do expected.Accessories+=1 end
-for _ in h.Config.Products do expected["Coins & Growth"]+=1 end
+for key in h.Config.WeaponStats do if h.Config.WeaponCoinPrices[key]~=nil then expected.Weapons+=1 end end -- سيف الـ VIP بيظهر في Owned بس
+for _,info in h.Config.SpeedAccessories do if not info.LootOnly then expected.Accessories+=1 end end -- gear dropped by the boss only shows under Owned
+for _,p in h.Config.Products do if not p.Hidden then expected["Coins & Growth"]+=1 end end
 for key,p in h.Config.Gamepasses do if not h.Config.WeaponStats[key] and not p.Hidden then expected.Gamepasses+=1 end end
 for _,v in {{1366,768},{1606,686},{750,381},{1920,1080},{320,568},{568,320},{480,320}} do
  h.Resize(v[1],v[2]); local w,ht=ui.GearFrame.Size.X.Offset,ui.GearFrame.Size.Y.Offset

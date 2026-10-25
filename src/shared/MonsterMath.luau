@@ -160,8 +160,11 @@ function MonsterMath.GetSellValue(monster: MonsterData): number
 	)
 end
 
+-- تمن الأكل بيمشي مع دخل النوع: Grassland يفضل رخيص، وVoid يبقى بالآلاف
 function MonsterMath.GetFoodCost(monster: MonsterData): number
-	return Config.Food.Cost * MonsterMath.GetStageIndex(monster.Level)
+	local species = Config.Species[monster.Species]
+	local scaled = if species then Config.Food.CostPerBaseProduction * species.BaseProduction else 0
+	return math.floor(math.max(Config.Food.Cost, scaled)) * MonsterMath.GetStageIndex(monster.Level)
 end
 
 function MonsterMath.GetDisplayName(monster: MonsterData): string
@@ -174,7 +177,7 @@ function MonsterMath.GetDisplayName(monster: MonsterData): string
 end
 
 function MonsterMath.FormatNumber(value: number): string
-	local suffixes = { "", "K", "M", "B", "T" }
+	local suffixes = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx" }
 	local index = 1
 	while math.abs(value) >= 1000 and index < #suffixes do
 		value /= 1000

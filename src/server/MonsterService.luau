@@ -229,6 +229,21 @@ function MonsterService.GetCoinMultiplier(player: Player): number
 	return multiplier * (if MonsterService.HasPass(player, "CoinBoost") then Config.CoinBoostMultiplier else 1)
 end
 
+-- دخل الوحوش الموضوعة في القاعدة في الثانية (بعد VIP)، بيتستخدم في حزم الكوينز
+function MonsterService.GetIncomePerSecond(player: Player): number
+	local profile = DataService.Get(player)
+	if not profile then
+		return 0
+	end
+	local total = 0
+	for _, monster in profile.Data.Monsters do
+		if monster.Slot > 0 then
+			total += MonsterMath.GetProduction(monster)
+		end
+	end
+	return total * MonsterService.GetCoinMultiplier(player)
+end
+
 local function saveInventory(player: Player)
 	MonsterService.PushState(player)
 	DataService.QueueSave(player)
@@ -335,7 +350,14 @@ function MonsterService.AutoPlace(player: Player): (boolean, string)
 	-- Commit every assignment before updating models, so slots cannot overlap.
 	for _, monster in changed do PlotService.RemoveMonster(player, monster.Id) end
 	for _, monster in changed do if monster.Slot > 0 then PlotService.RenderMonster(player, monster) end end
+	-- الوحوش اللي اتحطت (مترتبة بالدخل) اللي تنفع تتبعك بتبقى هي الـ followers
+	local placed: { MonsterMath.MonsterData } = {}
+	for _, monster in candidates do if monster.Slot > 0 then table.insert(placed, monster) end end
+	local following = FollowerService.SetBest(player, placed)
 	saveInventory(player)
+	if following > 0 then
+		return true, string.format("Highest income monsters placed, and %d now follow you. Others are safe on your bench.", following)
+	end
 	return true, "Highest income monsters placed. Others are safe on your bench."
 end
 
@@ -916,8 +938,8 @@ local function buySpeedAccessory(player: Player, name: unknown)
 	end
 	local accessory = Config.SpeedAccessories[name]
 	local profile = DataService.Get(player)
-	if not accessory or not profile then
-		return
+	if not accessory or not profile or accessory.LootOnly then
+		return -- boss-loot gear cannot be bought
 	end
 	if type(profile.Data.SpeedAccessories) ~= "table" then return end
 	if profile.Data.SpeedAccessories[name] == true then
@@ -1153,7 +1175,7 @@ local function prepareProgress(player: Player)
 			secondsAway = math.max(secondsAway, now - previous)
 		end
 		local stage = MonsterMath.GetStageIndex(monster.Level)
-		coins += MonsterMath.AdvanceProgress(monster, now, monster.Slot >= 1 and monster.Slot <= slots, multiplier)
+		coins += MonsterMath.AdvanceProgress(monster, now, monster.Slot >= 1 and monster.Slot <= slots, multiplier * Config.OfflineIncomeShare)
 		if MonsterMath.GetStageIndex(monster.Level) > stage then grown += 1 end
 	end
 	data.PendingCoins += coins

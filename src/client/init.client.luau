@@ -30,6 +30,7 @@ local FollowerSmooth = require(script.FollowerSmooth)
 local AdminPanel = require(script.AdminPanel)
 local BossFx = require(script.BossFx)
 local HalloweenPortalFx = require(script.HalloweenPortalFx)
+local AdChest = require(script.AdChest)
 
 local player = Players.LocalPlayer
 -- Camera zoom limits: keeps the view close enough to read the plaza and stops zooming out to see the whole map.
@@ -57,6 +58,7 @@ HalloweenUI.Init(ui, remotes)
 task.spawn(HalloweenDecor.Init) -- idle bob/blink for the Studio-authored Halloween decorations (client-local, own thread)
 task.spawn(FollowerSmooth.Init) -- display-rate gliding for follower monsters (client-local, own thread)
 task.spawn(HalloweenPortalFx.Init)
+task.spawn(AdChest.Init, ui, remotes, function() return state end) -- محطة الصندوق المجاني (إعلان فيديو)
 
 -- تحديث الواجهة ---------------------------------------------------------------------
 

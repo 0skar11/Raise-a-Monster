@@ -59,6 +59,7 @@ local env = {
 	Debris = { AddItem = function(_, item) table.insert(debris, item) end },
 	task = { delay = function(delay, callback) table.insert(pending, { At = now + delay, Callback = callback }) end },
 	os = { clock = function() return now end },
+	math = math, -- الضربة بقت بتحسب نغمة الصوت بـ math
 	getRoot = function() return {} end,
 	getHumanoid = function() return humanoid end,
 	playSound = function() sounds += 1 end,

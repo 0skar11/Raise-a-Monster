@@ -108,6 +108,21 @@ check(not toggle("a"), "Dead player cannot equip")
 humanoid.Health = 100
 followers.CleanupPlayer(player)
 check(table.concat(followers.GetIds(player), ",") == table.concat(profile.Data.Followers, ","), "Player cleanup drops only the session cache; the saved selection comes back")
+-- Auto Place: SetBest بياخد أول وحوش مؤهلة بالترتيب لحد الحد الأقصى
+followers.Clear(player)
+profile.Data.Followers, profile.Data.Monsters = {}, {}
+local ranked = {}
+for index = 1, 7 do add("auto" .. index, minimum); table.insert(ranked, profile.Data.Monsters["auto" .. index]) end
+add("auto-baby", 1)
+table.insert(ranked, 2, profile.Data.Monsters["auto-baby"])
+check(followers.SetBest(player, ranked) == config.Followers.MaxCount, "Auto Place fills follower slots up to the cap")
+local picked = followers.GetIds(player)
+check(not table.find(picked, "auto-baby") and picked[1] == "auto1" and picked[2] == "auto2", "Ineligible monsters are skipped and the ranking order is kept")
+check(table.concat(profile.Data.Followers, ",") == table.concat(picked, ","), "Auto Place followers are saved in the profile")
+carried.auto1 = true
+check(followers.SetBest(player, ranked) == config.Followers.MaxCount and not table.find(followers.GetIds(player), "auto1"), "Carried monsters are not picked")
+carried.auto1 = nil
+check(followers.SetBest(player, {}) == 0 and #followers.GetIds(player) == 0 and #profile.Data.Followers == 0, "Nothing eligible clears the old selection")
 local attack = fs.readFile("src/server/MonsterService.luau"):match("function MonsterService.GetAttackDamage.-\nend")
 check(attack and not attack:find("Production"), "Production is absent from damage calculation")
 print(string.format("PASS: %d follower policy checks (real Config and production server modules)", checks))
