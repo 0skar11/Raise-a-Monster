@@ -372,7 +372,7 @@ function UI.Create(playerGui: PlayerGui): UI
 		local topLeft, bottomRight = Vector2.zero, Vector2.zero
 		pcall(function() topLeft, bottomRight = GuiService:GetGuiInset() end)
 		local viewport = camera.ViewportSize - topLeft - bottomRight
-		gearScale.Scale = 1 / uiScale.Scale
+		gearScale.Scale = GuiTheme.ModalShrink(viewport) / uiScale.Scale
 		local bounds = UI.ShopBounds(viewport)
 		gearFrame.Size = UDim2.fromOffset(bounds.X, bounds.Y)
 		gearFrame.AnchorPoint = Vector2.new(0.5, 0.5)

@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local UI = require(script.Parent.UI)
+local GuiTheme = require(script.Parent.GuiTheme)
 
 local Vault = {}
 
@@ -25,8 +26,8 @@ local function play(object: Instance, seconds: number, properties: { [string]: a
 end
 local SHINY = { Legendary = true, Mythic = true, Secret = true }
 local C = {
-	Ink = Color3.fromRGB(7, 15, 34), Panel = Color3.fromRGB(13, 27, 52), Raised = Color3.fromRGB(24, 42, 72),
-	Line = Color3.fromRGB(77, 105, 143), Text = Color3.fromRGB(255, 250, 233), Muted = Color3.fromRGB(170, 192, 216),
+	Ink = Color3.fromRGB(30, 22, 74), Panel = Color3.fromRGB(46, 34, 108), Raised = Color3.fromRGB(66, 50, 138),
+	Line = Color3.fromRGB(140, 118, 210), Text = Color3.fromRGB(255, 250, 233), Muted = Color3.fromRGB(170, 192, 216),
 	Gold = Color3.fromRGB(255, 201, 86), Mint = Color3.fromRGB(109, 255, 174), Cyan = Color3.fromRGB(78, 221, 255),
 	Violet = Color3.fromRGB(191, 124, 255), Disabled = Color3.fromRGB(56, 70, 92),
 }
@@ -195,6 +196,7 @@ function Vault.Init(ui: UI.UI, remotes: { [string]: RemoteEvent }, getState: () 
 	if genericBand then genericBand:Destroy() end
 	frame.BackgroundColor3 = C.Ink
 	frame.ClipsDescendants = true
+	GuiTheme.Backdrop(frame, 8)
 	table.insert(ui.Panels, frame)
 	local close = frame:FindFirstChild("CloseButton") :: TextButton
 	local header = surface(frame, "VaultHeader", C.Panel)
@@ -571,7 +573,9 @@ function Vault.Init(ui: UI.UI, remotes: { [string]: RemoteEvent }, getState: () 
 	nativeScale.Name, nativeScale.Parent = "NativeInventoryScale", frame
 	local globalScale = ui.Gui:FindFirstChildOfClass("UIScale")
 	local function rescale()
-		nativeScale.Scale = if globalScale then 1 / math.max(0.01, globalScale.Scale) else 1
+		local camera = workspace.CurrentCamera
+		local shrink = if camera then GuiTheme.ModalShrink(camera.ViewportSize) else 1
+		nativeScale.Scale = (if globalScale then 1 / math.max(0.01, globalScale.Scale) else 1) * shrink
 		resize()
 	end
 	local function connectCamera()

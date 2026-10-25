@@ -71,8 +71,8 @@ function uiModule.Panel(parent, name, size)
 	return frame, title
 end
 function uiModule.Open(_, frame) frame.Visible = true; propertySignal(frame,"Visible"):Fire() end
-local modules = { Config = config, MonsterMath = mathModule, UI = uiModule }
-local env = { game = { GetService = function(_, name) return assert(services[name],name) end }, workspace = workspace, script = { Parent = { UI = "UI", PlotService = "PlotService" } }, require = function(name) return assert(modules[name],name) end, task = taskStub }
+local modules = { Config = config, MonsterMath = mathModule, UI = uiModule, GuiTheme = { ModalShrink = function() return 1 end, Backdrop = function() end } }
+local env = { game = { GetService = function(_, name) return assert(services[name],name) end }, workspace = workspace, script = { Parent = { UI = "UI", GuiTheme = "GuiTheme", PlotService = "PlotService" } }, require = function(name) return assert(modules[name],name) end, task = taskStub }
 for k,v in r do env[k] = v end
 local clientSource = fs.readFile("src/client/MonsterVault.luau"):gsub("entry%.Viewport%.CurrentCamera = nil", "-- Lune cannot assign nil to CurrentCamera; native Studio verifies this line")
 local vault = luau.load(clientSource, { environment = env, injectGlobals = true })()

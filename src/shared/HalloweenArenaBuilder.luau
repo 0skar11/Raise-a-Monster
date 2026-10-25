@@ -47,6 +47,17 @@ function Builder.Build(config): Model
 		light.Shadows = false
 		light.Parent = parent
 	end
+	-- Local fill preserves readable dodge space while the boss darkens the world.
+	local moonlight = Color3.fromRGB(183, 165, 222)
+	for index, position in {
+		Vector3.new(-38, 30, -38), Vector3.new(38, 30, -38),
+		Vector3.new(-38, 30, 38), Vector3.new(38, 30, 38),
+		Vector3.new(arrival.X, 22, arrival.Z - 1),
+	} do
+		local fill = part("MoonlightFill_"..index, Vector3.new(1, 1, 1), CFrame.new(position), moonlight, Enum.Material.SmoothPlastic, false, scenery)
+		fill.Transparency = 1
+		lamp(fill, moonlight, 2, 60)
+	end
 	local function pumpkin(position, width, yaw, lit)
 		local height = PumpkinVisual.MeshSize.Y * width / PumpkinVisual.MeshSize.X
 		local p = PumpkinVisual.Create("ArenaPumpkin", width, origin*CFrame.new(position+Vector3.new(0,height/2,0))*CFrame.Angles(0,yaw,0))

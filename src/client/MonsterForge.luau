@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
+local GuiTheme = require(script.Parent.GuiTheme)
 local UI = require(script.Parent.UI)
 
 local MonsterForge = {}
@@ -18,8 +19,8 @@ MonsterForge.Assets = {
 	},
 }
 local C = {
-	Ink = Color3.fromRGB(7, 15, 20), Stone = Color3.fromRGB(15, 26, 33), Raised = Color3.fromRGB(24, 37, 45),
-	Edge = Color3.fromRGB(81, 105, 119), Bronze = Color3.fromRGB(148, 109, 62), Gold = Color3.fromRGB(255, 197, 82),
+	Ink = Color3.fromRGB(30, 22, 72), Stone = Color3.fromRGB(46, 34, 108), Raised = Color3.fromRGB(66, 50, 138),
+	Edge = Color3.fromRGB(140, 118, 210), Bronze = Color3.fromRGB(148, 109, 62), Gold = Color3.fromRGB(255, 197, 82),
 	Ivory = Color3.fromRGB(255, 237, 196), Text = Color3.fromRGB(246, 243, 226), Muted = Color3.fromRGB(193, 211, 220),
 	Cyan = Color3.fromRGB(38, 221, 255), Blue = Color3.fromRGB(87, 151, 194), Red = Color3.fromRGB(187, 54, 36),
 }
@@ -160,6 +161,7 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	root.BackgroundColor3, root.BorderSizePixel, root.ZIndex = C.Stone, 0, 30
 	root.ClipsDescendants = false
 	round(root, 9)
+	GuiTheme.Backdrop(root, 9)
 	border(root, C.Bronze, 3)
 	local shell = image(root, "ForgeShell", MonsterForge.Assets.Shell)
 	shell.ScaleType, shell.SliceCenter = Enum.ScaleType.Slice, MonsterForge.Assets.ShellSlice
@@ -207,7 +209,7 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	detail.ZIndex = 33
 	round(detail, 5)
 	border(detail, C.Edge, 1)
-	shade(detail, Color3.fromRGB(13, 31, 43), C.Ink)
+	shade(detail, Color3.fromRGB(70, 52, 140), Color3.fromRGB(34, 24, 84))
 	local pedestal = image(detail, "Pedestal", MonsterForge.Assets.Pedestal)
 	pedestal.ScaleType = Enum.ScaleType.Fit
 	local detailPreview = frame(detail, "Preview", C.Ink)

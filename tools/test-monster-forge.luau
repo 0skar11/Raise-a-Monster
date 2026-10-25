@@ -16,7 +16,7 @@ local function hasGradient(key,top,bottom)
 	return gradient and gradient.Rotation==90 and #points==2 and points[1].Value==h.Roblox.Color3.fromRGB(table.unpack(top)) and points[2].Value==h.Roblox.Color3.fromRGB(table.unpack(bottom))
 end
 check(unmodulatedCards(),"White card bases preserve gradient colors without multiplying them into black")
-check(hasGradient("Bat",{24,37,45},{7,15,20}),"Ordinary cards retain the intended dark blue gradient")
+check(hasGradient("Bat",{66,50,138},{30,22,72}),"Ordinary cards retain the intended violet gradient")
 check(hasGradient("DoubleDamage",{74,10,10},{25,8,9}),"Featured damage card retains its red gradient")
 check(hasGradient("VIP",{70,39,10},{24,16,8}),"Featured VIP card retains its warm gold gradient")
 check(h.Card("Bat").Preview:FindFirstChild("WeaponPreview")~=nil,"Weapon cards use actual native 3D preview class")

@@ -49,6 +49,8 @@ modules.Config = luau.load(fs.readFile("src/shared/Config.luau"), { environment 
 modules.MonsterMath = luau.load(fs.readFile("src/shared/MonsterMath.luau"), { environment = env, injectGlobals = true })()
 modules.GuiTheme = {
 	ButtonFeedback = function() end,
+	ModalShrink = function() return 1 end, -- the real shrink is a presentation scale; geometry checks run at 1
+	Backdrop = function() end,
 	Atlas = { Image = "rbxassetid://116704436062887", CellSize = r.Vector2.new(360, 296.75) },
 	IconRects = { Gift = r.Vector2.new(1, 0) },
 }

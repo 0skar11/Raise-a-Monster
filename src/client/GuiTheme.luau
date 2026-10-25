@@ -377,4 +377,72 @@ function GuiTheme.DecoratePill(button: TextButton, name: string)
 	refresh()
 end
 
+-- Big modals (Vault, Forge, Rewards) are drawn a little smaller on roomy screens; small screens keep the full scale.
+function GuiTheme.ModalShrink(viewport: Vector2): number
+	if viewport.X >= 1000 and viewport.Y >= 560 then
+		return 0.82
+	end
+	return 1
+end
+
+-- A night-sky backdrop for modals: violet gradient, a warm glow in the corner and a few twinkling stars. It sits at the
+-- bottom of the panel so every authored child draws above it.
+function GuiTheme.Backdrop(parent: GuiObject, radius: number)
+	local old = parent:FindFirstChild("ModalBackdrop")
+	if old then old:Destroy() end
+	local back = Instance.new("Frame")
+	back.Name = "ModalBackdrop"
+	back.Size = UDim2.fromScale(1, 1)
+	back.BackgroundColor3 = Color3.new(1, 1, 1)
+	back.BorderSizePixel = 0
+	back.Active = false
+	back.ZIndex = 1
+	back.ClipsDescendants = true
+	back.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius)
+	corner.Parent = back
+	local fill = Instance.new("UIGradient")
+	fill.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(78, 50, 150)),
+		ColorSequenceKeypoint.new(0.55, Color3.fromRGB(44, 30, 104)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 18, 70)),
+	})
+	fill.Rotation = 90
+	fill.Parent = back
+	local glow = Instance.new("Frame")
+	glow.AnchorPoint = Vector2.new(0.5, 0.5)
+	glow.Position = UDim2.fromScale(0.88, 1.02)
+	glow.Size = UDim2.fromScale(0.7, 0.9)
+	glow.BackgroundColor3 = Color3.fromRGB(255, 150, 60)
+	glow.BackgroundTransparency = 0.86
+	glow.BorderSizePixel = 0
+	glow.ZIndex = 1
+	glow.Parent = back
+	local glowCorner = Instance.new("UICorner")
+	glowCorner.CornerRadius = UDim.new(1, 0)
+	glowCorner.Parent = glow
+	local glowTwo = glow:Clone()
+	glowTwo.Position = UDim2.fromScale(0.05, -0.05)
+	glowTwo.Size = UDim2.fromScale(0.55, 0.7)
+	glowTwo.BackgroundColor3 = Color3.fromRGB(255, 90, 190)
+	glowTwo.BackgroundTransparency = 0.9
+	glowTwo.Parent = back
+	local seed = Random.new(7)
+	for _ = 1, 26 do
+		local star = Instance.new("Frame")
+		star.AnchorPoint = Vector2.new(0.5, 0.5)
+		star.Position = UDim2.fromScale(seed:NextNumber(0.02, 0.98), seed:NextNumber(0.02, 0.98))
+		local size = seed:NextInteger(2, 4)
+		star.Size = UDim2.fromOffset(size, size)
+		star.Rotation = 45
+		star.BackgroundColor3 = Color3.fromRGB(255, 236, 190)
+		star.BackgroundTransparency = seed:NextNumber(0.35, 0.8)
+		star.BorderSizePixel = 0
+		star.ZIndex = 1
+		star.Parent = back
+	end
+	return back
+end
+
 return GuiTheme

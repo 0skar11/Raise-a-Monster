@@ -10,8 +10,8 @@ local GuiTheme = require(script.Parent.GuiTheme)
 
 local RewardsArcade = {}
 local COLORS = {
-	Night = Color3.fromRGB(10, 17, 39), Panel = Color3.fromRGB(16, 30, 61),
-	Card = Color3.fromRGB(25, 44, 81), Edge = Color3.fromRGB(66, 98, 145),
+	Night = Color3.fromRGB(34, 24, 82), Panel = Color3.fromRGB(50, 38, 112),
+	Card = Color3.fromRGB(66, 50, 138), Edge = Color3.fromRGB(140, 118, 210),
 	Gold = Color3.fromRGB(255, 198, 69), Pale = Color3.fromRGB(255, 238, 167),
 	White = Color3.fromRGB(245, 249, 255), Muted = Color3.fromRGB(162, 181, 210),
 	Green = Color3.fromRGB(80, 224, 139), Disabled = Color3.fromRGB(45, 60, 87),
@@ -171,6 +171,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		elseif child:IsA("TextLabel") then child.Visible = false
 		elseif child:IsA("UIStroke") then child.Color, child.Thickness = COLORS.Gold, 2 end
 	end
+	GuiTheme.Backdrop(panel, 8)
 	local root = frame(panel, "RewardsArcade", COLORS.Night)
 	root.BackgroundTransparency, root.Size = 1, UDim2.fromScale(1, 1)
 	local nativeScale = Instance.new("UIScale")
@@ -329,7 +330,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		local wideShort = available.X >= 1100 and activeCamera.ViewportSize.Y < 800 and available.Y >= 560
 		local width = math.min(if wideShort then 1080 else 790, math.max(240, available.X - 24))
 		local height = math.min(760, math.max(180, available.Y - 24))
-		nativeScale.Scale = if inheritedScale then 1 / math.max(0.01, inheritedScale.Scale) else 1
+		nativeScale.Scale = (if inheritedScale then 1 / math.max(0.01, inheritedScale.Scale) else 1) * GuiTheme.ModalShrink(activeCamera.ViewportSize)
 		panel.Size = UDim2.fromOffset(width, height)
 		position(header, 3, 3, width - 6, 66)
 		position(heading, 70, 8, width - 142, 34)

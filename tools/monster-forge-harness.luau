@@ -23,7 +23,7 @@ for key, value in r do env[key] = value end
 local config = luau.load(fs.readFile("src/shared/Config.luau"), { environment = env, injectGlobals = true })()
 local colors = {}
 for _, name in { "Panel", "PanelLight", "Text", "SubText", "Yellow", "Green", "Red", "Blue", "Gray", "Pink", "Orange" } do colors[name] = r.Color3.new(0.5, 0.5, 0.5) end
-local theme = { Colors = colors, Gloss = function() end, ButtonFeedback = function() end, DecoratePill = function() end, DecorateButton = function() end }
+local theme = { ModalShrink = function() return 1 end, Backdrop = function() end, Colors = colors, Gloss = function() end, ButtonFeedback = function() end, DecoratePill = function() end, DecorateButton = function() end }
 function theme.Icon(parent, _, size, position)
 	local icon = r.Instance.new("Frame"); icon.Size = size; icon.Position = position; icon.Parent = parent; return icon
 end

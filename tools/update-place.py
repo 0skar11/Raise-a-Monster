@@ -128,7 +128,7 @@ if workspace is None:
     props=ET.SubElement(workspace,'Properties')
     ET.SubElement(props,'string',{'name':'Name'}).text='Workspace'
 for child in stage_workspace.findall('Item'):
-    if name(child) in ('StudioWorld','AnimationRigs','HalloweenPortal'):
+    if name(child) in ('StudioWorld','AnimationRigs','HalloweenPortal','HalloweenArena'):
         if name(child)=='AnimationRigs' and any(name(old)=='AnimationRigs' for old in workspace.findall('Item')):
             continue # Retain animation work saved in Studio on subsequent code updates.
         replace_model(workspace, child)

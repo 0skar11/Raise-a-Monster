@@ -329,7 +329,13 @@ local function vineGrab(ctx: Context, _target: Target, scale: number, power: num
 			local destination = from + flat(candidate.Root.Position - from).Unit * (ctx.BodyRadius + 6)
 			task.spawn(function()
 				for step = 1, 6 do
-					if candidate.Humanoid.Health <= 0 or not candidate.Root.Parent then
+					-- Travel or respawning can happen between drag steps. Never pull a
+					-- departed character back from the arrival courtyard or the main map.
+					local character = candidate.Player.Character
+					if not ctx.IsAlive() or candidate.Humanoid.Health <= 0 or not candidate.Root.Parent
+						or not character or character:FindFirstChild("HumanoidRootPart") ~= candidate.Root
+						or character:FindFirstChildOfClass("Humanoid") ~= candidate.Humanoid
+						or (ArenaConfig.IsArenaBoss(origin(ctx)) and not ArenaConfig.IsCombatPosition(candidate.Root.Position)) then
 						return
 					end
 					local here = candidate.Root.Position
