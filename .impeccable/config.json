@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "tahoma",
+        "createdAt": "2026-10-25T10:34:31.258Z",
+        "reason": "agent decision: system fallback font in an internal dev-only animation preview page, not game UI"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "*",
+        "files": [
+          "docs/boss-attack-anim-preview.html"
+        ],
+        "createdAt": "2026-10-25T10:46:56.611Z",
+        "reason": "agent decision: Halloween purple/orange theme in an internal dev-only animation preview, flat colors, no gradients"
+      }
+    ]
+  }
+}

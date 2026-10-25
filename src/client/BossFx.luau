@@ -541,10 +541,11 @@ ANIMS.Sweep = function(params)
 	local w = params.Windup or 1.1
 	local keys = {
 		{ 0, {} },
-		{ w * 0.4, { UpperTorso = { 0, -0.7, 0 }, ArmR = { 1.0, 0, 1.5 }, ForearmR = { 0.6 }, ArmL = { 0.3, 0, -0.5 }, Head = { 0, 0.3, 0 } } },
-		{ w - 0.12, { UpperTorso = { -0.1, -0.9, 0 }, ArmR = { 1.25, 0, 1.75 }, ForearmR = { 0.8 }, ArmL = { 0.3, 0, -0.6 }, Head = { 0, 0.35, 0 } } },
-		{ w + 0.1, { UpperTorso = { 0.15, 0.95, 0 }, ArmR = { 1.1, 0, -0.55 }, ForearmR = { -0.1 }, ArmL = { 0.6, 0, -1.0 }, Head = { 0, -0.4, 0 } } },
-		{ w + 0.55, { UpperTorso = { 0.05, 0.45, 0 }, ArmR = { 0.6, 0, -0.2 }, ArmL = { 0.3, 0, -0.5 } } },
+		-- the hips coil and a step is taken before the shoulders, so the swing comes from the legs
+		{ w * 0.4, { UpperTorso = { 0, -0.7, 0 }, ArmR = { 1.0, 0, 1.5 }, ForearmR = { 0.6 }, ArmL = { 0.3, 0, -0.5 }, Head = { 0, 0.3, 0 }, LowerTorso = { 0, 0.2, 0, -0.5 }, LegL = { 0.45 }, LegR = { -0.35 } } },
+		{ w - 0.12, { UpperTorso = { -0.1, -0.9, 0 }, ArmR = { 1.25, 0, 1.75 }, ForearmR = { 0.8 }, ArmL = { 0.3, 0, -0.6 }, Head = { 0, 0.35, 0 }, LowerTorso = { 0, 0.35, 0, -0.8 }, LegL = { 0.5 }, LegR = { -0.4 } } },
+		{ w + 0.1, { UpperTorso = { 0.15, 0.95, 0 }, ArmR = { 1.1, 0, -0.55 }, ForearmR = { -0.1 }, ArmL = { 0.6, 0, -1.0 }, Head = { 0, -0.4, 0 }, LowerTorso = { 0, -0.3, 0, -0.2 }, LegL = { 0.15 }, LegR = { -0.1 } } },
+		{ w + 0.55, { UpperTorso = { 0.05, 0.45, 0 }, ArmR = { 0.6, 0, -0.2 }, ArmL = { 0.3, 0, -0.5 }, LowerTorso = { 0, -0.15, 0, 0 } } },
 		{ w + 1.0, {} },
 	}
 	if params.Pass == 2 then
@@ -559,28 +560,31 @@ ANIMS.Slam = function(params)
 	local w = params.Windup or 1.4
 	local keys = {
 		{ 0, {} },
-		{ w * 0.5, { ArmR = { 1.9, 0, 0.25 }, ArmL = { 1.9, 0, -0.25 }, ForearmR = { 0.4 }, ForearmL = { 0.4 }, UpperTorso = { -0.25 }, Head = { -0.15 } } },
-		{ w - 0.15, { ArmR = { 2.8, 0, 0.2 }, ArmL = { 2.8, 0, -0.2 }, ForearmR = { 0.9 }, ForearmL = { 0.9 }, UpperTorso = { -0.5 }, Head = { -0.35 }, LowerTorso = { 0, 0, 0, -0.4 }, LegR = { -0.2 }, LegL = { -0.2 } } },
-		{ w + 0.04, { ArmR = { 0.45, 0, 0.1 }, ArmL = { 0.45, 0, -0.1 }, ForearmR = { 0.2 }, ForearmL = { 0.2 }, UpperTorso = { 0.75 }, Head = { 0.35 }, LowerTorso = { 0, 0, 0, -1.7 }, LegR = { -0.5 }, LegL = { -0.5 } } },
-		{ w + 0.9, { ArmR = { 0.5 }, ArmL = { 0.5 }, UpperTorso = { 0.5 }, Head = { 0.25 }, LowerTorso = { 0, 0, 0, -1.2 } } },
-		{ w + 1.6, {} },
+		-- crouch, leap with the arms over the head, then crash down on the strike (damage lands at w)
+		{ w * 0.28, { LowerTorso = { 0, 0, 0, -1.4 }, LegR = { -0.55 }, LegL = { -0.55 }, UpperTorso = { 0.45 }, Head = { 0.1 }, ArmR = { -0.9, 0, 0.3 }, ArmL = { -0.9, 0, -0.3 }, ForearmR = { 0.3 }, ForearmL = { 0.3 } } },
+		{ w * 0.5, { LowerTorso = { 0, 0, 0, 1.2 }, LegR = { 0.45 }, LegL = { 0.45 }, UpperTorso = { -0.25 }, Head = { -0.2 }, ArmR = { 2.3, 0, 0.3 }, ArmL = { 2.3, 0, -0.3 }, ForearmR = { 0.4 }, ForearmL = { 0.4 } } },
+		{ w * 0.85, { LowerTorso = { 0, 0, 0, 3.8 }, LegR = { 0.6 }, LegL = { 0.6 }, UpperTorso = { -0.55 }, Head = { -0.4 }, ArmR = { 3.0, 0, 0.2 }, ArmL = { 3.0, 0, -0.2 }, ForearmR = { 0.9 }, ForearmL = { 0.9 } } },
+		{ w + 0.04, { ArmR = { 0.45, 0, 0.1 }, ArmL = { 0.45, 0, -0.1 }, ForearmR = { 0.2 }, ForearmL = { 0.2 }, UpperTorso = { 0.8 }, Head = { 0.4 }, LowerTorso = { 0, 0, 0, -1.9 }, LegR = { -0.6 }, LegL = { -0.6 } } },
+		{ w + 0.9, { ArmR = { 0.5 }, ArmL = { 0.5 }, UpperTorso = { 0.5 }, Head = { 0.25 }, LowerTorso = { 0, 0, 0, -1.3 }, LegR = { -0.4 }, LegL = { -0.4 } } },
+		{ w + 1.7, {} },
 	}
-	return keys, w + 1.6
+	return keys, w + 1.7
 end
 
 ANIMS.Throw = function(params)
 	local keys = {
 		{ 0, {} },
-		{ 0.1, { UpperTorso = { -0.2, -0.35, 0 }, ArmR = { -0.9, 0, 0.5 }, ForearmR = { 0.6 }, ArmL = { 0.4, 0, -0.4 }, Head = { -0.1 } } },
-		{ 0.24, { UpperTorso = { 0.3, 0.45, 0 }, ArmR = { 2.4, 0, 0.15 }, ForearmR = { -0.1 }, ArmL = { 0.2, 0, -0.7 }, Head = { 0.1, -0.2, 0 } } },
-		{ 0.6, {} },
+		{ 0.1, { UpperTorso = { -0.35, -0.4, 0 }, ArmR = { -1.3, 0, 0.5 }, ForearmR = { 0.8 }, ArmL = { 0.9, 0, -0.3 }, Head = { -0.1 }, LowerTorso = { 0, 0, 0, -0.3 }, LegR = { -0.25 }, LegL = { 0.2 } } },
+		{ 0.24, { UpperTorso = { 0.4, 0.5, 0 }, ArmR = { 2.6, 0, 0.15 }, ForearmR = { -0.1 }, ArmL = { 0.2, 0, -0.8 }, Head = { 0.15, -0.2, 0 }, LowerTorso = { 0, 0, 0, 0.15 }, LegR = { -0.1 }, LegL = { 0.3 } } },
+		{ 0.4, { UpperTorso = { 0.3, 0.3, 0 }, ArmR = { 1.4, 0, 0.1 }, LowerTorso = { 0, 0, 0, -0.1 }, LegL = { 0.2 } } },
+		{ 0.7, {} },
 	}
 	if params.Right == false then
 		for _, key in keys do
 			key[2] = mirror(key[2])
 		end
 	end
-	return keys, 0.6
+	return keys, 0.7
 end
 
 ANIMS.Vine = function(params)
@@ -588,20 +592,24 @@ ANIMS.Vine = function(params)
 	local keys = {
 		{ 0, {} },
 		{ w * 0.45, { ArmR = { 1.9, 0, 0.15 }, ForearmR = { 0.15 }, ArmL = { -0.4, 0, -0.6 }, UpperTorso = { 0.1, -0.15, 0 }, Head = { 0.15 } } },
-		{ w - 0.05, { ArmR = { 2.0, 0, 0.05 }, ForearmR = { 0.9 }, ArmL = { -0.5, 0, -0.7 }, UpperTorso = { 0.18, -0.2, 0 }, Head = { 0.2 } } },
-		{ w + 0.2, { ArmR = { 1.4, 0, 0.1 }, ForearmR = { 1.3 }, ArmL = { 0.2, 0, -0.4 }, UpperTorso = { 0.3 }, Head = { 0.3 } } },
-		{ w + 0.8, {} },
+		{ w - 0.25, { ArmR = { 2.4, 0, 0.1 }, ForearmR = { 0.9 }, ArmL = { -0.5, 0, -0.7 }, UpperTorso = { -0.1, -0.2, 0 }, Head = { -0.1 }, LowerTorso = { 0, 0, 0, 0.3 } } },
+		-- kneel and drive the palm into the ground just as the roots burst out
+		{ w + 0.05, { ArmR = { 0.5, 0, 0.1 }, ForearmR = { 0.1 }, ArmL = { 0.3, 0, -0.5 }, UpperTorso = { 0.95, -0.2, 0 }, Head = { 0.5 }, LowerTorso = { 0, 0, 0, -1.6 }, LegR = { -0.6 }, LegL = { -0.3 } } },
+		{ w + 0.7, { ArmR = { 0.5, 0, 0.1 }, ForearmR = { 0.1 }, ArmL = { 0.3, 0, -0.5 }, UpperTorso = { 0.9, -0.2, 0 }, Head = { 0.45 }, LowerTorso = { 0, 0, 0, -1.5 }, LegR = { -0.6 }, LegL = { -0.3 } } },
+		{ w + 1.4, {} },
 	}
-	return keys, w + 0.8
+	return keys, w + 1.4
 end
 
 ANIMS.Pulse = function(params)
 	local w = params.Windup or 3.4
 	local keys = {
 		{ 0, {} },
-		{ w * 0.3, { ArmR = { 0.6, 0, 1.35 }, ArmL = { 0.6, 0, -1.35 }, ForearmR = { 0.4 }, ForearmL = { 0.4 }, UpperTorso = { -0.3 }, Head = { -0.35 } } },
-		{ w - 0.1, { ArmR = { 0.7, 0, 1.5 }, ArmL = { 0.7, 0, -1.5 }, ForearmR = { 0.5 }, ForearmL = { 0.5 }, UpperTorso = { -0.4 }, Head = { -0.5 }, LowerTorso = { 0, 0, 0, 0.3 } } },
-		{ w + 0.1, { ArmR = { 1.6, 0, -0.1 }, ArmL = { 1.6, 0, 0.1 }, ForearmR = { 1.0 }, ForearmL = { 1.0 }, UpperTorso = { 0.55 }, Head = { 0.35 }, LowerTorso = { 0, 0, 0, -0.6 } } },
+		-- curl in around the chest while the heart gathers, then burst open and roar
+		{ w * 0.3, { ArmR = { 1.0, 0, 0.35 }, ArmL = { 1.0, 0, -0.35 }, ForearmR = { 1.7 }, ForearmL = { 1.7 }, UpperTorso = { 0.35 }, Head = { 0.2 }, LowerTorso = { 0, 0, 0, -0.7 }, LegR = { -0.35 }, LegL = { -0.35 } } },
+		{ w - 0.1, { ArmR = { 1.1, 0, 0.2 }, ArmL = { 1.1, 0, -0.2 }, ForearmR = { 1.9 }, ForearmL = { 1.9 }, UpperTorso = { 0.55 }, Head = { 0.3 }, LowerTorso = { 0, 0, 0, -1.1 }, LegR = { -0.5 }, LegL = { -0.5 } } },
+		{ w + 0.1, { ArmR = { 0.4, 0, 1.7 }, ArmL = { 0.4, 0, -1.7 }, ForearmR = { 0.2 }, ForearmL = { 0.2 }, UpperTorso = { -0.6 }, Head = { -0.65 }, LowerTorso = { 0, 0, 0, 0.7 } } },
+		{ w + 0.5, { ArmR = { 0.5, 0, 1.5 }, ArmL = { 0.5, 0, -1.5 }, UpperTorso = { -0.5 }, Head = { -0.55 }, LowerTorso = { 0, 0, 0, 0.4 } } },
 		{ w + 1.0, {} },
 	}
 	return keys, w + 1.0, w
@@ -609,30 +617,42 @@ end
 
 ANIMS.Rain = function(params)
 	local s = params.Seconds or 5.5
-	local keys = {
+	local keys: { { any } } = {
 		{ 0, {} },
-		{ 0.5, { ArmR = { 2.7, 0, 0.5 }, ArmL = { 2.7, 0, -0.5 }, ForearmR = { 0.3 }, ForearmL = { 0.3 }, UpperTorso = { -0.3 }, Head = { -0.5 } } },
-		{ s, { ArmR = { 2.8, 0, 0.6 }, ArmL = { 2.8, 0, -0.6 }, ForearmR = { 0.4 }, ForearmL = { 0.4 }, UpperTorso = { -0.35 }, Head = { -0.55 } } },
-		{ s + 0.9, {} },
+		-- crouch, rise onto the toes with both arms up, then pump the arms upward for as long as the rain lasts
+		{ 0.35, { LowerTorso = { 0, 0, 0, -0.9 }, LegR = { -0.4 }, LegL = { -0.4 }, ArmR = { 0.5, 0, 0.4 }, ArmL = { 0.5, 0, -0.4 }, UpperTorso = { 0.25 }, Head = { 0.1 } } },
+		{ 0.7, { LowerTorso = { 0, 0, 0, 0.6 }, LegR = { 0.1 }, LegL = { 0.1 }, ArmR = { 2.8, 0, 0.5 }, ArmL = { 2.8, 0, -0.5 }, ForearmR = { 0.3 }, ForearmL = { 0.3 }, UpperTorso = { -0.35 }, Head = { -0.55 } } },
 	}
+	local low = false
+	local at = 1.2
+	while at < s do
+		low = not low
+		local reach = if low then 2.4 else 3.0
+		local spread = if low then 0.7 else 0.5
+		table.insert(keys, { at, { LowerTorso = { 0, 0, 0, if low then 0.2 else 0.7 }, ArmR = { reach, 0, spread }, ArmL = { reach, 0, -spread }, ForearmR = { 0.3 }, ForearmL = { 0.3 }, UpperTorso = { if low then -0.2 else -0.4 }, Head = { -0.55 } } })
+		at += 0.7
+	end
+	table.insert(keys, { s, { LowerTorso = { 0, 0, 0, 0.6 }, ArmR = { 2.8, 0, 0.6 }, ArmL = { 2.8, 0, -0.6 }, UpperTorso = { -0.35 }, Head = { -0.55 } } })
+	table.insert(keys, { s + 0.9, {} })
 	return keys, s + 0.9
 end
 
 ANIMS.Rage = function(params)
 	local s = params.Seconds or 2.2
-	local beat = function(u: number)
-		return { ArmR = { 1.0, 0, 0.1 }, ArmL = { 1.0, 0, -0.1 }, ForearmR = { 1.4 }, ForearmL = { 1.4 }, UpperTorso = { -0.35 + 0.1 * u }, Head = { -0.3 } }
+	-- every chest beat comes with a stomp, alternating feet
+	local beat = function(rightFoot: boolean)
+		return { ArmR = { 1.0, 0, 0.1 }, ArmL = { 1.0, 0, -0.1 }, ForearmR = { 1.4 }, ForearmL = { 1.4 }, UpperTorso = { -0.25 }, Head = { -0.3 }, LowerTorso = { 0, 0, 0, -0.45 }, LegR = { if rightFoot then -0.5 else 0 }, LegL = { if rightFoot then 0 else -0.5 } }
 	end
-	local open = { ArmR = { 0.7, 0, 1.1 }, ArmL = { 0.7, 0, -1.1 }, ForearmR = { 0.3 }, ForearmL = { 0.3 }, UpperTorso = { -0.5 }, Head = { -0.55 } }
+	local open = { ArmR = { 0.7, 0, 1.1 }, ArmL = { 0.7, 0, -1.1 }, ForearmR = { 0.3 }, ForearmL = { 0.3 }, UpperTorso = { -0.5 }, Head = { -0.55 }, LowerTorso = { 0, 0, 0, 0.3 } }
 	local keys = {
 		{ 0, {} },
 		{ s * 0.2, open },
-		{ s * 0.32, beat(0) },
+		{ s * 0.32, beat(true) },
 		{ s * 0.42, open },
-		{ s * 0.54, beat(0) },
+		{ s * 0.54, beat(false) },
 		{ s * 0.64, open },
-		{ s * 0.76, beat(0) },
-		{ s * 0.9, { ArmR = { 0.4, 0, 1.4 }, ArmL = { 0.4, 0, -1.4 }, UpperTorso = { -0.6 }, Head = { -0.7 } } },
+		{ s * 0.76, beat(true) },
+		{ s * 0.9, { ArmR = { 0.4, 0, 1.5 }, ArmL = { 0.4, 0, -1.5 }, UpperTorso = { -0.65 }, Head = { -0.8 }, LowerTorso = { 0, 0, 0, 0.6 } } },
 		{ s + 0.7, {} },
 	}
 	return keys, s + 0.7

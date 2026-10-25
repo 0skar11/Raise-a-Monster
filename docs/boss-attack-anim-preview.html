@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pumpkin Titan Attack Animations</title>
+<style>
+:root{--bg:#14101a;--card:#1f1828;--ink:#f3e9ff;--dim:#a99bbd;--accent:#ff8a2a;--new:#7CFF8A;--old:#c9a6ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,Segoe UI,Tahoma,sans-serif;padding:16px}
+h1{font-size:20px;margin:0 0 4px}
+p.sub{margin:0 0 14px;color:var(--dim)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.tabs button{background:var(--card);color:var(--ink);border:1px solid #3a2d4d;border-radius:10px;padding:8px 14px;font:inherit;cursor:pointer}
+.tabs button.on{background:var(--accent);color:#1a0d00;border-color:var(--accent);font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:14px;padding:10px}
+.card h2{font-size:14px;margin:0 0 6px}
+.card.old h2{color:var(--old)}.card.new h2{color:var(--new)}
+canvas{width:100%;height:auto;display:block;background:#0e0b13;border-radius:10px;touch-action:none}
+.ctl{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:12px 0}
+.ctl label{color:var(--dim);font-size:13px;display:flex;gap:6px;align-items:center}
+input[type=range]{accent-color:var(--accent)}
+#scrub{flex:1;min-width:200px}
+button.b{background:var(--card);color:var(--ink);border:1px solid #3a2d4d;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+.note{background:var(--card);border-radius:14px;padding:12px 14px;margin-top:12px}
+.note b{color:var(--new)}
+</style>
+</head>
+<body>
+<h1>أنيميشن ضربات Pumpkin Titan — معاينة</h1>
+<p class="sub">اليمين: الحالي (نفس keyframes بتاعة BossFx). الشمال: المقترح. اسحب على الرسمة عشان تلف الكاميرا. الوميض الأحمر = لحظة الضرر الفعلية من السيرفر (ماتغيرتش).</p>
+<div class="tabs" id="tabs"></div>
+<div class="grid">
+  <div class="card old"><h2>الحالي</h2><canvas id="c0" width="520" height="400"></canvas></div>
+  <div class="card new"><h2>المقترح</h2><canvas id="c1" width="520" height="400"></canvas></div>
+</div>
+<div class="ctl">
+  <button class="b" id="play">⏸ إيقاف</button>
+  <input type="range" id="scrub" min="0" max="1000" value="0">
+  <label>سرعة <input type="range" id="speed" min="0.1" max="1.5" step="0.05" value="0.6"></label>
+  <label>زاوية الكاميرا <input type="range" id="cam" min="0" max="180" value="80"></label>
+</div>
+<div class="note" id="note"></div>
+
+<script>
+// ---- skeleton --------------------------------------------------------------
+// Pose per joint = [rx, ry, rz, py]. Same joint names and meaning as BossFx.luau (Roblox CFrame.Angles order).
+const JOINTS=["LowerTorso","UpperTorso","Head","ArmR","ArmL","ForearmR","ForearmL","LegR","LegL"];
+const mirror=p=>{const o={};for(const j in p){let n=j;const v=p[j];
+  if(/^(Arm|Forearm|Leg)[RL]$/.test(j))n=j.slice(0,-1)+(j.endsWith("R")?"L":"R");
+  o[n]=[v[0]||0,-(v[1]||0),-(v[2]||0),v[3]||0];}return o;};
+const lerpPose=(a,b,u)=>{const r={};for(const j of JOINTS){const pa=a[j],pb=b[j];if(pa||pb){r[j]=[0,1,2,3].map(i=>{const x=(pa&&pa[i])||0,y=(pb&&pb[i])||0;return x+(y-x)*u;});}}return r;};
+function sample(keys,t){
+  if(t<=keys[0][0])return keys[0][1];
+  for(let i=1;i<keys.length;i++){const k0=keys[i-1],k1=keys[i];
+    if(t<=k1[0]){let u=(t-k0[0])/Math.max(k1[0]-k0[0],1e-4);u=u*u*(3-2*u);return lerpPose(k0[1],k1[1],u);}}
+  return keys[keys.length-1][1];
+}
+
+// ---- animations: CURRENT = ported verbatim from BossFx.luau, NEXT = proposal --
+const A={};
+A.Slam={label:"Ground Slam",w:1.4,hit:p=>p.w,
+ cur(w){return[[0,{}],
+  [w*.5,{ArmR:[1.9,0,.25],ArmL:[1.9,0,-.25],ForearmR:[.4],ForearmL:[.4],UpperTorso:[-.25],Head:[-.15]}],
+  [w-.15,{ArmR:[2.8,0,.2],ArmL:[2.8,0,-.2],ForearmR:[.9],ForearmL:[.9],UpperTorso:[-.5],Head:[-.35],LowerTorso:[0,0,0,-.4],LegR:[-.2],LegL:[-.2]}],
+  [w+.04,{ArmR:[.45,0,.1],ArmL:[.45,0,-.1],ForearmR:[.2],ForearmL:[.2],UpperTorso:[.75],Head:[.35],LowerTorso:[0,0,0,-1.7],LegR:[-.5],LegL:[-.5]}],
+  [w+.9,{ArmR:[.5],ArmL:[.5],UpperTorso:[.5],Head:[.25],LowerTorso:[0,0,0,-1.2]}],[w+1.6,{}]];},
+ nxt(w){return[[0,{}],
+  [w*.28,{LowerTorso:[0,0,0,-1.4],LegR:[-.55],LegL:[-.55],UpperTorso:[.45],Head:[.1],ArmR:[-.9,0,.3],ArmL:[-.9,0,-.3],ForearmR:[.3],ForearmL:[.3]}],
+  [w*.5,{LowerTorso:[0,0,0,1.2],LegR:[.45],LegL:[.45],UpperTorso:[-.25],Head:[-.2],ArmR:[2.3,0,.3],ArmL:[2.3,0,-.3],ForearmR:[.4],ForearmL:[.4]}],
+  [w*.85,{LowerTorso:[0,0,0,3.8],LegR:[.6],LegL:[.6],UpperTorso:[-.55],Head:[-.4],ArmR:[3.0,0,.2],ArmL:[3.0,0,-.2],ForearmR:[.9],ForearmL:[.9]}],
+  [w+.04,{ArmR:[.45,0,.1],ArmL:[.45,0,-.1],ForearmR:[.2],ForearmL:[.2],UpperTorso:[.8],Head:[.4],LowerTorso:[0,0,0,-1.9],LegR:[-.6],LegL:[-.6]}],
+  [w+.9,{ArmR:[.5],ArmL:[.5],UpperTorso:[.5],Head:[.25],LowerTorso:[0,0,0,-1.3],LegR:[-.4],LegL:[-.4]}],[w+1.7,{}]];},
+ txt:"<b>يقفز ويرزع الأرض.</b> يتقرفص (يجمع طاقته) ← يطلع في الهوا ودراعاته فوق راسه ← ينزل بكل وزنه ويضرب بإيديه الاتنين وركبه تتثني من الصدمة. الضرر بيحصل في نفس لحظة الارتطام زي ما هو."};
+
+A.Sweep={label:"Sweep (كنسة)",w:1.1,hit:p=>p.w+.1,
+ cur(w){return[[0,{}],
+  [w*.4,{UpperTorso:[0,-.7,0],ArmR:[1,0,1.5],ForearmR:[.6],ArmL:[.3,0,-.5],Head:[0,.3,0]}],
+  [w-.12,{UpperTorso:[-.1,-.9,0],ArmR:[1.25,0,1.75],ForearmR:[.8],ArmL:[.3,0,-.6],Head:[0,.35,0]}],
+  [w+.1,{UpperTorso:[.15,.95,0],ArmR:[1.1,0,-.55],ForearmR:[-.1],ArmL:[.6,0,-1],Head:[0,-.4,0]}],
+  [w+.55,{UpperTorso:[.05,.45,0],ArmR:[.6,0,-.2],ArmL:[.3,0,-.5]}],[w+1,{}]];},
+ nxt(w){return[[0,{}],
+  [w*.4,{UpperTorso:[0,-.7,0],ArmR:[1,0,1.5],ForearmR:[.6],ArmL:[.3,0,-.5],Head:[0,.3,0],LowerTorso:[0,.2,0,-.5],LegL:[.45],LegR:[-.35]}],
+  [w-.12,{UpperTorso:[-.1,-.9,0],ArmR:[1.25,0,1.75],ForearmR:[.8],ArmL:[.3,0,-.6],Head:[0,.35,0],LowerTorso:[0,.35,0,-.8],LegL:[.5],LegR:[-.4]}],
+  [w+.1,{UpperTorso:[.15,.95,0],ArmR:[1.1,0,-.55],ForearmR:[-.1],ArmL:[.6,0,-1],Head:[0,-.4,0],LowerTorso:[0,-.3,0,-.2],LegL:[.15],LegR:[-.1]}],
+  [w+.55,{UpperTorso:[.05,.45,0],ArmR:[.6,0,-.2],ArmL:[.3,0,-.5],LowerTorso:[0,-.15,0,0]}],[w+1,{}]];},
+ txt:"<b>كنسة بوزن الجسم.</b> نفس حركة الدراع، بس دلوقتي بيتقرفص ويخطو خطوة والحوض بيلف قبل الكتف (عشان يبان إن الضربة جاية من الرجلين مش من الدراع بس)."};
+
+A.Throw={label:"Pumpkin Bombs (رمي)",w:.6,hit:p=>.24,
+ cur(){return[[0,{}],
+  [.1,{UpperTorso:[-.2,-.35,0],ArmR:[-.9,0,.5],ForearmR:[.6],ArmL:[.4,0,-.4],Head:[-.1]}],
+  [.24,{UpperTorso:[.3,.45,0],ArmR:[2.4,0,.15],ForearmR:[-.1],ArmL:[.2,0,-.7],Head:[.1,-.2,0]}],[.6,{}]];},
+ nxt(){return[[0,{}],
+  [.1,{UpperTorso:[-.35,-.4,0],ArmR:[-1.3,0,.5],ForearmR:[.8],ArmL:[.9,0,-.3],Head:[-.1],LowerTorso:[0,0,0,-.3],LegR:[-.25],LegL:[.2]}],
+  [.24,{UpperTorso:[.4,.5,0],ArmR:[2.6,0,.15],ForearmR:[-.1],ArmL:[.2,0,-.8],Head:[.15,-.2,0],LowerTorso:[0,0,0,.15],LegR:[-.1],LegL:[.3]}],
+  [.4,{UpperTorso:[.3,.3,0],ArmR:[1.4,0,.1],LowerTorso:[0,0,0,-.1],LegL:[.2]}],[.7,{}]];},
+ txt:"<b>رمية أقوى.</b> بيميل لورا ويشد دراعه، وبعدين يخطو برجل ويرمي من فوق راسه. الدراع التانية بتشاور على الهدف. نفس التوقيت القصير."};
+
+A.Vine={label:"Vine Grab (جذور)",w:1.5,hit:p=>p.w,
+ cur(w){return[[0,{}],
+  [w*.45,{ArmR:[1.9,0,.15],ForearmR:[.15],ArmL:[-.4,0,-.6],UpperTorso:[.1,-.15,0],Head:[.15]}],
+  [w-.05,{ArmR:[2,0,.05],ForearmR:[.9],ArmL:[-.5,0,-.7],UpperTorso:[.18,-.2,0],Head:[.2]}],
+  [w+.2,{ArmR:[1.4,0,.1],ForearmR:[1.3],ArmL:[.2,0,-.4],UpperTorso:[.3],Head:[.3]}],[w+.8,{}]];},
+ nxt(w){return[[0,{}],
+  [w*.45,{ArmR:[1.9,0,.15],ForearmR:[.15],ArmL:[-.4,0,-.6],UpperTorso:[.1,-.15,0],Head:[.15]}],
+  [w-.25,{ArmR:[2.4,0,.1],ForearmR:[.9],ArmL:[-.5,0,-.7],UpperTorso:[-.1,-.2,0],Head:[-.1],LowerTorso:[0,0,0,.3]}],
+  [w+.05,{ArmR:[.5,0,.1],ForearmR:[.1],ArmL:[.3,0,-.5],UpperTorso:[.95,-.2,0],Head:[.5],LowerTorso:[0,0,0,-1.6],LegR:[-.6],LegL:[-.3]}],
+  [w+.7,{ArmR:[.5,0,.1],ForearmR:[.1],ArmL:[.3,0,-.5],UpperTorso:[.9,-.2,0],Head:[.45],LowerTorso:[0,0,0,-1.5],LegR:[-.6],LegL:[-.3]}],
+  [w+1.4,{}]];},
+ txt:"<b>يغرس إيده في الأرض.</b> بيرفع دراعه يستحضر الجذور، وبعدين يركع ويضرب بكفه في الأرض لحظة ما الجذور تطلع تحت اللاعب."};
+
+A.Pulse={label:"Heart Pulse (نبضة)",w:3.4,hit:p=>p.w,shake:true,
+ cur(w){return[[0,{}],
+  [w*.3,{ArmR:[.6,0,1.35],ArmL:[.6,0,-1.35],ForearmR:[.4],ForearmL:[.4],UpperTorso:[-.3],Head:[-.35]}],
+  [w-.1,{ArmR:[.7,0,1.5],ArmL:[.7,0,-1.5],ForearmR:[.5],ForearmL:[.5],UpperTorso:[-.4],Head:[-.5],LowerTorso:[0,0,0,.3]}],
+  [w+.1,{ArmR:[1.6,0,-.1],ArmL:[1.6,0,.1],ForearmR:[1],ForearmL:[1],UpperTorso:[.55],Head:[.35],LowerTorso:[0,0,0,-.6]}],[w+1,{}]];},
+ nxt(w){return[[0,{}],
+  [w*.3,{ArmR:[1,0,.35],ArmL:[1,0,-.35],ForearmR:[1.7],ForearmL:[1.7],UpperTorso:[.35],Head:[.2],LowerTorso:[0,0,0,-.7],LegR:[-.35],LegL:[-.35]}],
+  [w-.1,{ArmR:[1.1,0,.2],ArmL:[1.1,0,-.2],ForearmR:[1.9],ForearmL:[1.9],UpperTorso:[.55],Head:[.3],LowerTorso:[0,0,0,-1.1],LegR:[-.5],LegL:[-.5]}],
+  [w+.1,{ArmR:[.4,0,1.7],ArmL:[.4,0,-1.7],ForearmR:[.2],ForearmL:[.2],UpperTorso:[-.6],Head:[-.65],LowerTorso:[0,0,0,.7]}],
+  [w+.5,{ArmR:[.5,0,1.5],ArmL:[.5,0,-1.5],UpperTorso:[-.5],Head:[-.55],LowerTorso:[0,0,0,.4]}],[w+1,{}]];},
+ txt:"<b>يشحن ثم ينفجر.</b> بيتكوّر ويضم دراعاته على صدره (القلب بيتجمّع) وبيرتعش أكتر وأكتر، وبعدين يفرد دراعاته على الآخر ويرجع راسه لورا وينفجر النبض."};
+
+A.Rain={label:"Pumpkin Rain (مطر)",w:5.5,hit:p=>null,
+ cur(s){return[[0,{}],[.5,{ArmR:[2.7,0,.5],ArmL:[2.7,0,-.5],ForearmR:[.3],ForearmL:[.3],UpperTorso:[-.3],Head:[-.5]}],
+  [s,{ArmR:[2.8,0,.6],ArmL:[2.8,0,-.6],ForearmR:[.4],ForearmL:[.4],UpperTorso:[-.35],Head:[-.55]}],[s+.9,{}]];},
+ nxt(s){const k=[[0,{}],
+  [.35,{LowerTorso:[0,0,0,-.9],LegR:[-.4],LegL:[-.4],ArmR:[.5,0,.4],ArmL:[.5,0,-.4],UpperTorso:[.25],Head:[.1]}],
+  [.7,{LowerTorso:[0,0,0,.6],LegR:[.1],LegL:[.1],ArmR:[2.8,0,.5],ArmL:[2.8,0,-.5],ForearmR:[.3],ForearmL:[.3],UpperTorso:[-.35],Head:[-.55]}]];
+  let on=false;for(let t=1.2;t<s;t+=.7){on=!on;
+   k.push([t,{LowerTorso:[0,0,0,on?.2:.7],ArmR:[on?2.4:3,0,on?.7:.5],ArmL:[on?2.4:3,0,on?-.7:-.5],ForearmR:[.3],ForearmL:[.3],UpperTorso:[on?-.2:-.4],Head:[-.55]}]);}
+  k.push([s,{LowerTorso:[0,0,0,.6],ArmR:[2.8,0,.6],ArmL:[2.8,0,-.6],UpperTorso:[-.35],Head:[-.55]}]);k.push([s+.9,{}]);return k;},
+ txt:"<b>يستدعي المطر بإيديه.</b> يتقرفص ثم يرتفع على أطراف رجليه ويرفع دراعاته للسما، وطول مدة المطر بيدفع دراعاته لفوق في نبضات كأنه بيرمي القرع."};
+
+A.Rage={label:"Enrage (غضب)",w:2.2,hit:p=>null,
+ cur(s){const beat=()=>({ArmR:[1,0,.1],ArmL:[1,0,-.1],ForearmR:[1.4],ForearmL:[1.4],UpperTorso:[-.35+.1],Head:[-.3]});
+  const open={ArmR:[.7,0,1.1],ArmL:[.7,0,-1.1],ForearmR:[.3],ForearmL:[.3],UpperTorso:[-.5],Head:[-.55]};
+  return[[0,{}],[s*.2,open],[s*.32,beat()],[s*.42,open],[s*.54,beat()],[s*.64,open],[s*.76,beat()],
+   [s*.9,{ArmR:[.4,0,1.4],ArmL:[.4,0,-1.4],UpperTorso:[-.6],Head:[-.7]}],[s+.7,{}]];},
+ nxt(s){const beat=(l)=>({ArmR:[1,0,.1],ArmL:[1,0,-.1],ForearmR:[1.4],ForearmL:[1.4],UpperTorso:[-.25],Head:[-.3],LowerTorso:[0,0,0,-.45],LegR:[l?-.5:0],LegL:[l?0:-.5]});
+  const open={ArmR:[.7,0,1.1],ArmL:[.7,0,-1.1],ForearmR:[.3],ForearmL:[.3],UpperTorso:[-.5],Head:[-.55],LowerTorso:[0,0,0,.3]};
+  return[[0,{}],[s*.2,open],[s*.32,beat(1)],[s*.42,open],[s*.54,beat(0)],[s*.64,open],[s*.76,beat(1)],
+   [s*.9,{ArmR:[.4,0,1.5],ArmL:[.4,0,-1.5],UpperTorso:[-.65],Head:[-.8],LowerTorso:[0,0,0,.6]}],[s+.7,{}]];},
+ txt:"<b>يضرب صدره ويزأر.</b> كل ضربة على الصدر معاها دوسة برجل وانحناءة، وفي الآخر بيفرد ويرجع راسه لورا ويزأر."};
+
+// ---- tiny 3D renderer ------------------------------------------------------
+const R=(rx,ry,rz)=>{ // Roblox CFrame.Angles = Rx*Ry*Rz
+ const cx=Math.cos(rx),sx=Math.sin(rx),cy=Math.cos(ry),sy=Math.sin(ry),cz=Math.cos(rz),sz=Math.sin(rz);
+ const X=[[1,0,0],[0,cx,-sx],[0,sx,cx]],Y=[[cy,0,sy],[0,1,0],[-sy,0,cy]],Z=[[cz,-sz,0],[sz,cz,0],[0,0,1]];
+ const mul=(a,b)=>a.map((r,i)=>[0,1,2].map(j=>r[0]*b[0][j]+r[1]*b[1][j]+r[2]*b[2][j]));
+ return mul(mul(X,Y),Z);};
+const ap=(m,v)=>[m[0][0]*v[0]+m[0][1]*v[1]+m[0][2]*v[2],m[1][0]*v[0]+m[1][1]*v[1]+m[1][2]*v[2],m[2][0]*v[0]+m[2][1]*v[1]+m[2][2]*v[2]];
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const I=[[1,0,0],[0,1,0],[0,0,1]];
+const mm=(a,b)=>a.map(r=>[0,1,2].map(j=>r[0]*b[0][j]+r[1]*b[1][j]+r[2]*b[2][j]));
+
+function skeleton(pose){
+ const g=j=>pose[j]||[0,0,0,0];
+ const rot=j=>{const p=g(j);return R(p[0]||0,p[1]||0,p[2]||0);};
+ const H=6,segs=[],circ=[];
+ const lp=g("LowerTorso");
+ const hip=[0,H+(lp[3]||0),0], RL=rot("LowerTorso");
+ // upper torso pivot
+ const up=add(hip,ap(RL,[0,.6,0])), RU=mm(RL,rot("UpperTorso"));
+ const neck=add(up,ap(RU,[0,4.6,0])), chest=add(up,ap(RU,[0,2.3,0]));
+ segs.push({a:add(hip,ap(RL,[0,-.4,0])),b:up,w:9,c:"#b5541a"});
+ segs.push({a:up,b:neck,w:13,c:"#e0701f"});
+ const RH=mm(RU,rot("Head")); const hc=add(neck,ap(RH,[0,1.5,0]));
+ circ.push({p:hc,r:1.6,c:"#ff9a3a",eye:RH});
+ const limb=(side,arm,fore,len1,len2,col)=>{
+  const sh=add(up,ap(RU,[side*2.7,4.0,0])),Ra=mm(RU,rot(arm));
+  const el=add(sh,ap(Ra,[0,-len1,0])),Rf=mm(Ra,rot(fore));
+  const wr=add(el,ap(Rf,[0,-len2,0]));
+  segs.push({a:sh,b:el,w:10,c:col});segs.push({a:el,b:wr,w:9,c:col});
+  circ.push({p:wr,r:1.15,c:"#ffb15a"});};
+ limb(1,"ArmR","ForearmR",4,4,"#d4631a");
+ limb(-1,"ArmL","ForearmL",4,4,"#d4631a");
+ const leg=(side,n)=>{const top=add(hip,ap(RL,[side*1.1,-.3,0])),Rg=mm(RL,rot(n));
+  const foot=add(top,ap(Rg,[0,-5.4,0]));segs.push({a:top,b:foot,w:11,c:"#9a4313"});circ.push({p:foot,r:1.1,c:"#6e2f0c"});};
+ leg(1,"LegR");leg(-1,"LegL");
+ return{segs,circ,chest};
+}
+
+const canv=[document.getElementById("c0"),document.getElementById("c1")];
+const ctx=canv.map(c=>c.getContext("2d"));
+let camYaw=80*Math.PI/180;
+function proj(p,W,Hh){const a=camYaw,x=p[0]*Math.cos(a)-p[2]*Math.sin(a),d=p[0]*Math.sin(a)+p[2]*Math.cos(a);
+ const s=Hh/27;return[W/2+x*s,Hh*.9-p[1]*s,d];}
+
+function draw(i,pose,t,A_,hitFlash,shakeAmt){
+ const c=canv[i],x=ctx[i],W=c.width,Hh=c.height;
+ x.clearRect(0,0,W,Hh);
+ // ground
+ x.fillStyle="#1a1426";x.fillRect(0,Hh*.9,W,Hh);
+ x.strokeStyle="#3a2d4d";x.lineWidth=1;x.beginPath();x.moveTo(0,Hh*.9);x.lineTo(W,Hh*.9);x.stroke();
+ if(shakeAmt){pose=JSON.parse(JSON.stringify(pose));for(const j of["UpperTorso","Head","ArmR","ArmL"]){const v=pose[j]||(pose[j]=[0,0,0,0]);for(let k=0;k<3;k++)v[k]=(v[k]||0)+(Math.random()-.5)*shakeAmt;}}
+ const sk=skeleton(pose);
+ // shadow
+ x.fillStyle="rgba(0,0,0,.35)";const sp=proj([0,0,0],W,Hh);x.beginPath();x.ellipse(sp[0],Hh*.9,60,10,0,0,7);x.fill();
+ // impact shockwave
+ if(hitFlash>0){const rr=(1-hitFlash)*(W*.45)+20;x.strokeStyle=`rgba(255,70,40,${hitFlash})`;x.lineWidth=5*hitFlash+1;
+  x.beginPath();x.ellipse(sp[0],Hh*.9,rr,rr*.16,0,0,7);x.stroke();
+  x.fillStyle=`rgba(255,70,40,${hitFlash*.15})`;x.fillRect(0,0,W,Hh);}
+ const items=[];
+ sk.segs.forEach(s=>{const a=proj(s.a,W,Hh),b=proj(s.b,W,Hh);items.push({d:(a[2]+b[2])/2,f:()=>{x.strokeStyle=s.c;x.lineWidth=s.w;x.lineCap="round";x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();}});});
+ sk.circ.forEach(s=>{const p=proj(s.p,W,Hh),r=s.r*(Hh/27);items.push({d:p[2],f:()=>{x.fillStyle=s.c;x.beginPath();x.arc(p[0],p[1],r,0,7);x.fill();
+  if(s.eye){const e=[ap(s.eye,[.6,.2,-1.3]),ap(s.eye,[-.6,.2,-1.3])];x.fillStyle="#120008";e.forEach(v=>{const q=proj(add(s.p,v),W,Hh);x.beginPath();x.arc(q[0],q[1],r*.16,0,7);x.fill();});}}});});
+ items.sort((a,b)=>a.d-b.d).forEach(o=>o.f());
+ // time label
+ x.fillStyle="#a99bbd";x.font="12px system-ui";x.fillText(t.toFixed(2)+"s",10,18);
+ // front arrow
+ const f1=proj([0,.4,0],W,Hh),f2=proj([0,.4,-4],W,Hh);x.strokeStyle="#4b3a63";x.lineWidth=2;x.setLineDash([4,4]);x.beginPath();x.moveTo(f1[0],f1[1]);x.lineTo(f2[0],f2[1]);x.stroke();x.setLineDash([]);
+}
+
+// ---- UI --------------------------------------------------------------------
+const tabs=document.getElementById("tabs"),note=document.getElementById("note");
+const scrub=document.getElementById("scrub"),speed=document.getElementById("speed"),cam=document.getElementById("cam"),playBtn=document.getElementById("play");
+let cur="Slam",playing=true,time=0,keysC,keysN,dur=1,hitT=null,last=performance.now();
+function select(n){cur=n;const a=A[n];const w=a.w;keysC=a.cur(w);keysN=a.nxt(w);
+ dur=Math.max(keysC[keysC.length-1][0],keysN[keysN.length-1][0])+.4;hitT=a.hit({w});time=0;
+ [...tabs.children].forEach(b=>b.classList.toggle("on",b.dataset.n===n));
+ note.innerHTML="<b>"+a.label+":</b> "+a.txt;}
+for(const n in A){const b=document.createElement("button");b.textContent=A[n].label;b.dataset.n=n;b.onclick=()=>select(n);tabs.appendChild(b);}
+playBtn.onclick=()=>{playing=!playing;playBtn.textContent=playing?"⏸ إيقاف":"▶ تشغيل";};
+scrub.oninput=()=>{playing=false;playBtn.textContent="▶ تشغيل";time=scrub.value/1000*dur;};
+cam.oninput=()=>camYaw=cam.value*Math.PI/180;
+canv.forEach(c=>{let down=null;c.onpointerdown=e=>{down=e.clientX;c.setPointerCapture(e.pointerId);};
+ c.onpointermove=e=>{if(down==null)return;camYaw+=(e.clientX-down)*.012;down=e.clientX;cam.value=((camYaw*180/Math.PI)%180+180)%180;};
+ c.onpointerup=()=>down=null;});
+function frame(now){
+ const dt=Math.min(.05,(now-last)/1000);last=now;
+ if(playing){time+=dt*+speed.value;if(time>dur)time=0;scrub.value=time/dur*1000;}
+ const a=A[cur],idle=t=>({LowerTorso:[0,0,0,.12*Math.sin(t*1.4)],UpperTorso:[.03*Math.sin(t*1.4),.04*Math.sin(t*.6),0],Head:[.05*Math.sin(t*1.1),.14*Math.sin(t*.5),0]});
+ [keysC,keysN].forEach((k,i)=>{
+  const extra=sample(k,Math.min(time,k[k.length-1][0]));const base=idle(now/1000),pose={};
+  for(const j of JOINTS){const b=base[j]||[0,0,0,0],e=extra[j]||[0,0,0,0];pose[j]=[0,1,2,3].map(n=>(b[n]||0)+(e[n]||0));}
+  let flash=0;if(hitT!=null&&time>=hitT&&time<hitT+.6)flash=1-(time-hitT)/.6;
+  const sh=a.shake&&time<a.w?Math.pow(time/a.w,2)*.07:0;
+  draw(i,pose,time,a,flash,sh);});
+ requestAnimationFrame(frame);}
+select("Slam");requestAnimationFrame(frame);
+</script>
+</body>
+</html>
