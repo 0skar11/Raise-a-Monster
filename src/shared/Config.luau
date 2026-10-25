@@ -333,8 +333,8 @@ end
 Config.SecretChance = 0.001
 Config.SecretSpecies = { "Secret1", "Secret2" }
 local strongestRegionalProduction = Config.Species.Void_10.BaseProduction
-Config.Species.Secret1 = { DisplayName = "Secret ???", Rarity = "Secret", BaseProduction = strongestRegionalProduction * 1.25, SellValue = strongestRegionalProduction * 50, Color = Color3.fromRGB(20, 20, 25), Horns = true }
-Config.Species.Secret2 = { DisplayName = "Secret Void", Rarity = "Secret", BaseProduction = strongestRegionalProduction * 1.5, SellValue = strongestRegionalProduction * 60, Color = Color3.fromRGB(240, 240, 255), Horns = true }
+Config.Species.Secret1 = { DisplayName = "Secret ???", Rarity = "Secret", BaseProduction = strongestRegionalProduction * 1.25, SellValue = strongestRegionalProduction * 50, Color = Color3.fromRGB(20, 20, 25), Horns = true, Model = { Region = 7, Index = 1 } }
+Config.Species.Secret2 = { DisplayName = "Secret Void", Rarity = "Secret", BaseProduction = strongestRegionalProduction * 1.5, SellValue = strongestRegionalProduction * 60, Color = Color3.fromRGB(240, 240, 255), Horns = true, Model = { Region = 7, Index = 2 } }
 
 -- البيض ----------------------------------------------------------------------
 export type Egg = {

@@ -22,6 +22,7 @@ local RARITY = {
 	Epic      = { scale = 1.30, color = Color3.fromRGB(170, 80, 255),  light = 1.4 },
 	Legendary = { scale = 1.45, color = Color3.fromRGB(255, 190, 40),  light = 2.0, sparkle = 6 },
 	Mythic    = { scale = 1.70, color = Color3.fromRGB(255, 70, 70),   light = 3.0, sparkle = 18 },
+	Secret    = { scale = 1.85, color = Color3.fromRGB(235, 220, 255), light = 3.6, sparkle = 26 },
 }
 local RARITY_ORDER = { "Common", "Common", "Uncommon", "Uncommon", "Rare", "Rare", "Epic", "Epic", "Legendary", "Mythic" }
 
@@ -980,6 +981,15 @@ local REGIONS = {
 			{ "Count Fang", "biped", pal({ main = rgb(236, 226, 238), main2 = rgb(150, 24, 52), sec = rgb(40, 18, 56), acc = rgb(206, 30, 66), acc2 = rgb(255, 120, 150), glow = rgb(255, 60, 100), glowEyes = true }), { bulk = 0.85, headMul = 1.3, armMul = 1.0, horns = true }, rarity = "Legendary" },
 			{ "Grave Golem", "biped", pal({ main = rgb(98, 106, 116), main2 = rgb(74, 82, 92), sec = rgb(56, 98, 52), acc = rgb(140, 255, 100), acc2 = rgb(190, 255, 150), glow = rgb(140, 255, 100), mat = M.Slate, glowEyes = true }), { bulk = 1.4, headMul = 1.1, armMul = 1.2, cracks = true, core = true }, rarity = "Legendary" },
 			{ "Wraith Reaper", "biped", pal({ main = rgb(28, 24, 44), main2 = rgb(44, 36, 70), sec = rgb(88, 232, 190), acc = rgb(150, 255, 230), acc2 = rgb(88, 232, 190), glow = rgb(88, 232, 190), glowEyes = true }), { bulk = 0.8, headMul = 1.4, armMul = 1.25, horns = true, flames = true, core = true }, rarity = "Mythic" },
+		},
+	},
+	{
+		name = "Secret",
+		floor = { color = rgb(14, 10, 26), mat = M.Slate },
+		-- The two Secret monsters (Config.Species.Secret1 / Secret2, Region 7): hatched only from the Secret Egg.
+		monsters = {
+			{ "Void Phantom", "quad", pal({ main = rgb(14, 10, 24), main2 = rgb(24, 16, 42), sec = rgb(72, 40, 130), acc = rgb(236, 220, 255), acc2 = rgb(170, 110, 255), glow = rgb(214, 170, 255), glowEyes = true, eye = rgb(255, 255, 255) }), { bulk = 1.1, legH = 2.2, ears = "tall", tail = "thin", headMul = 1.3, snout = 1.2, spikes = 8, spikeGlow = true, stars = true }, rarity = "Secret" },
+			{ "Celestial Void", "dragon", pal({ main = rgb(244, 242, 255), main2 = rgb(222, 218, 250), sec = rgb(176, 152, 255), acc = rgb(134, 212, 255), acc2 = rgb(255, 214, 246), glow = rgb(206, 196, 255), glowEyes = true }), { spikeGlow = true, crystals = true, glowWings = true, stars = true }, rarity = "Secret" },
 		},
 	},
 }

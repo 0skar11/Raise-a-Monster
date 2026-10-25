@@ -975,6 +975,24 @@ local function showBossBar(part: BasePart, fillSeconds: number)
 	count.ZIndex = 11
 	count.Text = ""
 	count.Parent = back
+	-- who is hurting it: the server keeps the rows in the boss part's DamageBoard attribute (rich text, no background)
+	local damageList = Instance.new("TextLabel")
+	damageList.Name = "DamageList"
+	damageList.BackgroundTransparency = 1
+	damageList.Position = UDim2.fromOffset(0, 60)
+	damageList.Size = UDim2.new(1, 0, 0, 120)
+	damageList.Font = Enum.Font.GothamBold
+	damageList.RichText = true
+	damageList.TextSize = 17
+	damageList.TextColor3 = Color3.new(1, 1, 1)
+	damageList.TextStrokeColor3 = Color3.new(0, 0, 0)
+	damageList.TextStrokeTransparency = 0.2
+	damageList.TextXAlignment = Enum.TextXAlignment.Center
+	damageList.TextYAlignment = Enum.TextYAlignment.Top
+	damageList.LineHeight = 1.05
+	damageList.Text = ""
+	damageList.ZIndex = 8
+	damageList.Parent = frame
 	frame.Position = UDim2.new(0.5, 0, 0, -80)
 	tween(frame, 0.5, { Position = UDim2.new(0.5, 0, 0, 52) }, Enum.EasingStyle.Back)
 	local bar = { Frame = frame, Fill = fill, Lag = lag, Count = count, Name = name }
@@ -1006,6 +1024,11 @@ local function showBossBar(part: BasePart, fillSeconds: number)
 		local trail = lag.Size.X.Scale
 		lag.Size = UDim2.fromScale(math.max(shown, trail - dt * 0.25), 1)
 		count.Text = MonsterMath.FormatNumber(math.max(0, math.floor(health + 0.5))) .. " / " .. MonsterMath.FormatNumber(math.floor(max + 0.5))
+		local rows = part:GetAttribute("DamageBoard")
+		local rowsText = if type(rows) == "string" then rows else ""
+		if damageList.Text ~= rowsText then
+			damageList.Text = rowsText
+		end
 	end)
 end
 

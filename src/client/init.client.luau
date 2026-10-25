@@ -29,6 +29,7 @@ local HalloweenDecor = require(script.HalloweenDecor)
 local FollowerSmooth = require(script.FollowerSmooth)
 local AdminPanel = require(script.AdminPanel)
 local BossFx = require(script.BossFx)
+local BossLootPanel = require(script.BossLootPanel)
 local HalloweenPortalFx = require(script.HalloweenPortalFx)
 local AdChest = require(script.AdChest)
 
@@ -321,6 +322,7 @@ GearAnimate.Start()
 CombatFx.Start(ui, remotes, UI.Button)
 Effects.Start(ui)
 BossFx.Start(remotes, player:WaitForChild("PlayerGui") :: PlayerGui)
+BossLootPanel.Start(remotes, player:WaitForChild("PlayerGui") :: PlayerGui)
 AdminPanel.Start(player:WaitForChild("PlayerGui") :: PlayerGui, remotes) -- only appears for Config.Admin.Usernames
 
 -- العدّاد في لوحة الوحش (Play cooldown) بيتحدث مع كل StateUpdate، وكمان كل نص ثانية.

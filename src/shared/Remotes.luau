@@ -64,6 +64,7 @@ local EVENT_NAMES = {
 	"AdminAccess", -- (true, { actionNames }) only ever sent to an admin
 	-- Big Boss attack visuals (server decides damage; the client only draws)
 	"BossFx", -- (kind, data)
+	"BossLoot", -- ({ Share, Rank, Fighters, Needed, Items = { { Icon, Name, Detail, Rarity } } }) the loot you won from the Pumpkin Titan
 }
 
 local Remotes = {}

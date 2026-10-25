@@ -105,10 +105,23 @@ local event = read("src/server/EventService.luau")
 check(not event:find('EggType = "Secret"', 1, true), "The boss no longer drops a guaranteed Secret Egg")
 check(event:find("BossLoot.Distribute(fighters, current.MaxHealth)", 1, true), "Loot is shared out when the boss dies")
 check(event:find("contributor.Damage += dealt", 1, true) and event:find("math.min(current.Health, damage", 1, true), "Damage is recorded per player and capped at the boss's remaining HP")
-check(event:find("DamageBoard", 1, true) and event:find("boardLabel.BackgroundTransparency = 1", 1, true) and event:find("TextStrokeTransparency", 1, true), "A background-free damage board hangs under the boss")
+local fx = read("src/client/BossFx.luau")
+check(event:find('part:SetAttribute("DamageBoard"', 1, true) and fx:find('part:GetAttribute("DamageBoard")', 1, true), "The damage list travels as a boss attribute and is read by the boss bar HUD")
+check(fx:find("damageList.BackgroundTransparency = 1", 1, true) and fx:find("damageList.TextStrokeTransparency", 1, true) and fx:find("damageList.Position = UDim2.fromOffset(0, 60)", 1, true) and fx:find("damageList.Parent = frame", 1, true), "A background-free damage list sits directly under the health bar")
 check(event:find("%.1f%%", 1, true), "The board shows each fighter's damage percentage")
 local bossLoot = read("src/server/BossLoot.luau")
+local panel = read("src/client/BossLootPanel.luau")
+check(bossLoot:find("remotes.BossLoot:FireClient", 1, true) and panel:find("remotes.BossLoot.OnClientEvent", 1, true) and read("src/shared/Remotes.luau"):find('"BossLoot"', 1, true), "The loot result reaches the client through the BossLoot remote")
+check(panel:find("COLLECT", 1, true) and panel:find("Config.Rarities", 1, true) and read("src/client/init.client.luau"):find("BossLootPanel.Start", 1, true), "The loot panel shows rarity cards with a Collect button and is started by the client")
 check(bossLoot:find("BossLootMath.RollCount", 1, true) and bossLoot:find("BossLootMath.Pick", 1, true), "The server uses the tested loot maths")
 check(not Config.Halloween.Items.GhostSlime and not Config.Halloween.Items.SkeletonImp and not Config.Halloween.Items.PumpkinKing, "The old Candy-shop monsters are gone")
+
+-- Secret monsters use real rigs (region 7) instead of the plain blob
+local models = read("src/server/MonsterModels.luau")
+check(models:find('name = "Secret"', 1, true) and models:find('"Void Phantom"', 1, true) and models:find('"Celestial Void"', 1, true) and models:find("Secret    = {", 1, true), "MonsterModels has a Secret region with both Secret rigs and a Secret rarity look")
+for index, key in { "Secret1", "Secret2" } do
+	local model = Config.Species[key].Model
+	check(model and model.Region == 7 and model.Index == index, key .. " points at its rigged model")
+end
 
 print(string.format("PASS: %d boss loot checks", checks))

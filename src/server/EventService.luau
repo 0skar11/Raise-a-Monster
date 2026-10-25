@@ -78,7 +78,7 @@ local function removeBoss(current: Boss)
 	end
 end
 
--- Damage board under the boss: one small line per fighter, strongest first (no background, outlined text).
+-- Damage list shown under the boss health bar: one line per fighter, strongest first (rich text for the client HUD).
 local function boardText(current: Boss): string
 	local rows: { BossLoot.Contributor } = {}
 	for _, contributor in current.Contributors do
@@ -253,30 +253,6 @@ function EventService.SpawnBoss()
 	text.ZIndex = 2
 	text.Parent = bar
 
-	-- damage board: sits below the boss, no background
-	local board = Instance.new("BillboardGui")
-	board.Name = "DamageBoard"
-	board.Size = UDim2.fromScale(22, 6)
-	board.StudsOffset = Vector3.new(0, -(part.Size.Y / 2) + 3, 0)
-	board.AlwaysOnTop = true
-	board.LightInfluence = 0
-	board.MaxDistance = 260
-	board.Adornee = part
-	board.Parent = part
-	local boardLabel = Instance.new("TextLabel")
-	boardLabel.Name = "Rows"
-	boardLabel.Size = UDim2.fromScale(1, 1)
-	boardLabel.BackgroundTransparency = 1
-	boardLabel.Font = Enum.Font.GothamBold
-	boardLabel.RichText = true
-	boardLabel.TextScaled = true
-	boardLabel.TextXAlignment = Enum.TextXAlignment.Center
-	boardLabel.TextYAlignment = Enum.TextYAlignment.Top
-	boardLabel.TextColor3 = Color3.new(1, 1, 1)
-	boardLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-	boardLabel.TextStrokeTransparency = 0.15
-	boardLabel.Text = ""
-	boardLabel.Parent = board
 
 	local state = { VulnerableUntil = 0, Enraged = false, IntroUntil = if model then os.clock() + settings.IntroBuildUp + settings.IntroRise + settings.IntroRoar else 0 }
 	local current: Boss
@@ -337,11 +313,12 @@ function EventService.SpawnBoss()
 		}),
 	}
 	boss = current
+	-- the damage list under the boss bar: the client HUD reads this attribute (BossFx.showBossBar)
 	task.spawn(function()
-		while not current.Dead and boardLabel.Parent do
+		while not current.Dead and part.Parent do
 			if current.BoardDirty then
 				current.BoardDirty = false
-				boardLabel.Text = boardText(current)
+				part:SetAttribute("DamageBoard", boardText(current))
 			end
 			task.wait(0.4)
 		end
