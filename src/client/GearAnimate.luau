@@ -417,6 +417,15 @@ local function step(character: Model, cache: Cache, gear: string, dt: number)
 		if orbit then drive(cache, orbit, CFrame.Angles(0, clock * (1.4 + energy * 3), 0) * CFrame.new(0, 0.18 * sin(clock * 2.1), 0)) end
 		if mist then drive(cache, mist, CFrame.Angles(0, -clock * (0.8 + energy), 0)) end
 	elseif gear == "ShadowCloak" then
+		for _, side in { "L", "R" } do
+			for panel = 0, 2 do
+				local tail = cache.Motors["CloakTail" .. side .. panel]
+				if tail then
+					local wave = t * 0.6 - panel * 0.7 + (if side == "L" then 0 else 0.8)
+					drive(cache, tail, CFrame.Angles(energy * 0.22 + 0.055 * sin(wave), 0.045 * sin(wave * 0.8), 0.035 * cos(wave)))
+				end
+			end
+		end
 		local shards, ribbons = cache.Motors.ShadowOrbitMotor, cache.Motors.ShadowRibbonMotor
 		if shards then drive(cache, shards, CFrame.Angles(0, clock * (1.3 + energy * 2), 0) * CFrame.new(0, 0.12 * sin(clock * 2), 0)) end
 		if ribbons then drive(cache, ribbons, CFrame.Angles(0, -clock * 0.7, 0)) end
