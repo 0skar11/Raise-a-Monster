@@ -65,6 +65,7 @@ local EVENT_NAMES = {
 	-- Big Boss attack visuals (server decides damage; the client only draws)
 	"BossFx", -- (kind, data)
 	"BossLoot", -- ({ Share, Rank, Fighters, Needed, Items = { { Icon, Name, Detail, Rarity } } }) the loot you won from the Pumpkin Titan
+	"BossSummoned", -- ({ UserId, Name, DisplayName, Robux }) server-confirmed paid summon announcement
 }
 
 local Remotes = {}

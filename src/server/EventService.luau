@@ -175,9 +175,9 @@ local function cloneBossModel(): (Model?, number, number, CFrame?)
 	return model, boxSize.Y, math.max(boxSize.X, boxSize.Z) / 2, standing
 end
 
-function EventService.SpawnBoss()
-	if boss then
-		return
+function EventService.SpawnBoss(summoned: boolean?): boolean
+	if boss or not eventsFolder then
+		return false
 	end
 	local settings = Config.Boss
 	local arenaBoss = ArenaConfig.IsArenaBoss(settings.Position)
@@ -326,7 +326,9 @@ function EventService.SpawnBoss()
 	workspace:SetAttribute("BossAlive", true)
 	HalloweenService.SetBossNight(true) -- night falls the moment it appears
 	updateBossBar(current)
-	MonsterService.Announce("💀 The PUMPKIN TITAN appeared! Enter the Halloween portal at the end of the Void road and fight for epic loot!", Color3.fromRGB(200, 120, 255))
+	if not summoned then
+		MonsterService.Announce("💀 The PUMPKIN TITAN appeared! Enter the Halloween portal at the end of the Void road and fight for epic loot!", Color3.fromRGB(200, 120, 255))
+	end
 
 	if model and standing then
 		remotes.BossFx:FireAllClients("Entrance", { Position = part.Position, BuildUp = settings.IntroBuildUp, Rise = settings.IntroRise, Roar = settings.IntroRoar, Height = modelHeight, Part = part })
@@ -372,6 +374,7 @@ function EventService.SpawnBoss()
 			MonsterService.Announce("The Big Boss got away... maybe next time!", Color3.fromRGB(200, 200, 200))
 		end
 	end)
+	return true
 end
 
 -- Admin controls: all act on the boss that is alive right now and return false when there is none.

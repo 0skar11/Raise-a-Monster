@@ -41,8 +41,14 @@ if options.Market then services.MarketplaceService = { GetProductInfo = function
 services.RunService.IsStudio = function() return options.Studio == true end
 env.game = { GetService = function(_, name) return assert(services[name], name) end }
 env.workspace = workspace
-env.script = { Parent = { UI = "UI", GuiTheme = "GuiTheme", TravelControls = "TravelControls", RewardsArcade = "RewardsArcade", MonsterForge = "MonsterForge" } }
+env.script = { Parent = { UI = "UI", GuiTheme = "GuiTheme", TravelControls = "TravelControls", RewardsArcade = "RewardsArcade", MonsterForge = "MonsterForge", CartoonUI = "CartoonUI" } }
 env.require = function(name) return assert(modules[name], name) end
+-- Decorative images are real GuiObjects; network loading is an engine concern.
+modules.CartoonUI = { Icon = function(parent, _, size)
+	local icon = r.Instance.new("ImageLabel"); icon.BackgroundTransparency = 1; icon.Size = r.UDim2.fromOffset(size, size); icon.Parent = parent; return icon
+end, DecorateShell = function(parent)
+	local image = r.Instance.new("ImageLabel"); image.Name = "CartoonBackdrop"; image.Size = r.UDim2.fromScale(1, 1); image.Parent = parent; return image
+end }
 local uiModule = luau.load(fs.readFile("src/client/UI.luau"), { environment = env, injectGlobals = true })()
 modules.UI = uiModule
 -- Preview rendering is unrelated to layout; preserve each viewport's real class.

@@ -11,7 +11,7 @@ local function overlap(a,b) return a.x<b.x+b.w and b.x<a.x+a.w and a.y<b.y+b.h a
 local expected={Weapons=1,Accessories=0,Gamepasses=0,["Coins & Growth"]=0,Owned=3}
 for key in h.Config.WeaponStats do if h.Config.WeaponCoinPrices[key]~=nil then expected.Weapons+=1 end end -- سيف الـ VIP بيظهر في Owned بس
 for _,info in h.Config.SpeedAccessories do if not info.LootOnly then expected.Accessories+=1 end end -- gear dropped by the boss only shows under Owned
-for _,p in h.Config.Products do if not p.Hidden then expected["Coins & Growth"]+=1 end end
+for key,p in h.Config.Products do if not p.Hidden then expected[if key=="SummonBoss" then "Gamepasses" else "Coins & Growth"]+=1 end end
 for key,p in h.Config.Gamepasses do if not h.Config.WeaponStats[key] and not p.Hidden then expected.Gamepasses+=1 end end
 for _,v in {{1366,768},{1606,686},{750,381},{1920,1080},{320,568},{568,320},{480,320}} do
  h.Resize(v[1],v[2]); local w,ht=ui.GearFrame.Size.X.Offset,ui.GearFrame.Size.Y.Offset
@@ -51,6 +51,23 @@ for _,v in {{1366,768},{1606,686},{750,381},{1920,1080},{320,568},{568,320},{480
    local d=rect(detail,if detail.Parent==ui.GearScroll then body.w else w,if detail.Parent==ui.GearScroll then body.h else ht)
    local a=rect(detail.BuyButton,d.w,d.h)
    check(a.w>=44 and a.h==44 and a.y+a.h<=d.h,"Selected purchase action retains native target")
+   local stats=detail.Stats
+   local statSize=rect(stats,d.w,d.h)
+   for _,name in {"Primary","Secondary"} do
+    local label=stats:FindFirstChild(name)
+    local icon=stats:FindFirstChild(name.."Icon")
+    check(icon~=nil and icon.Parent==stats,"Stat art is a sibling, never shifted by text padding")
+    local padding=label:FindFirstChildOfClass("UIPadding").PaddingLeft.Offset
+    local labelBox=rect(label,statSize.w,statSize.h)
+    if icon.Visible then
+     local iconBox=rect(icon,statSize.w,statSize.h)
+     local textBox={x=labelBox.x+padding,y=labelBox.y,w=labelBox.w-padding,h=labelBox.h}
+     check(iconBox.x>=labelBox.x and iconBox.x+iconBox.w<=labelBox.x+labelBox.w and iconBox.y>=labelBox.y and iconBox.y+iconBox.h<=labelBox.y+labelBox.h,"Each stat icon stays inside its own stat cell")
+     check(padding>=40 and textBox.w>0 and not overlap(iconBox,textBox) and textBox.x-(iconBox.x+iconBox.w)>=6,"Stat icon and padded text have separate regions with a clear gap")
+    else
+     check(padding==0,"Compact stats reclaim hidden-icon space for readable text")
+    end
+   end
    local regions={}
    for _,name in {"SelectedLabel","Title","Stats","Preview","Price","BuyButton","CollectionNote"} do
     local item=detail:FindFirstChild(name)

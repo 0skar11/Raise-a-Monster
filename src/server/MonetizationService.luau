@@ -17,6 +17,9 @@ local CharacterService = require(script.Parent.CharacterService)
 local CombatService = require(script.Parent.CombatService)
 
 local MonetizationService = {}
+-- Bound by the server bootstrap; the client can only request a Marketplace prompt.
+MonetizationService.CanPromptBossSummon = function(_player: Player): boolean return false end
+MonetizationService.ProcessBossSummonReceipt = function(_player: Player, _receipt: any): boolean return false end
 
 local owned: { [Player]: { [string]: boolean } } = {}
 local lastPrompt: { [Player]: number } = {}
@@ -231,7 +234,7 @@ local function buyPass(player: Player, name: unknown)
 		return
 	end
 	local profile = DataService.Get(player)
-	if not profile or profile.LoadFailed or not owned[player] then return end
+	if not profile or profile.LoadFailed or profile.Closing or profile.CanSave == false or not owned[player] then return end
 	local now = os.clock()
 	if lastPrompt[player] and now - lastPrompt[player] < Config.Monetization.PromptCooldown then return end
 	lastPrompt[player] = now
@@ -298,7 +301,7 @@ local function buyProduct(player: Player, name: unknown, selectedId: unknown)
 		return
 	end
 	local profile = DataService.Get(player)
-	if not profile or profile.LoadFailed then
+	if not profile or profile.LoadFailed or profile.Closing or profile.CanSave == false then
 		MonsterService.Notify(player, "Purchases are unavailable while saving is offline.", "error")
 		return
 	end
@@ -307,6 +310,7 @@ local function buyProduct(player: Player, name: unknown, selectedId: unknown)
 		return
 	end
 	lastPrompt[player] = now
+	if name == "SummonBoss" and not MonetizationService.CanPromptBossSummon(player) then return end
 	if isAdultProduct(name) then
 		promptAdultProduct(player, name, selectedId)
 		return
@@ -322,7 +326,8 @@ local function buyProduct(player: Player, name: unknown, selectedId: unknown)
 		MonsterService.PushState(player)
 		return
 	end
-	MarketplaceService:PromptProductPurchase(player, product.Id)
+	local ok = pcall(function() MarketplaceService:PromptProductPurchase(player, product.Id) end)
+	if not ok then MonsterService.Notify(player, "The purchase window could not open. Please try again.", "error") end
 end
 
 local function loadPasses(player: Player, session: { [string]: boolean })
@@ -414,6 +419,10 @@ function MonetizationService.Init(remotes: { [string]: RemoteEvent })
 		for name, product in Config.Products do
 			if product.Id > 0 and product.Id == receipt.ProductId then
 				local purchaseId = receipt.PurchaseId
+				if name == "SummonBoss" then
+					return if MonetizationService.ProcessBossSummonReceipt(player, receipt)
+						then Enum.ProductPurchaseDecision.PurchaseGranted else Enum.ProductPurchaseDecision.NotProcessedYet
+				end
 				if isAdultProduct(name) then
 					if processingReceipts[purchaseId] or adultBusy[player] then return Enum.ProductPurchaseDecision.NotProcessedYet end
 					local intent = profile.Data.PendingAdultPurchase

@@ -469,7 +469,7 @@ local function babyText(nest: Nest): string
 	return string.format('<font color="%s">%s</font>\n✋ Hold E to take', rarityHex(species), name)
 end
 
--- Gamepass "Baby Collector": كل لاعب ضرب الأم وعنده الجيمباس بياخد صغير واحد بس لمجموعته لوحده
+-- Gamepass "Monster Collector": كل لاعب ضرب الأم وعنده الجيمباس بياخد صغير واحد بس لمجموعته لوحده
 -- (القاتل أولاً ثم الأعلى ضرراً)، والباقي يفضل للي بياخدوا بإيديهم. بيرجّع اللي خدوا صغيرهم.
 local function autoCollectBabies(nest: Nest, killer: Player): { [Player]: boolean }
 	local collected: { [Player]: boolean } = {}
@@ -490,17 +490,19 @@ local function autoCollectBabies(nest: Nest, killer: Player): { [Player]: boolea
 		return (nest.Damagers[a] or 0) > (nest.Damagers[b] or 0)
 	end)
 	for _, owner in owners do
-		local baby = table.remove(nest.Babies, 1)
+		local baby = nest.Babies[1]
 		if not baby then
 			break
 		end
+		-- Keep the pickup available if the owner's inventory cannot accept it.
+		if not MonsterService.AddMonster(owner, species, MonsterService.RollMutation(1)) then continue end
+		table.remove(nest.Babies, 1)
 		local babyModel = baby.Parent
 		if babyModel and babyModel:IsA("Model") then
 			babyModel:Destroy()
 		else
 			baby:Destroy()
 		end
-		MonsterService.AddMonster(owner, species, MonsterService.RollMutation(1))
 		collected[owner] = true
 	end
 	return collected

@@ -672,7 +672,7 @@ Config.Gamepasses = {
 	AutoFeeder = { Id = 2037406772, Name = "Auto-Feeder", Description = "Feeds hungry monsters using your coins and grants normal feeding XP", Price = 99, Order = 5 },
 	AutoMinigame = { Id = 2044616622, Name = "Auto Minigame", Description = "Automatically plays with your placed monsters and earns normal game XP", Price = 99, Order = 6 },
 	-- بعد ما تقتل الأم، الصغار بتدخل مجموعتك لوحدها من غير ما تشيلهم لقاعدتك (ZoneService.killMother)
-	AutoCollectBabies = { Id = 0, Name = "Baby Collector", Description = "Baby monsters go straight to your collection when you defeat their mother", Price = 149, Order = 8 },
+	AutoCollectBabies = { Id = 2052666547, Name = "Monster Collector", Description = "Baby monsters go straight to your collection when you defeat their mother", Price = 149, Order = 8 },
 	DoubleDamage = { Id = 2052905177, Name = "x2 Damage", Description = "Double your player weapon damage against monsters, bosses and players", Price = 299, Order = 7 },
 	IronBat = { Id = 0, Name = "Iron Bat", Description = "A heavy bat for stronger hits", Price = 79, Order = 9 },
 	IronSword = { Id = 0, Name = "Iron Sword", Description = "A reliable sword for monster zones", Price = 99, Order = 10 },
@@ -685,6 +685,7 @@ Config.Gamepasses = {
 -- Coins = الحد الأدنى الثابت، Minutes = دقايق من دخلك الحالي (بيتدّي الأكبر من الاتنين)
 export type Product = { Id: number, Name: string, Description: string, Price: number, Order: number, Coins: number?, Minutes: number?, Hidden: boolean? }
 Config.Products = {
+	SummonBoss = { Id = 3722488952, Name = "Summon Pumpkin Titan", Description = "Spawn the Halloween boss in this server with your name in lights. If another summon arrives first, yours waits safely.", Price = 50, Order = 0 },
 	Coins1000 = { Id = 3717867513, Name = "Coin Pack S", Description = "15 minutes of your income added to your wallet · repeatable", Price = 50, Order = 4, Coins = 1000, Minutes = 15 },
 	Coins5000 = { Id = 3717867716, Name = "Coin Pack M", Description = "1 hour of your income added to your wallet · repeatable", Price = 100, Order = 5, Coins = 5000, Minutes = 60 },
 	Coins15000 = { Id = 3717867936, Name = "Coin Pack L", Description = "3 hours of your income added to your wallet · repeatable", Price = 250, Order = 6, Coins = 15000, Minutes = 180 },

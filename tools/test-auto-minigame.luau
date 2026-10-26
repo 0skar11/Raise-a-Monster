@@ -49,7 +49,7 @@ local function harness(id, owner, studio)
 	local plots = { GetPlot = function() return if h.PlotAvailable then plot else nil end,
 		SetPending = function() end, SetLockVisual = function() end, SetUpgradeLabel = function() end,
 		UpdateMonster = function() end, SetUnlockedSlots = function() end }
-	local market = { PromptGamePassPurchaseFinished = signal(),
+	local market = { PromptGamePassPurchaseFinished = signal(), PromptProductPurchaseFinished = signal(),
 		UserOwnsGamePassAsync = function(_, _, passId) return h.Owner == true and passId == id and id > 0 end,
 		PromptGamePassPurchase = function(_, _, passId) table.insert(h.Prompts, passId) end }
 	local services = { Players = { GetPlayers = function() return if h.Online then { player } else {} end },
