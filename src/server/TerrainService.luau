@@ -46,26 +46,30 @@ end
 local function boundary(): ({ Segment }, { { Corner: Vector3, A: Vector3, B: Vector3 } })
 	local minX = PlotService.IslandMinX
 	local midX = PlotService.ZonesStartX
+	local lobbyX = PlotService.LobbyMaxX
 	local maxX = ZoneService.ZonesEndX
 	local bigZ = PlotService.PlazaHalfZ
+	local minZ = Config.Map.IslandMinZ
 	local smallZ = ZoneService.ZoneHalfZ
 	local function v(x: number, z: number): Vector3
 		return Vector3.new(x, 0, z)
 	end
 	local segments: { Segment } = {
-		{ From = v(minX, -bigZ), To = v(minX, bigZ), Normal = v(-1, 0), ExtendStart = true, ExtendEnd = true },
-		{ From = v(minX, -bigZ), To = v(midX, -bigZ), Normal = v(0, -1), ExtendStart = true, ExtendEnd = true },
-		{ From = v(minX, bigZ), To = v(midX, bigZ), Normal = v(0, 1), ExtendStart = true, ExtendEnd = true },
-		{ From = v(midX, -bigZ), To = v(midX, -smallZ), Normal = v(1, 0), ExtendStart = true, ExtendEnd = false },
-		{ From = v(midX, bigZ), To = v(midX, smallZ), Normal = v(1, 0), ExtendStart = true, ExtendEnd = false },
+		{ From = v(minX, minZ), To = v(minX, bigZ), Normal = v(-1, 0), ExtendStart = true, ExtendEnd = true },
+		{ From = v(minX, minZ), To = v(lobbyX, minZ), Normal = v(0, -1), ExtendStart = true, ExtendEnd = true },
+		{ From = v(minX, bigZ), To = v(lobbyX, bigZ), Normal = v(0, 1), ExtendStart = true, ExtendEnd = true },
+		{ From = v(lobbyX, minZ), To = v(lobbyX, -smallZ), Normal = v(1, 0), ExtendStart = true, ExtendEnd = false },
+		{ From = v(lobbyX, bigZ), To = v(lobbyX, smallZ), Normal = v(1, 0), ExtendStart = true, ExtendEnd = false },
+		{ From = v(lobbyX, -smallZ), To = v(midX, -smallZ), Normal = v(0, -1), ExtendStart = false, ExtendEnd = false },
+		{ From = v(lobbyX, smallZ), To = v(midX, smallZ), Normal = v(0, 1), ExtendStart = false, ExtendEnd = false },
 		{ From = v(midX, -smallZ), To = v(maxX, -smallZ), Normal = v(0, -1), ExtendStart = false, ExtendEnd = true },
 		{ From = v(midX, smallZ), To = v(maxX, smallZ), Normal = v(0, 1), ExtendStart = false, ExtendEnd = true },
 		{ From = v(maxX, -smallZ), To = v(maxX, smallZ), Normal = v(1, 0), ExtendStart = true, ExtendEnd = true },
 	}
 	-- الأركان اللي لجوه (بين منطقة القواعد والمناطق) محتاجة جبال صغيرة تقفلها
 	local innerCorners = {
-		{ Corner = v(midX, -smallZ), A = v(1, 0), B = v(0, -1) },
-		{ Corner = v(midX, smallZ), A = v(1, 0), B = v(0, 1) },
+		{ Corner = v(lobbyX, -smallZ), A = v(1, 0), B = v(0, -1) },
+		{ Corner = v(lobbyX, smallZ), A = v(1, 0), B = v(0, 1) },
 	}
 	return segments, innerCorners
 end

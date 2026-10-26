@@ -3,7 +3,8 @@
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local SoundService = game:GetService("SoundService")
-local GuiTheme = require(script.Parent.GuiTheme)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HudKit = require(script.Parent.HudKit)
 local UserInputService = game:GetService("UserInputService")
 
 local Settings = {}
@@ -40,6 +41,21 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 	musicGroup.Volume = 1
 	musicGroup.Parent = master
 	local musicOn = true
+	-- The server keeps the player's choices (volume, music button, scenery distance) so a mute survives rejoining.
+	-- Nothing is sent until the saved values have been applied, so the defaults can never overwrite them.
+	local saveRemote = require(ReplicatedStorage.Shared.Remotes).Get().SaveSettings
+	local settingsLoaded = false
+	local saveToken = 0
+	local function saveSoon()
+		if not settingsLoaded then return end
+		saveToken += 1
+		local token = saveToken
+		task.delay(1, function()
+			if alive and token == saveToken then
+				saveRemote:FireServer({ Volume = volume, MusicOn = musicOn, DistanceIndex = distanceIndex })
+			end
+		end)
+	end
 
 	local function connect(signal: RBXScriptSignal, callback: (...any) -> ())
 		table.insert(connections, signal:Connect(callback))
@@ -62,6 +78,11 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		local function route()
 			if not alive then return end
 			local group = sound.SoundGroup
+			-- The boss theme is mandatory: it never goes through the master volume or the music button.
+			if sound:GetAttribute("RaiseAMonsterForcedMusic") == true then
+				if sound.SoundGroup == musicGroup or sound.SoundGroup == master then sound.SoundGroup = nil end
+				return
+			end
 			local backgroundMusic = sound:IsDescendantOf(SoundService)
 				and (sound:GetAttribute("RaiseAMonsterMusic") == true or sound.Name == "BackgroundMusic" or sound.Name == "MapMusic")
 			if backgroundMusic then
@@ -178,49 +199,6 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 	gui.DisplayOrder = 50
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = playerGui
-	local white = GuiTheme.Colors.Text
-	local background = GuiTheme.Colors.Panel
-	local function round(object: GuiObject, radius: number)
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, math.min(4, radius))
-		corner.Parent = object
-	end
-	local function text(parent: Instance, value: string, position: UDim2, size: UDim2, fontSize: number): TextLabel
-		local label = Instance.new("TextLabel")
-		label.BackgroundTransparency = 1
-		label.Position = position
-		label.Size = size
-		label.Font = Enum.Font.FredokaOne
-		label.Text = value
-		label.TextColor3 = white
-		label.TextSize = fontSize
-		label.TextWrapped = true
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.Parent = parent
-		return label
-	end
-	local function button(parent: Instance, value: string, position: UDim2, size: UDim2): TextButton
-		local item = Instance.new("TextButton")
-		item.Position = position
-		item.Size = size
-		item.BackgroundColor3 = GuiTheme.Colors.PanelLight
-		item.TextColor3 = white
-		item.Text = value
-		item.Font = Enum.Font.FredokaOne
-		item.TextSize = 15
-		item.Selectable = true
-		item.Active = true
-		item.AutoButtonColor = false
-		item.Parent = parent
-		round(item, 9)
-		local border = Instance.new("UIStroke")
-		border.Color = GuiTheme.Colors.Yellow
-		border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		border.Parent = item
-		GuiTheme.Gloss(item)
-		GuiTheme.ButtonFeedback(item, border)
-		return item
-	end
 	local topbarColor = Color3.fromRGB(21, 22, 24)
 	local function topbarButton(name: string, label: string): TextButton
 		local item = Instance.new("TextButton")
@@ -291,77 +269,134 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		musicToggle:SetAttribute("AccessibleName", if musicOn then "Mute music" else "Unmute music")
 		musicToggle:SetAttribute("MusicMuted", not musicOn)
 	end
-	musicToggle.Activated:Connect(function() musicOn = not musicOn; refreshMusic() end)
+	musicToggle.Activated:Connect(function() musicOn = not musicOn; refreshMusic(); saveSoon() end)
 	refreshMusic()
+	-- The settings window follows the HUD kit: blue/purple header, slate body and one row per setting.
+	local PANEL_WIDTH, PANEL_HEIGHT = 420, 430
 	local panel = Instance.new("Frame")
 	panel.Name = "SettingsPanel"
-	panel.Size = UDim2.fromOffset(296, 314)
-	panel.BackgroundColor3 = background
+	panel.Size = UDim2.fromOffset(PANEL_WIDTH, PANEL_HEIGHT)
 	panel.Active = true
 	panel.Visible = false
 	panel.Parent = gui
-	panel:SetAttribute("PixelAccent", GuiTheme.Colors.Blue)
-	round(panel, 12)
-	local panelBorder = Instance.new("UIStroke")
-	panelBorder.Color = GuiTheme.Colors.Yellow
-	panelBorder.Thickness = 2
-	panelBorder.Parent = panel
-	GuiTheme.Gloss(panel)
-	text(panel, "Settings", UDim2.fromOffset(16, 12), UDim2.fromOffset(200, 32), 20)
-	local close = button(panel, "X", UDim2.new(1, -52, 0, 6), UDim2.fromOffset(44, 44))
+	HudKit.Body(panel)
+	local header, headerTitle = HudKit.Header(panel, "Header", "Settings", "Settings")
+	header.Position, header.Size = UDim2.fromOffset(6, 6), UDim2.new(1, -12, 0, 60)
+	local gear = Instance.new("ImageLabel")
+	gear.Name, gear.BackgroundTransparency, gear.Size, gear.Position = "SettingsArt", 1, UDim2.fromOffset(34, 34), UDim2.fromOffset(16, 13)
+	gear.Image, gear.ZIndex, gear.Active = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png", header.ZIndex + 3, false
+	gear.Parent = header
+	headerTitle.Position, headerTitle.Size, headerTitle.TextSize = UDim2.fromOffset(60, 0), UDim2.new(1, -130, 1, 0), 32
+	local close = HudKit.Button(panel, "CloseButton", "X", "Red")
+	close.Position, close.Size, close.ZIndex = UDim2.new(1, -58, 0, 14), UDim2.fromOffset(44, 44), 20
 	local content = Instance.new("ScrollingFrame")
 	content.Name = "SettingsContent"
-	content.Position = UDim2.fromOffset(0, 56)
-	content.Size = UDim2.new(1, 0, 1, -64)
+	content.Position = UDim2.fromOffset(10, 76)
+	content.Size = UDim2.new(1, -20, 1, -86)
 	content.BackgroundTransparency = 1
 	content.BorderSizePixel = 0
 	content.ScrollBarThickness = 5
-	content.ScrollBarImageColor3 = GuiTheme.Colors.Yellow
+	content.ScrollBarImageColor3 = HudKit.Colors.Gold
 	content.ScrollingDirection = Enum.ScrollingDirection.Y
-	content.CanvasSize = UDim2.fromOffset(0, 250)
+	content.CanvasSize = UDim2.new()
+	content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	content.ZIndex = panel.ZIndex + 2
 	content.Parent = panel
-	text(content, "Master audio", UDim2.fromOffset(16, 0), UDim2.new(1, -100, 0, 24), 15)
-	local audioValue = text(content, "100%", UDim2.new(1, -80, 0, 0), UDim2.fromOffset(64, 24), 15)
-	local quieter = button(content, "−", UDim2.fromOffset(16, 28), UDim2.new(0.22, -8, 0, 44))
-	local louder = button(content, "+", UDim2.new(0.22, 16, 0, 28), UDim2.new(0.22, -8, 0, 44))
-	local mute = button(content, "Mute", UDim2.new(0.5, 4, 0, 28), UDim2.new(0.5, -20, 0, 44))
-	text(content, "Decor distance", UDim2.fromOffset(16, 80), UDim2.new(0.5, 0, 0, 24), 15)
-	local renderValue = text(content, "Far", UDim2.new(0.5, 16, 0, 80), UDim2.new(0.5, -32, 0, 24), 15)
+	local rows = Instance.new("UIListLayout")
+	rows.Padding, rows.SortOrder, rows.Parent = UDim.new(0, 8), Enum.SortOrder.LayoutOrder, content
+	local function row(name: string, title: string, note: string?, height: number, order: number): Frame
+		local item = Instance.new("Frame")
+		item.Name, item.LayoutOrder = name, order
+		item.Size, item.BackgroundColor3, item.BorderSizePixel = UDim2.new(1, -10, 0, height), HudKit.Colors.Row, 0
+		item.ZIndex = content.ZIndex + 1
+		item.Parent = content
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 4)
+		corner.Parent = item
+		local edge = Instance.new("UIStroke")
+		edge.Color, edge.Thickness = HudKit.Colors.Shadow, 2
+		edge.Parent = item
+		local label = HudKit.Text(item, "Title", title, 22)
+		label.Position, label.Size, label.TextXAlignment = UDim2.fromOffset(12, 4), UDim2.new(1, -24, 0, 28), Enum.TextXAlignment.Left
+		label.TextWrapped = false
+		if note then
+			local hint = Instance.new("TextLabel")
+			hint.Name, hint.BackgroundTransparency, hint.ZIndex = "Description", 1, item.ZIndex + 1
+			hint.Position, hint.Size = UDim2.fromOffset(12, 32), UDim2.new(1, -24, 0, 18)
+			hint.Font, hint.TextSize, hint.TextColor3 = Enum.Font.GothamBold, 12, HudKit.Colors.Muted
+			hint.TextXAlignment, hint.Text = Enum.TextXAlignment.Left, note
+			hint.Parent = item
+		end
+		return item
+	end
+	local function stateLabel(parent: Instance): TextLabel
+		local label = HudKit.Text(parent, "State", "ON", 20)
+		label.TextXAlignment = Enum.TextXAlignment.Right
+		return label
+	end
+	local function place(item: GuiObject, x: UDim, y: number, width: UDim, height: number)
+		item.Position, item.Size = UDim2.new(x.Scale, x.Offset, 0, y), UDim2.new(width.Scale, width.Offset, 0, height)
+	end
+
+	-- Master audio: down / up steps, the current level and an ON / OFF switch (OFF is muted).
+	local audioRow = row("MasterAudio", "Master audio", nil, 96, 1)
+	local quieter = HudKit.Button(audioRow, "Quieter", "-", "Blue")
+	local louder = HudKit.Button(audioRow, "Louder", "+", "Blue")
+	local audioValue = HudKit.Text(audioRow, "Level", "100%", 22)
+	local muteToggle = HudKit.Toggle(audioRow, "Mute")
+	local muteState = stateLabel(audioRow)
+	place(quieter, UDim.new(0, 12), 46, UDim.new(0, 56), 40)
+	place(louder, UDim.new(0, 74), 46, UDim.new(0, 56), 40)
+	place(audioValue, UDim.new(0, 138), 46, UDim.new(0, 64), 40)
+	place(muteToggle, UDim.new(1, -96), 46, UDim.new(0, 84), 40)
+	place(muteState, UDim.new(1, -148), 46, UDim.new(0, 48), 40)
+	-- Decor distance: three choices, the chosen one lit up.
+	local distanceRow = row("DecorDistance", "Decor distance", "Distant scenery only. Gameplay stays visible.", 104, 2)
 	local distanceButtons: { TextButton } = {}
 	local refreshControls: () -> () = function() end
 	for index, name in DISTANCE_NAMES do
-		local option = button(content, name, UDim2.new((index - 1) / 3, 16 - (index - 1) * 8, 0, 108), UDim2.new(1 / 3, -16, 0, 44))
+		local option = HudKit.Button(distanceRow, name, name, "Blue")
+		place(option, UDim.new((index - 1) / 3, if index == 1 then 12 else 6), 56, UDim.new(1 / 3, if index == 3 then -18 else -12), 40)
 		table.insert(distanceButtons, option)
-		option.Activated:Connect(function() distanceIndex = index; renderDirty = true; refreshControls() end)
+		option.Activated:Connect(function() distanceIndex = index; renderDirty = true; refreshControls(); saveSoon() end)
 	end
-	text(content, "Distant scenery only. Gameplay stays visible.", UDim2.fromOffset(16, 158), UDim2.new(1, -32, 0, 32), 13)
-	local hide = button(content, "Hide UI", UDim2.fromOffset(16, 198), UDim2.new(0.5, -20, 0, 44))
-	local reset = button(content, "Reset", UDim2.new(0.5, 4, 0, 198), UDim2.new(0.5, -20, 0, 44))
+	-- Interface: ON shows the game UI, OFF hides it (this window stays so it can be switched back).
+	local interfaceRow = row("Interface", "Game interface", nil, 64, 3)
+	local interfaceToggle = HudKit.Toggle(interfaceRow, "ShowUI")
+	local interfaceState = stateLabel(interfaceRow)
+	place(interfaceToggle, UDim.new(1, -96), 12, UDim.new(0, 84), 40)
+	place(interfaceState, UDim.new(1, -148), 12, UDim.new(0, 48), 40)
+	local resetRow = row("Reset", "Reset settings", nil, 64, 4)
+	local reset = HudKit.Button(resetRow, "Reset", "Reset", "Yellow")
+	place(reset, UDim.new(1, -128), 12, UDim.new(0, 116), 40)
 	local function refresh()
 		master.Volume = volume / 100
 		audioValue.Text = tostring(volume) .. "%"
-		mute.Text = if volume == 0 then "Unmute" else "Mute"
-		renderValue.Text = DISTANCE_NAMES[distanceIndex]
+		HudKit.SetToggle(muteToggle, volume > 0)
+		muteState.Text = if volume > 0 then "ON" else "OFF"
 		for index, option in distanceButtons do
-			option.Text = DISTANCE_NAMES[index]
-			option.BackgroundColor3 = if index == distanceIndex then GuiTheme.Colors.Blue else GuiTheme.Colors.PanelLight
+			HudKit.SetPalette(option, if index == distanceIndex then "Yellow" else "Blue")
 		end
-		hide.Text = if ui.Gui.Enabled then "Hide UI" else "Show UI"
+		HudKit.SetToggle(interfaceToggle, ui.Gui.Enabled)
+		interfaceState.Text = if ui.Gui.Enabled then "ON" else "OFF"
 	end
 	refreshControls = refresh
 	local function changeVolume(value: number)
 		volume = math.clamp(value, 0, 100)
 		if volume > 0 then lastAudible = volume end
 		refresh()
+		saveSoon()
 	end
 	quieter.Activated:Connect(function() changeVolume(volume - 10) end)
 	louder.Activated:Connect(function() changeVolume(volume + 10) end)
-	mute.Activated:Connect(function() changeVolume(if volume == 0 then lastAudible else 0) end)
-	hide.Activated:Connect(function() ui.Gui.Enabled = not ui.Gui.Enabled; refresh() end)
+	muteToggle.Activated:Connect(function() changeVolume(if volume == 0 then lastAudible else 0) end)
+	interfaceToggle.Activated:Connect(function() ui.Gui.Enabled = not ui.Gui.Enabled; refresh() end)
 	reset.Activated:Connect(function()
 		distanceIndex = 3
 		renderDirty = true
 		ui.Gui.Enabled = true
+		musicOn = true
+		refreshMusic()
 		changeVolume(100)
 	end)
 	connect(ui.Gui:GetPropertyChangedSignal("Enabled"), refresh)
@@ -397,8 +432,8 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 		musicToggle.Position = UDim2.fromOffset(left, top)
 		toggle.Position = UDim2.fromOffset(left + 52, top)
 		local panelTop = math.max(top + 52, if ok then topbar.Max.Y + 8 else 58)
-		local width = math.min(296, math.max(1, viewport.X - 16))
-		panel.Size = UDim2.fromOffset(width, math.min(314, math.max(64, viewport.Y - panelTop - 12)))
+		local width = math.min(PANEL_WIDTH, math.max(1, viewport.X - 16))
+		panel.Size = UDim2.fromOffset(width, math.min(PANEL_HEIGHT, math.max(64, viewport.Y - panelTop - 12)))
 		panel.Position = UDim2.fromOffset(math.clamp(left + 52, 8, math.max(8, viewport.X - width - 8)), panelTop)
 	end
 	connect(GuiService:GetPropertyChangedSignal("TopbarInset"), layout)
@@ -412,6 +447,26 @@ function Settings.Init(ui: { Gui: ScreenGui }): () -> ()
 	connect(workspace:GetPropertyChangedSignal("CurrentCamera"), watchCamera)
 	watchCamera()
 	refresh()
+
+	-- Apply what the server saved (it arrives as Player attributes once the profile has loaded).
+	local function applySaved()
+		if settingsLoaded or player:GetAttribute("SettingsLoaded") ~= true then return end
+		local savedVolume = player:GetAttribute("SettingsVolume")
+		local savedMusic = player:GetAttribute("SettingsMusicOn")
+		local savedDistance = player:GetAttribute("SettingsDistance")
+		if type(savedVolume) == "number" then
+			volume = math.clamp(savedVolume, 0, 100)
+			if volume > 0 then lastAudible = volume end
+		end
+		if type(savedMusic) == "boolean" then musicOn = savedMusic end
+		if type(savedDistance) == "number" and DISTANCES[savedDistance] then distanceIndex = savedDistance end
+		renderDirty = true
+		settingsLoaded = true
+		refresh()
+		refreshMusic()
+	end
+	connect(player:GetAttributeChangedSignal("SettingsLoaded"), applySaved)
+	applySaved()
 
 	local function cleanup()
 		if not alive then return end

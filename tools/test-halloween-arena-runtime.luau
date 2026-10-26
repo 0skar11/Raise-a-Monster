@@ -10,7 +10,7 @@ local gameConfig=load("src/shared/Config.luau")
 env.script={Parent={Config="GameConfig"}}
 env.require=function(key)assert(key=="GameConfig");return gameConfig end
 local config=load("src/shared/HalloweenArenaConfig.luau")
-assert(config.Capacity==gameConfig.MaxPlots and config.Capacity==6,"Encounter capacity does not match tycoons")
+assert(config.Capacity==gameConfig.MaxPlots and config.Capacity==10,"Encounter capacity does not match tycoons")
 assert(config.CombatRadius==90 and #config.ArrivalPoints==config.Capacity)
 local used={}
 for _,point in config.ArrivalPoints do
@@ -30,10 +30,10 @@ serviceEnv.game={GetService=function()return {Shared={HalloweenArenaConfig="conf
 serviceEnv.workspace={FindFirstChild=function()return model end}
 serviceEnv.require=function(key)if key=="config"then return config else return {}end end
 local service=load("src/server/HalloweenArenaService.luau",serviceEnv)
-assert(service.Init()==model and attributes.PlayerCapacity==6)
-for index=1,12 do
+assert(service.Init()==model and attributes.PlayerCapacity==config.Capacity)
+for index=1,config.Capacity*2 do
 	local destination=service.NextArrival()
-	assert(destination==config.Origin*config.ArrivalPoints[(index-1)%6+1],"Arrival distribution did not wrap")
+	assert(destination==config.Origin*config.ArrivalPoints[(index-1)%config.Capacity+1],"Arrival distribution did not wrap")
 end
 -- Execute the production target predicate against a mixed combat/arrival group.
 local players={}
@@ -56,4 +56,4 @@ for _,radius in {9,5.5}do
 	local point=attacks.StrikeCenter(context,config.Origin:PointToWorldSpace(roblox.Vector3.new(0,0,150)),radius)
 	assert((point-config.Origin.Position).Magnitude+radius<=config.CombatRadius,"Predicted hazard leaked onto arrival")
 end
-print("PASS: six tycoon arrivals, safe staging, floor/boundary checks, distribution wrap, production target eligibility and predicted hazard clamping")
+print("PASS: ten tycoon arrivals, safe staging, floor/boundary checks, distribution wrap, production target eligibility and predicted hazard clamping")

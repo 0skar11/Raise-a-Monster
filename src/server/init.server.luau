@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Config = require(ReplicatedStorage.Shared.Config)
 local CharacterService = require(script.CharacterService)
 local MonsterModels = require(script.MonsterModels)
 local DataService = require(script.DataService)
@@ -26,6 +27,8 @@ local MonsterPortraits = require(script.MonsterPortraits)
 local TradeService = require(script.TradeService)
 local ArenaService = require(script.ArenaService)
 local HalloweenService = require(script.HalloweenService)
+local EggStoreService = require(script.EggStoreService)
+local CodeService = require(script.CodeService)
 local PumpkinDecor = require(script.PumpkinDecor)
 local AdminService = require(script.AdminService)
 local HalloweenPortalService = require(script.HalloweenPortalService)
@@ -36,9 +39,14 @@ local remotes = Remotes.Get()
 MonsterService.HasPass = MonetizationService.HasPass
 MonetizationService.CanPromptBossSummon = BossSummonService.CanPrompt
 MonetizationService.ProcessBossSummonReceipt = BossSummonService.ProcessReceipt
-MonsterService.SyncPortraits = MonsterPortraits.Sync
+MonetizationService.IsEggStoreProduct = EggStoreService.IsStoreProduct
+MonetizationService.ProcessEggStoreReceipt = EggStoreService.ProcessReceipt
+MonsterService.SyncPortraits =MonsterPortraits.Sync
+MonsterService.RequestPortraits = MonsterPortraits.Request
 -- Halloween Candy Boost (inert unless Config.Halloween is running)
 MonsterService.GetEventMultiplier = HalloweenService.GetCashMultiplier
+-- Egg Keeper Luck (paid, timed) re-weights the rare species of the eggs it covers
+MonsterService.AdjustHatchWeights = EggStoreService.AdjustHatchWeights
 MonsterService.ExtraState = function(player: Player): { [string]: any }
 	local profile = DataService.Get(player)
 	return {
@@ -57,6 +65,7 @@ CharacterService.Init()
 MonsterModels.Build() -- الوحوش الـ Rig (موجودين في ServerStorage.MonsterModels)
 -- StudioWorld is an edit-mode preview. Runtime services rebuild it with live callbacks.
 local studioWorld = workspace:FindFirstChild("StudioWorld")
+PlotService.CaptureAuthoredLayout(studioWorld) -- hand-moved plots in Studio survive the rebuild
 if studioWorld and studioWorld:GetAttribute("GeneratedPreview") then
 	studioWorld:Destroy()
 end
@@ -64,12 +73,15 @@ PlotService.Init()
 MonsterService.Init(remotes)
 StealService.Init()
 CarryService.Init()
+CombatService.Start()
 ZoneService.Init()
 TerrainService.Init()
 MonetizationService.Init(remotes)
 EventService.Init()
 BossSummonService.Init(remotes)
 HalloweenService.Init(remotes)
+EggStoreService.Init(remotes)
+CodeService.Init(remotes)
 PumpkinDecor.Init()
 LeaderboardService.Init()
 RewardService.Init(remotes)
@@ -94,6 +106,10 @@ end
 local lastTeleport: { [Player]: number } = {}
 remotes.Teleport.OnServerEvent:Connect(function(player: Player, where: unknown)
 	if where ~= "Home" and where ~= "Shop" and where ~= "Arena" then
+		return
+	end
+	if where == "Arena" and not Config.Arena.Enabled then
+		MonsterService.Notify(player, "The Arena is temporarily closed for renovation.", "info")
 		return
 	end
 	local now = os.clock()
@@ -199,10 +215,24 @@ local function onPlayerAdded(player: Player)
 	MonsterService.SetupPlayer(player)
 	HalloweenService.SetupPlayer(player)
 
+	-- Saved settings reach the client as attributes (set last, SettingsLoaded flips the client over to them).
+	local saved = profile.Data.UserSettings
+	player:SetAttribute("SettingsVolume", saved.Volume)
+	player:SetAttribute("SettingsMusicOn", saved.MusicOn)
+	player:SetAttribute("SettingsDistance", saved.DistanceIndex)
+	player:SetAttribute("SettingsLoaded", true)
+
 	if profile.Temporary then
 		MonsterService.Notify(player, "Studio test session: saving is unavailable. Your live progress is safe; changes here will not be saved.", "error")
 	end
 end
+
+remotes.SaveSettings.OnServerEvent:Connect(function(player: Player, settings: unknown)
+	local profile = DataService.Get(player)
+	if not profile or profile.Closing == true then return end
+	profile.Data.UserSettings = DataService.CleanSettings(settings)
+	DataService.QueueSave(player)
+end)
 
 Players.PlayerAdded:Connect(onPlayerAdded)
 for _, player in Players:GetPlayers() do

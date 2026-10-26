@@ -5,6 +5,8 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local UI = require(script.Parent.UI)
 local CartoonUI = require(script.Parent.CartoonUI)
+local HudKit = require(script.Parent.HudKit)
+local Players = game:GetService("Players")
 
 local MonsterForge = {}
 MonsterForge.Assets = {} -- Shared authored artwork lives in CartoonUI.
@@ -15,7 +17,8 @@ local C = {
 	Cyan = Color3.fromRGB(0, 201, 214), Blue = Color3.fromRGB(219, 244, 255), Red = Color3.fromRGB(232, 57, 91),
 	Green = Color3.fromRGB(157, 235, 44), Disabled = Color3.fromRGB(211, 226, 227),
 }
-local NAV = { "Weapons", "Accessories", "Gamepasses", "Coins & Growth", "Owned" }
+local NAV = { "Weapons", "Accessories", "Gamepasses", "Coins & Growth", "Owned", "Codes", "Gift" }
+local EXTRA_TABS: { [string]: boolean } = { Codes = true, Gift = true } -- their own panels instead of the catalog grid
 
 local function frame(parent: Instance, name: string, color: Color3): Frame
 	local item = Instance.new("Frame")
@@ -82,7 +85,10 @@ local function comma(value: number): string
 	end
 end
 
-local function glyph(parent: Instance, kind: string): ImageLabel
+local function glyph(parent: Instance, kind: string): GuiObject
+	if kind == "Codes" then
+		return HudKit.TicketIcon(parent, 40)
+	end
 	local key = if kind == "Forge" then "Weapons" elseif kind == "Coins & Growth" then "CoinsGrowth" else kind
 	local icon = CartoonUI.Icon(parent, key, 40)
 	icon.Name, icon.ZIndex = "Icon", 34
@@ -104,35 +110,27 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	for _, child in root:GetChildren() do
 		if child ~= scroll and child.Name ~= "NativeShopScale" then child:Destroy() end
 	end
-	root.BackgroundColor3, root.BorderSizePixel, root.ZIndex = C.Stone, 0, 30
+	root.ZIndex = 30
 	root.ClipsDescendants = false
-	round(root, 16)
-	border(root, C.Bronze, 3)
-	local shell = CartoonUI.DecorateShell(root)
-	shell.ZIndex = 30
-	local catalogCanvas = frame(root, "CatalogCanvas", C.Stone)
+	HudKit.Body(root)
+	-- Dark slate well behind the catalog, nav and panels.
+	local catalogCanvas = frame(root, "CatalogCanvas", Color3.fromRGB(38, 40, 54))
 	catalogCanvas.ZIndex = 31
-	round(catalogCanvas, 14)
-	local header = frame(root, "ForgeHeader", Color3.fromRGB(31, 177, 236))
+	round(catalogCanvas, 4)
+	border(catalogCanvas, HudKit.Colors.Ink, 3)
+	local header, title = HudKit.Header(root, "ForgeHeader", "Yellow", "Shop")
 	header.ZIndex = 33
-	header.BackgroundTransparency = 0.12
-	round(header, 12)
-	local forgeIcon = glyph(header, "Forge")
-	local title = text(header, "Title", "MONSTER FORGE", 34, C.Gold)
-	title.Font = Enum.Font.FredokaOne
-	title.TextStrokeColor3, title.TextStrokeTransparency = C.Ink, 0
-	title.TextXAlignment = Enum.TextXAlignment.Center
-	local subtitle = text(header, "Subtitle", "Gear up. Hit harder.", 14, Color3.new(1, 1, 1))
-	subtitle.TextStrokeColor3, subtitle.TextStrokeTransparency = C.Ink, 0.2
+	local forgeIcon = text(header, "CartIcon", "🛒", 44, C.Ink)
+	forgeIcon.Name, forgeIcon.TextWrapped, forgeIcon.TextStrokeTransparency = "Icon", false, 1
+	forgeIcon.ZIndex = 37
+	-- The old subtitle slot now holds the shop's current section name, in the kit's "- SECTION -" style.
+	local subtitle = HudKit.Text(root, "SectionTitle", "", 20)
+	subtitle.ZIndex = 33
 	subtitle.TextXAlignment = Enum.TextXAlignment.Center
 	local passHeading = text(header, "PassHeading", "", 21, C.Ivory)
-	local close = button(root, "CloseButton", "X")
-	close.BackgroundColor3, close.TextColor3, close.TextSize = C.Red, Color3.new(1, 1, 1), 24
-	local closeStroke = close:FindFirstChildOfClass("UIStroke")
-	if closeStroke then closeStroke.Color = Color3.fromRGB(160, 34, 72) end
-	local closeGradient = close:FindFirstChildOfClass("UIGradient")
-	if closeGradient then closeGradient:Destroy() end
-	close.Size, close.Position = UDim2.fromOffset(44, 44), UDim2.new(1, -56, 0, 10)
+	local close = HudKit.Button(root, "CloseButton", "X", "Red")
+	close.ZIndex = 40
+	close.Size, close.Position = UDim2.fromOffset(44, 44), UDim2.new(1, -58, 0, 12)
 	close.Activated:Connect(function() root.Visible = false end)
 	local nav = Instance.new("ScrollingFrame")
 	nav.Name, nav.BackgroundColor3, nav.BorderSizePixel, nav.ZIndex = "Categories", C.Stone, 0, 33
@@ -145,7 +143,7 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 		local gradient = tab:FindFirstChildOfClass("UIGradient")
 		if gradient then gradient:Destroy() end
 		local stroke = tab:FindFirstChildOfClass("UIStroke")
-		if stroke then stroke.Color = C.Edge end
+		if stroke then stroke.Color = HudKit.Colors.Ink end
 		glyph(tab, category)
 		local caption = text(tab, "Caption", category, 14, C.Text)
 		caption.Font = Enum.Font.FredokaOne
@@ -158,21 +156,45 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	scroll.ScrollBarThickness, scroll.ScrollBarImageColor3, scroll.ZIndex = 4, C.Bronze, 33
 	local empty = text(scroll, "Empty", "Your owned weapons and accessories appear here.", 18, C.Muted)
 	empty.Visible = false
+	-- Codes and Gift get their own panels beside the nav; the catalog scroll and detail pane hide while one is open.
+	local codesPanel = frame(root, "CodesPanel", Color3.new(1, 1, 1))
+	codesPanel.BackgroundTransparency, codesPanel.ZIndex, codesPanel.Visible = 1, 33, false
+	local codesMessage = HudKit.Text(codesPanel, "Message", "Enter a code to claim a reward!", 22)
+	local codeField, codeBox = HudKit.Field(codesPanel, "CodeBoxFrame", "ENTER CODE")
+	local redeemButton = HudKit.Button(codesPanel, "RedeemButton", "Redeem", "Green")
+	local codesStatus = HudKit.Text(codesPanel, "Status", "", 18)
+	local giftPanel = frame(root, "GiftPanel", Color3.new(1, 1, 1))
+	giftPanel.BackgroundTransparency, giftPanel.ZIndex, giftPanel.Visible = 1, 33, false
+	local giftMessage = HudKit.Text(giftPanel, "Message", "Choose a player to gift", 22)
+	local giftList = Instance.new("ScrollingFrame")
+	giftList.Name, giftList.BackgroundTransparency, giftList.BorderSizePixel, giftList.ZIndex = "PlayerList", 1, 0, 34
+	giftList.ScrollBarThickness, giftList.ScrollBarImageColor3 = 4, HudKit.Colors.Gold
+	giftList.ScrollingDirection, giftList.CanvasSize, giftList.Parent = Enum.ScrollingDirection.Y, UDim2.new(), giftPanel
+	local giftEmpty = HudKit.Text(giftPanel, "Empty", "No other players here yet", 20)
+	giftEmpty.TextColor3 = HudKit.Colors.Muted
+	local giftField, giftBox = HudKit.Field(giftPanel, "UserBoxFrame", "PLAYER NAME")
+	local giftButton = HudKit.Button(giftPanel, "ConfirmButton", "Gift", "Green")
+	local giftIcon = CartoonUI.Icon(giftButton, "Gift", 40)
+	giftIcon.Name, giftIcon.ZIndex = "GiftArt", giftButton.ZIndex + 3
+	(giftButton:FindFirstChild("Label") :: TextLabel).Visible = false
+	local giftStatus = HudKit.Text(giftPanel, "Status", "", 18)
 	local detail = frame(root, "SelectedItem", Color3.new(1, 1, 1))
 	detail.ZIndex = 33
 	round(detail, 14)
 	border(detail, C.Cyan, 2)
 	shade(detail, Color3.fromRGB(238, 255, 255), Color3.fromRGB(198, 244, 255))
-	local detailPreview = frame(detail, "Preview", C.Blue)
-	detailPreview.BackgroundTransparency = 1
+	local detailPreview = frame(detail, "Preview", Color3.new(1, 1, 1))
+	round(detailPreview, 14)
+	shade(detailPreview, Color3.fromRGB(122, 218, 255), Color3.fromRGB(227, 251, 255))
+	border(detailPreview, Color3.fromRGB(247, 255, 255), 2)
 	local detailEyebrow = text(detail, "SelectedLabel", "", 12, C.Muted)
 	detailEyebrow.Visible = false
 	local detailName = text(detail, "Title", "Ice Sword", 25, C.Ivory)
 	detailName.Font = Enum.Font.FredokaOne
 	local stats = frame(detail, "Stats", C.Ink)
 	stats.BackgroundTransparency = 1
-	local statA = text(stats, "Primary", "x40\nweapon damage", 18, C.Text)
-	local statB = text(stats, "Secondary", "+2.5\nreach", 18, C.Text)
+	local statA = text(stats, "Primary", "x40\nDAMAGE", 18, C.Text)
+	local statB = text(stats, "Secondary", "+2.5\nREACH", 18, C.Text)
 	for _, label in { statA, statB } do
 		label.BackgroundTransparency, label.BackgroundColor3 = 0, Color3.fromRGB(238, 252, 255)
 		round(label, 10)
@@ -206,8 +228,8 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	local function add(offer: any)
 		-- UIGradient multiplies this color; white preserves its intended palette.
 		local card = frame(scroll, offer.Key .. "Card", Color3.new(1, 1, 1))
-		round(card, 12)
-		local outline = border(card, C.Edge, 1)
+		round(card, 16)
+		local outline = border(card, Color3.fromRGB(225, 216, 187), 2)
 		if offer.Featured and offer.Key == "DoubleDamage" then
 			shade(card, Color3.fromRGB(255, 242, 229), Color3.fromRGB(255, 219, 216))
 		elseif offer.Featured and offer.Key == "VIP" then
@@ -216,14 +238,17 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 			shade(card, C.Raised, C.Stone)
 		end
 		local preview = frame(card, "Preview", Color3.new(1, 1, 1))
-		round(preview, 10)
+		round(preview, 12)
 		local previewColors = {
-			SwiftSneakers = Color3.fromRGB(168, 236, 255), FlameBoots = Color3.fromRGB(255, 211, 157),
-			IceSkates = Color3.fromRGB(208, 237, 255), LightningBoots = Color3.fromRGB(255, 239, 142),
-			VoidHoverboard = Color3.fromRGB(247, 211, 255), WindScarf = Color3.fromRGB(222, 211, 255),
+			SwiftSneakers = Color3.fromRGB(104, 220, 250), FlameBoots = Color3.fromRGB(255, 183, 104),
+			IceSkates = Color3.fromRGB(158, 214, 255), LightningBoots = Color3.fromRGB(255, 227, 91),
+			VoidHoverboard = Color3.fromRGB(232, 170, 255), WindScarf = Color3.fromRGB(193, 170, 250),
+			Bat = Color3.fromRGB(255, 222, 151), IronBat = Color3.fromRGB(187, 213, 243), IronSword = Color3.fromRGB(166, 220, 240),
+			ForestSword = Color3.fromRGB(168, 228, 157), DesertSword = Color3.fromRGB(255, 205, 128),
+			IceSword = Color3.fromRGB(143, 222, 255), LavaSword = Color3.fromRGB(255, 166, 145),
 		}
-		local previewTint = previewColors[offer.Key] or Color3.fromRGB(211, 239, 255)
-		shade(preview, Color3.new(1, 1, 1), previewTint)
+		local previewTint = previewColors[offer.Key] or Color3.fromRGB(170, 227, 253)
+		shade(preview, previewTint, previewTint:Lerp(Color3.new(1, 1, 1), 0.66))
 		if offer.Kind == "Weapon" then UI.WeaponPreview(preview, offer.Template)
 		elseif offer.Kind == "Accessory" then UI.GearPreview(preview, offer.Key)
 		else
@@ -236,14 +261,20 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 			if child:IsA("ViewportFrame") then
 				child.Position, child.Size, child.ZIndex = UDim2.new(), UDim2.fromScale(1, 1), 33
 				child.Ambient = Color3.fromRGB(218, 224, 234)
+				if child.CurrentCamera then child.CurrentCamera.FieldOfView = 28 end
 			end
 		end
 		local titleLabel = text(card, "Title", offer.Title, 17, C.Text)
 		titleLabel.Font = Enum.Font.FredokaOne
 		local description = text(card, "Description", offer.Description, 13, C.Muted)
 		local price = text(card, "Price", "", 18, C.Ivory)
+		price.Font = Enum.Font.FredokaOne
+		round(price, 8)
+		local coin = CartoonUI.Icon(card, "Coins", 24)
+		coin.Name, coin.ZIndex = "CoinIcon", 34
+		coin.Visible = offer.Kind == "Weapon" or offer.Kind == "Accessory"
 		local action = button(card, "BuyButton", "")
-		offer.Card, offer.Preview, offer.TitleLabel, offer.DescriptionLabel, offer.PriceLabel, offer.Action, offer.Outline = card, preview, titleLabel, description, price, action, outline
+		offer.Card, offer.Preview, offer.TitleLabel, offer.DescriptionLabel, offer.PriceLabel, offer.Action, offer.Outline, offer.CoinIcon = card, preview, titleLabel, description, price, action, outline, coin
 		table.insert(offers, offer)
 	end
 	-- السيوف مترتبة بقوتها (ضرر الضربة) من الأضعف للأقوى، والـ Bat الأول
@@ -370,18 +401,21 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 			for _, icon in { statAIcon, statBIcon } do icon.Position, icon.ZIndex = UDim2.new(0, 6, 0.5, -14), 35 end
 		end
 		if offer.Kind == "Weapon" then
-			statA.Text = "x" .. tostring(if offer.Stats then offer.Stats.DamageMultiplier else 1) .. "\nweapon damage"
-			statB.Text = "+" .. tostring(if offer.Stats then offer.Stats.ExtraReach else 0) .. "\nreach"
+			statA.Text = "x" .. tostring(if offer.Stats then offer.Stats.DamageMultiplier else 1) .. "\nDAMAGE"
+			statB.Text = "+" .. tostring(if offer.Stats then offer.Stats.ExtraReach else 0) .. "\nREACH"
 		else
-			statA.Text = "+" .. tostring(math.floor((offer.Stats.Multiplier - 1) * 100 + 0.5)) .. "%\nspeed"
-			statB.Text = "+" .. tostring(offer.Stats.HealthBonus) .. "\nhealth"
+			statA.Text = "+" .. tostring(math.floor((offer.Stats.Multiplier - 1) * 100 + 0.5)) .. "%\nSPEED"
+			statB.Text = "+" .. tostring(offer.Stats.HealthBonus) .. "\nHEALTH"
 		end
 		if previewKey ~= token(offer) then
 			previewKey = token(offer)
-			for _, child in detailPreview:GetChildren() do child:Destroy() end
+			for _, child in detailPreview:GetChildren() do if child:IsA("ViewportFrame") then child:Destroy() end end
 			if offer.Kind == "Weapon" then UI.WeaponPreview(detailPreview, offer.Template) else UI.GearPreview(detailPreview, offer.Key) end
 			for _, child in detailPreview:GetChildren() do
-				if child:IsA("ViewportFrame") then child.Position, child.Size, child.ZIndex = UDim2.new(), UDim2.fromScale(1, 1), 33 end
+				if child:IsA("ViewportFrame") then
+					child.Position, child.Size, child.ZIndex = UDim2.new(), UDim2.fromScale(1, 1), 33
+					if child.CurrentCamera then child.CurrentCamera.FieldOfView = 28 end
+				end
 			end
 		end
 	end
@@ -390,10 +424,12 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 		card.Position, card.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(w, h)
 		local preview, titleLabel, description, price, action = offer.Preview, offer.TitleLabel, offer.DescriptionLabel, offer.PriceLabel, offer.Action
 		if mode == "gear" then
-			preview.Position, preview.Size = UDim2.fromOffset(6, 6), UDim2.fromOffset(w - 12, h - 75)
-			titleLabel.Position, titleLabel.Size, titleLabel.TextSize = UDim2.fromOffset(4, h - 66), UDim2.fromOffset(w - 8, 31), if w < 150 then 12 else 15
+			preview.Position, preview.Size = UDim2.fromOffset(9, 9), UDim2.fromOffset(w - 18, h - 80)
+			titleLabel.Position, titleLabel.Size, titleLabel.TextSize = UDim2.fromOffset(6, h - 67), UDim2.fromOffset(w - 12, 31), if w < 150 then 14 else 17
 			description.Visible = false
-			price.Position, price.Size, price.TextSize = UDim2.fromOffset(4, h - 34), UDim2.fromOffset(w - 8, 28), 17
+			local coinVisible = offer.CoinIcon.Visible
+			price.Position, price.Size, price.TextSize = UDim2.fromOffset(if coinVisible then 36 else 12, h - 34), UDim2.fromOffset(w - (if coinVisible then 46 else 24), 26), if w < 150 then 16 else 18
+			offer.CoinIcon.Position, offer.CoinIcon.Size = UDim2.fromOffset(9, h - 33), UDim2.fromOffset(24, 24)
 			-- A single native selection target includes both item art and its price/state.
 			action.Position, action.Size = UDim2.new(), UDim2.fromScale(1, 1)
 			action.Text, action.BackgroundTransparency, action.ZIndex = "", 1, 35
@@ -414,37 +450,80 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	end
 	layout = function()
 		local width, height = root.Size.X.Offset, root.Size.Y.Offset
-		local compact = width < 840 or height < 420
-		local headerHeight = if compact then 58 else 70
-		local navWidth = if width < 480 then 86 elseif compact then 126 else 162
+		local compact = width < 780 or height < 390
+		local headerHeight = if compact then 66 else 80
+		local navWidth = if width < 480 then 86 elseif compact then 140 else 176
 		local padding, gap = if compact then 8 else 12, if compact then 8 else 12
-		header.Position, header.Size = UDim2.fromOffset(6, 6), UDim2.new(1, -12, 0, headerHeight - 6)
-		catalogCanvas.Position, catalogCanvas.Size = UDim2.fromOffset(6, headerHeight), UDim2.new(1, -12, 1, -headerHeight - 6)
-		forgeIcon.Position = UDim2.fromOffset(14, if compact then 8 else 13)
-		title.Position, title.Size, title.TextSize = UDim2.fromOffset(if width < 480 then 8 else 58, 1), UDim2.fromOffset(math.max(120, width - (if width < 480 then 74 else 126)), if compact then 30 else 39), if width < 480 then 20 elseif compact then 27 else 34
-		forgeIcon.Visible = width >= 480
-		subtitle.Position, subtitle.Size, subtitle.TextSize = UDim2.fromOffset(if width < 480 then 8 else 58, if compact then 30 else 40), UDim2.fromOffset(math.max(120, width - (if width < 480 then 74 else 126)), 18), if width < 480 then 11 else 14
+		local faceHeight = headerHeight - 6
+		header.Position, header.Size = UDim2.fromOffset(6, 6), UDim2.new(1, -12, 0, faceHeight)
+		catalogCanvas.Position, catalogCanvas.Size = UDim2.fromOffset(6, headerHeight + 2), UDim2.new(1, -12, 1, -headerHeight - 8)
+		local showIcon = width >= 480
+		local iconSize = if compact then 40 else 52
+		forgeIcon.Visible = showIcon
+		forgeIcon.Size, forgeIcon.Position = UDim2.fromOffset(iconSize, iconSize), UDim2.fromOffset(14, math.floor((faceHeight - iconSize) / 2))
+		forgeIcon.TextSize = iconSize - 8
+		local titleX = if showIcon then iconSize + 28 else 16
+		title.Position, title.Size = UDim2.fromOffset(titleX, 0), UDim2.new(1, -titleX - 70, 1, 0)
+		title.TextSize = if width < 480 then 26 elseif compact then 32 else 40
+		close.Position = UDim2.new(1, -58, 0, 6 + math.floor((faceHeight - 44) / 2))
 		passHeading.Visible = false
 		passHeading.Position, passHeading.Size = UDim2.fromOffset(520, 14), UDim2.fromOffset(math.max(1, width - 600), 32)
 		nav.Position, nav.Size = UDim2.fromOffset(padding, headerHeight + 4), UDim2.fromOffset(navWidth - padding, height - headerHeight - padding - 4)
-		local tabHeight = if compact then 48 else 65
+		-- Seven tabs share the column: they shrink toward the 44px touch minimum, then the column scrolls.
+		local tabHeight = math.clamp(math.floor((height - headerHeight - padding - 4 - (#NAV - 1) * 6) / #NAV), 44, if compact then 56 else 66)
 		for index, category in NAV do
 			local tab = tabs[category]
-			tab.Position, tab.Size = UDim2.fromOffset(0, (index - 1) * (tabHeight + 2)), UDim2.fromOffset(navWidth - padding - 4, tabHeight)
+			tab.Position, tab.Size = UDim2.fromOffset(3, (index - 1) * (tabHeight + 6)), UDim2.fromOffset(navWidth - padding - 7, tabHeight)
 			local icon, caption = tab:FindFirstChild("Icon") :: ImageLabel, tab:FindFirstChild("Caption") :: TextLabel
 			icon.Visible = width >= 480
-			icon.Position = UDim2.fromOffset(6, math.floor((tabHeight - 40) / 2))
-			caption.Position, caption.Size = UDim2.fromOffset(if width < 480 then 4 else 50, 2), UDim2.new(1, if width < 480 then -8 else -54, 1, -4)
-			caption.TextSize = if width < 480 then 12 elseif compact then 12 else 15
+			local iconSize = math.min(if compact then 42 else 50, tabHeight - 8)
+			icon.Size, icon.Position = UDim2.fromOffset(iconSize, iconSize), UDim2.fromOffset(5, math.floor((tabHeight - iconSize) / 2))
+			caption.Position, caption.Size = UDim2.fromOffset(if width < 480 then 4 else iconSize + 9, 2), UDim2.new(1, if width < 480 then -8 else -iconSize - 15, 1, -4)
+			caption.TextSize = if width < 480 then 13 elseif compact then 14 else 17
 		end
-		nav.CanvasSize = UDim2.fromOffset(0, #NAV * (tabHeight + 2))
-		local contentX, contentY = navWidth + gap, headerHeight + 4
+		nav.CanvasSize = UDim2.fromOffset(0, #NAV * (tabHeight + 6))
+		local sectionHeight = if compact then 0 else 30
+		local contentX, contentY = navWidth + gap, headerHeight + 4 + sectionHeight
 		local contentWidth, contentHeight = width - contentX - padding, height - contentY - padding
+		local extraTab = EXTRA_TABS[selectedCategory] == true
+		subtitle.Visible = sectionHeight > 0
+		subtitle.Text = "- " .. string.upper(selectedCategory) .. " -"
+		subtitle.Position, subtitle.Size = UDim2.fromOffset(contentX, headerHeight + 4), UDim2.fromOffset(contentWidth, sectionHeight - 2)
 		local hasDetail = selectedCategory == "Weapons" or selectedCategory == "Accessories" or selectedCategory == "Owned"
 		local stacked = hasDetail and (contentWidth < 370 or contentHeight < 300)
 		local detailWidth = if compact then math.min(220, math.floor(contentWidth * 0.43)) else math.floor(contentWidth * 0.4)
 		local gridWidth = if hasDetail and not stacked then contentWidth - detailWidth - gap else contentWidth
 		scroll.Position, scroll.Size = UDim2.fromOffset(contentX, contentY), UDim2.fromOffset(gridWidth, contentHeight)
+		scroll.Visible = not extraTab
+		codesPanel.Visible, giftPanel.Visible = selectedCategory == "Codes", selectedCategory == "Gift"
+		codesPanel.Position, codesPanel.Size = UDim2.fromOffset(contentX, contentY), UDim2.fromOffset(contentWidth, contentHeight)
+		giftPanel.Position, giftPanel.Size = codesPanel.Position, codesPanel.Size
+		if extraTab then
+			local small = contentWidth < 400
+			-- Codes: message, then the input box with Redeem beside it (stacked on narrow screens), then the answer.
+			codesMessage.Position, codesMessage.Size, codesMessage.TextSize = UDim2.fromOffset(8, 8), UDim2.fromOffset(contentWidth - 16, 44), if small then 18 else 24
+			local redeemWidth = if small then contentWidth - 24 else 170
+			local fieldHeight = if small then 52 else 64
+			codeField.Position = UDim2.fromOffset(12, 64)
+			codeField.Size = UDim2.fromOffset(if small then contentWidth - 24 else contentWidth - 24 - redeemWidth - 12, fieldHeight)
+			redeemButton.Position = if small then UDim2.fromOffset(12, 64 + fieldHeight + 10) else UDim2.fromOffset(contentWidth - 12 - redeemWidth, 64)
+			redeemButton.Size = UDim2.fromOffset(redeemWidth, fieldHeight)
+			codesStatus.Position = UDim2.fromOffset(8, if small then 64 + fieldHeight * 2 + 24 else 64 + fieldHeight + 16)
+			codesStatus.Size = UDim2.fromOffset(contentWidth - 16, 52)
+			-- Gift: heading, player list, then the name box with its confirm button and a status line.
+			giftMessage.Position, giftMessage.Size, giftMessage.TextSize = UDim2.fromOffset(8, 4), UDim2.fromOffset(contentWidth - 16, 36), if small then 18 else 24
+			local rowHeight, statusHeight = if small then 48 else 60, 26
+			local rowY = contentHeight - 12 - statusHeight - rowHeight
+			local listHeight = math.max(48, rowY - 48 - 8)
+			giftList.Position, giftList.Size = UDim2.fromOffset(12, 46), UDim2.fromOffset(contentWidth - 24, listHeight)
+			giftEmpty.Position, giftEmpty.Size = UDim2.fromOffset(12, 46 + math.floor(listHeight / 2) - 18), UDim2.fromOffset(contentWidth - 24, 36)
+			giftField.Position, giftField.Size = UDim2.fromOffset(12, rowY), UDim2.fromOffset(contentWidth - 24 - 80, rowHeight)
+			giftButton.Position, giftButton.Size = UDim2.fromOffset(contentWidth - 12 - 72, rowY), UDim2.fromOffset(72, rowHeight)
+			giftIcon.Size = UDim2.fromOffset(rowHeight - 14, rowHeight - 14)
+			giftIcon.Position = UDim2.new(0.5, -(rowHeight - 14) / 2, 0.4, -(rowHeight - 14) / 2)
+			giftStatus.Position, giftStatus.Size = UDim2.fromOffset(8, contentHeight - 12 - statusHeight + 2), UDim2.fromOffset(contentWidth - 16, statusHeight)
+			codeBox.TextSize, giftBox.TextSize = if small then 18 else 24, if small then 18 else 24
+		end
 		detail.Visible = hasDetail
 		detail.Parent = if stacked then scroll else root
 		detail.Position = if stacked then UDim2.fromOffset(0, 0) else UDim2.fromOffset(contentX + gridWidth + gap, contentY)
@@ -538,11 +617,11 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 			end
 		end
 		for category, tab in tabs do
-			tab.BackgroundColor3 = if category == selectedCategory then Color3.fromRGB(67, 229, 237) else C.Blue
+			tab.BackgroundColor3 = if category == selectedCategory then HudKit.Colors.Gold else C.Blue
 			local caption = tab:FindFirstChild("Caption") :: TextLabel
 			caption.TextColor3 = C.Text
 			local stroke = tab:FindFirstChildOfClass("UIStroke")
-			if stroke then stroke.Color, stroke.Thickness = if category == selectedCategory then C.Cyan else C.Edge, if category == selectedCategory then 2.5 else 1.5 end
+			if stroke then stroke.Color, stroke.Thickness = HudKit.Colors.Ink, if category == selectedCategory then 3 else 2 end
 		end
 		updateDetail(state)
 		layout()
@@ -554,9 +633,63 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 			elseif category == "Weapons" then if not Config.WeaponStats[selectedKey] and selectedKey ~= "Bat" then selectedKey = "IceSword" end
 			elseif category == "Owned" then selectedKey = "Bat" end
 			scroll.CanvasPosition = Vector2.zero
+			if category == "Gift" then refreshGiftList() end
 			refresh()
 		end)
 	end
+	-- Codes: the server validates, rate limits and rewards; this only sends the typed text.
+	local function setStatus(label: TextLabel, value: string, good: boolean?)
+		label.Text = value
+		label.TextColor3 = if good == true then Color3.fromRGB(150, 255, 90) elseif good == false then Color3.fromRGB(255, 120, 130) else HudKit.Colors.White
+	end
+	local redeemLockedUntil = 0
+	redeemButton.Activated:Connect(function()
+		local code = string.sub(codeBox.Text, 1, 32)
+		if code:match("^%s*$") then setStatus(codesStatus, "Type a code first.", false); return end
+		if os.clock() < redeemLockedUntil then return end
+		local remote = options.Remotes.RedeemCode
+		if not remote then setStatus(codesStatus, "Codes are not available right now.", false); return end
+		redeemLockedUntil = os.clock() + 1.5
+		setStatus(codesStatus, "Checking...", nil)
+		remote:FireServer(code)
+	end)
+	local redeemResult = options.Remotes.RedeemResult
+	if redeemResult then
+		redeemResult.OnClientEvent:Connect(function(ok: any, message: any)
+			if not alive then return end
+			setStatus(codesStatus, tostring(message), ok == true)
+			if ok == true then codeBox.Text = "" end
+		end)
+	end
+	-- Gift: lists the other players in this server. There is no gifting economy yet, so Confirm only explains that.
+	local function refreshGiftList()
+		for _, child in giftList:GetChildren() do
+			if child:IsA("GuiObject") then child:Destroy() end
+		end
+		local others = {}
+		for _, member in Players:GetPlayers() do
+			if member ~= Players.LocalPlayer then table.insert(others, member) end
+		end
+		table.sort(others, function(a, b) return a.Name < b.Name end)
+		for index, member in others do
+			local picked = giftBox.Text == member.Name
+			local row = HudKit.Button(giftList, member.Name, member.DisplayName .. "  @" .. member.Name, if picked then "Yellow" else "Blue")
+			row.Position, row.Size = UDim2.fromOffset(0, (index - 1) * 54), UDim2.new(1, -8, 0, 48)
+			row.Activated:Connect(function()
+				giftBox.Text = member.Name
+				setStatus(giftStatus, "", nil)
+				refreshGiftList()
+			end)
+		end
+		giftList.CanvasSize = UDim2.fromOffset(0, #others * 54)
+		giftEmpty.Visible = #others == 0
+	end
+	giftButton.Activated:Connect(function()
+		if giftBox.Text:match("^%s*$") then setStatus(giftStatus, "Pick a player first.", false); return end
+		setStatus(giftStatus, "Gifting is coming soon!", nil)
+	end)
+	Players.PlayerAdded:Connect(function() if alive and giftPanel.Visible then refreshGiftList() end end)
+	Players.PlayerRemoving:Connect(function() if alive and giftPanel.Visible then task.defer(refreshGiftList) end end)
 	root:GetPropertyChangedSignal("Size"):Connect(layout)
 	root:GetPropertyChangedSignal("Visible"):Connect(function() if root.Visible then refresh() end end)
 	refresh()

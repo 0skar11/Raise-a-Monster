@@ -53,12 +53,14 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 	local PURPLE = Color3.fromRGB(176, 96, 255)
 	local CANDY = Color3.fromRGB(255, 170, 60)
 	local CATEGORIES = {
-		{ Name = "Boosts", Icon = "⚡", Kinds = { Boost = true } },
-		{ Name = "Cosmetics", Icon = "🎩", Kinds = { Hat = true, Trail = true, Aura = true, Title = true } },
+		{ Name = "Boosts", Icon = "⚡", Kinds = { Boost = true, Speed = true } },
+		{ Name = "Hats", Icon = "🎩", Kinds = { Hat = true } },
+		{ Name = "Effects", Icon = "✨", Kinds = { Trail = true, Aura = true } },
+		{ Name = "Titles", Icon = "🏷️", Kinds = { Title = true } },
 		{ Name = "Eggs", Icon = "🥚", Kinds = { Egg = true } },
 	}
 	local ICONS = {
-		Boost = "⚡", Hat = "🎩", Trail = "👻", Aura = "✨", Title = "🏷️", Egg = "🥚",
+		Boost = "⚡", Speed = "💨", Hat = "🎩", Trail = "👻", Aura = "✨", Title = "🏷️", Egg = "🥚",
 		HalloweenGhostSlime = "👻", HalloweenSkeletonImp = "💀", HalloweenPumpkinKing = "🎃", HalloweenHexCat = "🐈‍⬛", HalloweenCryptMummy = "🧟", HalloweenCountFang = "🧛", HalloweenGraveGolem = "🗿", HalloweenWraithReaper = "☠️",
 	}
 	local GREETINGS = {
@@ -344,15 +346,15 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		artGradient.Rotation = 90
 		artGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 175))
 		artGradient.Parent = art
-		local icon = UI.Label(art, ICONS[item.Species or ""] or ICONS[item.Kind] or "🎃", UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 44)
+		local icon = UI.Label(art, item.Icon or ICONS[item.Species or ""] or ICONS[item.Kind] or "🎃", UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 44)
 		icon.Name = "Icon"
 		local tag = UI.Label(card, "", UDim2.fromOffset(112, 18), UDim2.new(1, -118, 0, 14), 12)
 		tag.Name = "Tag"
 		tag.BackgroundColor3 = if premium then Color3.fromRGB(255, 170, 40) else Color3.fromRGB(80, 220, 110)
 		tag.BackgroundTransparency = 0
 		tag.TextColor3 = Color3.fromRGB(20, 12, 8)
-		tag.Visible = premium
-		tag.Text = if premium then "ONE PER PLAYER" else ""
+		tag.Visible = premium or item.Badge ~= nil
+		tag.Text = if premium then "ONE PER PLAYER" else (item.Badge or "")
 		tag.ZIndex = 3
 		UI.Corner(tag, 4)
 		local name = UI.Label(card, item.Name, UDim2.new(1, -16, 0, 22), UDim2.fromOffset(8, 86), 19)
@@ -391,9 +393,9 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 		scroll.CanvasPosition = Vector2.new(0, 0)
 	end
 	for index, category in CATEGORIES do
-		local tab = UI.Button(tabBar, category.Icon .. "  " .. category.Name, Color3.fromRGB(58, 40, 92), UDim2.new(0.25, -8, 1, 0), UDim2.fromOffset(0, 0))
+		local tab = UI.Button(tabBar, category.Icon .. "  " .. category.Name, Color3.fromRGB(58, 40, 92), UDim2.new(0.2, -8, 1, 0), UDim2.fromOffset(0, 0))
 		tab.LayoutOrder = index
-		tab.TextSize = 17
+		tab.TextSize = 15
 		tabs[index] = tab
 		tab.Activated:Connect(function()
 			activeCategory = index
@@ -429,9 +431,9 @@ function HalloweenUI.Init(ui: UI.UI, remotes: { [string]: RemoteEvent })
 				local affordable = state.Candy >= item.Cost
 				card.Button.Text = if affordable then "Buy  🍬 " .. formatCandy(item.Cost) else "Need  🍬 " .. formatCandy(item.Cost)
 				card.Button.BackgroundColor3 = if affordable then COLORS.Green else COLORS.Gray
-				card.Tag.Visible = item.Unique == true
-				card.Tag.Text = if item.Unique then "ONE PER PLAYER" else ""
-				card.Tag.BackgroundColor3 = Color3.fromRGB(255, 170, 40)
+				card.Tag.Visible = item.Unique == true or item.Badge ~= nil
+				card.Tag.Text = if item.Unique then "ONE PER PLAYER" else (item.Badge or "")
+				card.Tag.BackgroundColor3 = if item.Unique then Color3.fromRGB(255, 170, 40) else Color3.fromRGB(80, 220, 110)
 			end
 		end
 	end

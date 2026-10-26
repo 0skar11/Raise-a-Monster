@@ -24,8 +24,12 @@ Config.Monetization = {
 
 -- أبعاد الأرض والممرات؛ القواعد الستة تفضل في مكانها الحالي.
 Config.Map = {
+	KeepStudioPlotLayout = true, -- plots you move in StudioWorld.Map keep their saved position in-game
 	IslandMinX = -100,
 	PlazaMinX = -10,
+	PlazaMaxX = 50,
+	LobbyMaxX = 80,
+	IslandMinZ = -280,
 	PlazaHalfZ = 280,
 	PlazaPadding = 10,
 	ZonesStartX = 100,
@@ -40,7 +44,7 @@ Config.Map = {
 }
 
 -- القاعدة ------------------------------------------------------------------
-Config.MaxPlots = 6
+Config.MaxPlots = 10
 -- لون كل قاعدة بالترتيب (القواعد جنب بعض على الشمال)
 Config.PlotColors = {
 	Color3.fromRGB(60, 140, 255), -- أزرق
@@ -517,7 +521,7 @@ Config.MotherHealthByRarity = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2
 Config.BabiesPerNest = 3
 
 Config.PlayerBaseHealth = 100
-Config.Shop = { Position = Vector3.new(Config.Map.ZonesStartX - 8, 0, -55), Yaw = -90, TeleportOffset = Vector3.new(0, 4, 12) }
+Config.Shop = { Position = Vector3.new(Config.Map.PlazaMaxX - 8, 0, -55), Yaw = -90, TeleportOffset = Vector3.new(0, 4, 12) }
 Config.WalkSpeed = 25 -- سرعة المشي ثابتة (الافتراضي في Roblox 16)
 
 Config.SpeedAccessories = {
@@ -548,6 +552,8 @@ Config.PvP = {
 	BatDamage = 19,
 	SwordDamage = 38,
 	Reach = 7,
+	MaxHitFraction = 0.3, -- a single player hit never takes more than this share of the victim's max health
+	DeathProtection = 60, -- seconds a player who was killed by another player can't be hit by players
 }
 
 -- الوحوش الكبيرة اللي اللاعب يجهزها بتتبعه؛ ضربها مرتبط بالندرة مش الدخل.
@@ -703,16 +709,16 @@ Config.VIPCoinMultiplier = 2
 Config.CoinBoostMultiplier = 1.5
 Config.DoubleDamageMultiplier = 2
 Config.ExtraSlotsAmount = 2
-Config.VIPSword = { DamageMultiplier = 90, ExtraReach = 3 }
+Config.VIPSword = { DamageMultiplier = 400, ExtraReach = 5 }
 Config.WeaponStats = {
-	-- Each weapon is a big step up: x2, x4, x8, x18, x40, x90, x180 (the starter bat is x1). The best sword can
+	-- Each weapon is a big step up: x2, x4, x8, x18, x40, x180, then the VIP Sword at x400 (the starter bat is x1). The best sword can
 	-- solo a Void Mother (310K-1.2M HP) but only with careful dodging - she kills a player in about two hits.
 	IronBat = { Template = "IronBat", DamageMultiplier = 2, ExtraReach = 0.5 },
 	IronSword = { Template = "IronSword", DamageMultiplier = 4, ExtraReach = 1 },
 	ForestSword = { Template = "ForestSword", DamageMultiplier = 8, ExtraReach = 1.5 },
 	DesertSword = { Template = "DesertSword", DamageMultiplier = 18, ExtraReach = 2 },
 	IceSword = { Template = "IceSword", DamageMultiplier = 40, ExtraReach = 2.5 },
-	VIPSword = { Template = "VoidBat", DamageMultiplier = 90, ExtraReach = 3 },
+	VIPSword = { Template = "VoidBat", DamageMultiplier = 400, ExtraReach = 5 }, -- strongest sword in the game
 	LavaSword = { Template = "LavaSword", DamageMultiplier = 180, ExtraReach = 4 },
 } :: { [string]: { Template: string, DamageMultiplier: number, ExtraReach: number } }
 -- معدات القتال تُشترى بعملات اللعبة من المتجر، مش بـ Robux.
@@ -833,6 +839,12 @@ Config.Spin = {
 	EggFallbackMinutes = 15, -- لو القاعدة مليانة البيضة بتتحول فلوس بدقايق الدخل دي
 }
 
+-- Promo codes for the shop's Codes tab. Keys are UPPERCASE; each code can be redeemed once per player.
+-- TEST1000 is a trial code for trying the tab: remove it before launch. Add real ones as MYCODE = { Coins = 1000 }.
+Config.Codes = {
+	TEST1000 = { Coins = 1000 },
+} :: { [string]: { Coins: number } }
+
 -- ألعاب صغيرة مع الوحش (بدل زرار Play) ------------------------------------------------------
 Config.MiniGames = {
 	Cooldown = 20, -- لكل وحش
@@ -919,6 +931,7 @@ end
 
 -- Monster Arena: معارك 1 ضد 1. الكسبان بياخد فلوس والوحش اللي خسر --------------------------
 Config.Arena = {
+	Enabled = false, -- Temporarily closed while the arena is redesigned.
 	-- Two arenas on the grass at both ends of the base row (left and right of the bases).
 	Positions = { Vector3.new(-40, 0, 238), Vector3.new(-40, 0, -238) },
 	Radius = 22,
@@ -969,11 +982,16 @@ Config.UIEffects = {
 -- In Studio you can also run  game.ServerStorage.RaiseAMonsterDebug.HalloweenToggle:Fire()  to flip it live.
 export type HalloweenItem = {
 	Name: string,
-	Kind: string, -- "Boost" | "Hat" | "Trail" | "Aura" | "Title" | "Egg" | "Monster"
+	Kind: string, -- "Boost" (cash) | "Speed" | "Hat" | "Trail" | "Aura" | "Title" | "Egg" | "Monster"
 	Cost: number, -- in Candy
 	Order: number,
 	Description: string,
 	Color: Color3,
+	Color2: Color3?, -- Trail / Aura: second gradient colour
+	Icon: string?, -- shop card emoji (falls back to the kind icon)
+	Badge: string?, -- shop card ribbon, e.g. "BEST VALUE"
+	Tint: Color3?, -- Hat: pumpkin tint
+	HatSize: number?, -- Hat: pumpkin width in studs
 	Unique: boolean?, -- one purchase per player (Pumpkin King)
 	Duration: number?, -- Boost: seconds added per purchase
 	Multiplier: number?, -- Boost: cash multiplier while active
@@ -1034,6 +1052,11 @@ Config.Halloween = {
 		Area = { MinX = 8, MaxX = 90, HalfZ = 235 },
 		-- keep clear of the egg shop, the merchant and the zone gate road
 		KeepClear = { { X = 92, Z = -55, Radius = 24 }, { X = 76, Z = -34, Radius = 14 }, { X = 100, Z = 0, Radius = 24 } },
+		-- decorated median down the middle of the plaza; keeps spawn, gear shop and the gate lane clear
+		Median = {
+			MinX = 4, MaxX = 38, HalfLength = 190, Count = 46, MinGap = 9, -- scattered at random across the plaza, not in rows
+			KeepClear = { { X = 20, Z = 40, Radius = 16 }, { X = 42, Z = -55, Radius = 16 }, { X = 20, Z = 0, Radius = 12 } },
+		},
 	},
 	Merchant = {
 		Name = "Pumpkin Merchant",
@@ -1068,12 +1091,26 @@ Config.Halloween = {
 		Seed = 20261031,
 	},
 	Items = {
-		CandyBoost = { Name = "Candy Boost", Kind = "Boost", Cost = 150, Order = 1, Description = "2x cash from your monsters for 10 minutes. Buying again adds time.", Color = Color3.fromRGB(255, 190, 60), Duration = 600, Multiplier = 2, MaxBoostSeconds = 3600 },
-		PumpkinHat = { Name = "Pumpkin Hat", Kind = "Hat", Cost = 300, Order = 2, Description = "A glowing jack-o-lantern on your head.", Color = Color3.fromRGB(255, 130, 30) },
-		GhostTrail = { Name = "Ghost Trail", Kind = "Trail", Cost = 500, Order = 3, Description = "A pale ghostly trail follows you.", Color = Color3.fromRGB(190, 230, 255) },
-		CandyAura = { Name = "Candy Aura", Kind = "Aura", Cost = 800, Order = 4, Description = "Sweet sparkles swirl around you.", Color = Color3.fromRGB(255, 120, 200) },
-		HalloweenTitle = { Name = "Halloween 2026 Title", Kind = "Title", Cost = 1000, Order = 5, Description = "Show 'Halloween 2026' above your head.", Color = Color3.fromRGB(190, 110, 255), TitleText = "Halloween 2026" },
-		HauntedEgg = { Name = "Haunted Egg", Kind = "Egg", Cost = 400, Order = 6, Description = "A real egg: Rare Egg (common) or Mythic Egg (rarer). Hatches into a real monster.", Color = Color3.fromRGB(150, 255, 160), EggWeights = { Rare = 70, Mythic = 30 } :: { [string]: number } },
+		-- Boosts. The two cash boosts share one timer (buying either adds its time); Speed has its own timer.
+		DoubleCash5 = { Name = "x2 Money · 5 min", Kind = "Boost", Cost = 90, Order = 1, Icon = "💰", Badge = "QUICK", Description = "2x cash from your monsters for 5 minutes. Buying again adds time.", Color = Color3.fromRGB(110, 230, 120), Duration = 300, Multiplier = 2, MaxBoostSeconds = 3600 },
+		CandyBoost = { Name = "Candy Boost", Kind = "Boost", Cost = 150, Order = 2, Icon = "🍬", Badge = "BEST VALUE", Description = "2x cash from your monsters for 10 minutes. Buying again adds time.", Color = Color3.fromRGB(255, 190, 60), Duration = 600, Multiplier = 2, MaxBoostSeconds = 3600 },
+		SpeedBoost = { Name = "Ghost Sprint", Kind = "Speed", Cost = 120, Order = 3, Icon = "💨", Description = "Run 40% faster for 5 minutes. Buying again adds time.", Color = Color3.fromRGB(120, 210, 255), Duration = 300, Multiplier = Config.SpeedBoost.Multiplier, MaxBoostSeconds = 3600 },
+		PumpkinHat = { Name = "Pumpkin Hat", Kind = "Hat", Cost = 300, Order = 4, Description = "A glowing jack-o-lantern on your head.", Color = Color3.fromRGB(255, 130, 30) },
+		ToxicHat = { Name = "Toxic Pumpkin", Kind = "Hat", Cost = 450, Order = 5, Icon = "☣️", Description = "A radioactive green jack-o-lantern.", Color = Color3.fromRGB(130, 255, 90), Tint = Color3.fromRGB(150, 255, 110) },
+		FrostHat = { Name = "Frost Pumpkin", Kind = "Hat", Cost = 600, Order = 6, Icon = "❄️", Description = "A frozen pumpkin crown, ice cold.", Color = Color3.fromRGB(150, 215, 255), Tint = Color3.fromRGB(160, 215, 255), HatSize = 1.85 },
+		MidnightHat = { Name = "Midnight Pumpkin", Kind = "Hat", Cost = 900, Order = 7, Icon = "🌙", Badge = "RARE", Description = "A giant violet pumpkin from the witching hour.", Color = Color3.fromRGB(190, 120, 255), Tint = Color3.fromRGB(190, 130, 255), HatSize = 2.1 },
+		GhostTrail = { Name = "Ghost Trail", Kind = "Trail", Cost = 500, Order = 8, Description = "A pale ghostly trail follows you.", Color = Color3.fromRGB(190, 230, 255) },
+		BloodTrail = { Name = "Blood Moon Trail", Kind = "Trail", Cost = 650, Order = 9, Icon = "🩸", Description = "A crimson streak under the blood moon.", Color = Color3.fromRGB(255, 60, 80), Color2 = Color3.fromRGB(120, 10, 40) },
+		ToxicTrail = { Name = "Witch Brew Trail", Kind = "Trail", Cost = 650, Order = 10, Icon = "🧪", Description = "Bubbling green potion in your wake.", Color = Color3.fromRGB(120, 255, 80), Color2 = Color3.fromRGB(40, 140, 60) },
+		CandyAura = { Name = "Candy Aura", Kind = "Aura", Cost = 800, Order = 11, Description = "Sweet sparkles swirl around you.", Color = Color3.fromRGB(255, 120, 200) },
+		SpiritAura = { Name = "Spirit Flame Aura", Kind = "Aura", Cost = 1000, Order = 12, Icon = "🔥", Description = "Cold blue spirit fire dances around you.", Color = Color3.fromRGB(90, 220, 255), Color2 = Color3.fromRGB(180, 140, 255) },
+		EmberAura = { Name = "Ember Aura", Kind = "Aura", Cost = 1000, Order = 13, Icon = "🌋", Description = "Glowing embers rise from your shoulders.", Color = Color3.fromRGB(255, 110, 30), Color2 = Color3.fromRGB(255, 220, 90) },
+		HalloweenTitle = { Name = "Halloween 2026 Title", Kind = "Title", Cost = 1000, Order = 14, Description = "Show 'Halloween 2026' above your head.", Color = Color3.fromRGB(190, 110, 255), TitleText = "Halloween 2026" },
+		GhoulTitle = { Name = "Night Ghoul Title", Kind = "Title", Cost = 1200, Order = 15, Icon = "💀", Description = "Show 'Night Ghoul' above your head.", Color = Color3.fromRGB(120, 255, 190), TitleText = "Night Ghoul" },
+		SlayerTitle = { Name = "Pumpkin Slayer Title", Kind = "Title", Cost = 1800, Order = 16, Icon = "🗡️", Description = "Show 'Pumpkin Slayer' above your head.", Color = Color3.fromRGB(255, 120, 50), TitleText = "Pumpkin Slayer" },
+		CandyKingTitle = { Name = "Candy King Title", Kind = "Title", Cost = 3000, Order = 17, Icon = "👑", Badge = "ELITE", Description = "Show 'Candy King' above your head.", Color = Color3.fromRGB(255, 205, 70), TitleText = "Candy King" },
+		HauntedEgg = { Name = "Haunted Egg", Kind = "Egg", Cost = 400, Order = 18, Description = "A real egg: Rare Egg (common) or Mythic Egg (rarer). Hatches into a real monster.", Color = Color3.fromRGB(150, 255, 160), EggWeights = { Rare = 70, Mythic = 30 } :: { [string]: number } },
+		MysteryEgg = { Name = "Mystery Egg", Kind = "Egg", Cost = 250, Order = 19, Icon = "❓", Badge = "RANDOM", Description = "A random egg: Basic, Rare, Mythic or even Lucky! You never know what hatches.", Color = Color3.fromRGB(200, 150, 255), EggWeights = { Basic = 40, Rare = 35, Mythic = 18, Lucky = 7 } :: { [string]: number } },
 	} :: { [string]: HalloweenItem },
 }
 
@@ -1103,6 +1140,45 @@ Config.Eggs.HalloweenMonster = {
 		HalloweenHexCat = 15, HalloweenCryptMummy = 15,
 		HalloweenCountFang = 10, HalloweenGraveGolem = 10,
 		HalloweenWraithReaper = 7, HalloweenPumpkinKing = 3,
+	},
+}
+
+-- Egg Keeper store ----------------------------------------------------------------------------------------------
+-- A man beside the Halloween zone gate sells the Halloween Monster Egg for ROBUX in bundles of 1/3/8, plus a timed
+-- Luck boost. They are repeatable Developer Products (a Game Pass can only be bought once), granted only in the
+-- single MarketplaceService.ProcessReceipt (MonetizationService routes the receipt to EggStoreService).
+-- The client only sends a bundle size (1/3/8) or "buy luck"; the server validates and opens the prompt.
+export type EggBundle = { Count: number, Discount: number }
+Config.EggStore = {
+	Egg = "HalloweenMonster",
+	EggPrice = 99, -- Robux per egg before the bundle discount (Buy 3 = 267, Buy 8 = 634)
+	Bundles = { { Count = 1, Discount = 0 }, { Count = 3, Discount = 0.1 }, { Count = 8, Discount = 0.2 } } :: { EggBundle },
+	-- Developer Product ids. 0 = NOT CREATED YET: the store shows the price but refuses to prompt (nothing is charged).
+	-- The owner creates the products in the Creator Dashboard (Monetization > Developer Products) and pastes the ids.
+	Products = {
+		Egg1 = 0, -- "Halloween Egg x1"  99 Robux
+		Egg3 = 0, -- "Halloween Egg x3"  267 Robux
+		Egg8 = 0, -- "Halloween Egg x8"  634 Robux
+		Luck = 0, -- "Egg Luck x2 (15 min)"  149 Robux
+	} :: { [string]: number },
+	-- Luck multiplies the hatch weight of every species of a boosted rarity, then the weights are renormalised.
+	Luck = {
+		Price = 149, -- Robux
+		Duration = 900, -- seconds added per purchase
+		MaxSeconds = 3600, -- the timer can never be stacked past this
+		Multiplier = 2,
+		Rarities = { Legendary = true, Mythic = true, Secret = true } :: { [string]: boolean },
+		Eggs = { HalloweenMonster = true } :: { [string]: boolean }, -- only these eggs are affected
+	},
+	Cooldown = 0.5, -- seconds between store requests from one player
+	Npc = {
+		Name = "Egg Keeper",
+		-- Right of the Zone 1 gate for a player walking in from the plaza (+X): the gate stands at x=100 with posts at
+		-- z=+-13, so he is on the plaza side of the zone wall (x<100), off the walking lane (|z|<14), facing the lane.
+		Position = Vector3.new(93, 0, 22),
+		FaceTowards = Vector3.new(80, 0, 4),
+		PromptDistance = 12,
+		StoreDistance = 18, -- the server only opens/accepts store actions this close to him
 	},
 }
 

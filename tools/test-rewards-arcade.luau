@@ -39,7 +39,7 @@ local services = {
 local env = {
 	game = { GetService = function(_, name) return assert(services[name], name) end },
 	workspace = workspace,
-	script = { Parent = { Config = "Config", GuiTheme = "GuiTheme", CartoonUI = "CartoonUI" } },
+	script = { Parent = { Config = "Config", GuiTheme = "GuiTheme", CartoonUI = "CartoonUI", HudKit = "HudKit" } },
 	require = function(name) return assert(modules[name], name) end,
 	task = { delay = function(seconds, callback) table.insert(scheduled, { Seconds = seconds, Callback = callback }) end },
 	TweenInfo = { new = function() return {} end },
@@ -54,23 +54,13 @@ modules.GuiTheme = {
 	Atlas = { Image = "rbxassetid://116704436062887", CellSize = r.Vector2.new(360, 296.75) },
 	IconRects = { Gift = r.Vector2.new(1, 0) },
 }
--- Artwork is a renderer boundary; the real controller still builds all native
--- controls, labels and prize geometry, and exercises every reward interaction.
-modules.CartoonUI = {
-	Icon = function(parent, key, size)
-		local icon = r.Instance.new("ImageLabel")
-		icon.Name, icon.BackgroundTransparency = key, 1
-		icon.Image, icon.Size, icon.Parent = "rbxassetid://123", r.UDim2.fromOffset(size, size), parent
-		return icon
-	end,
-	ApplyBackdrop = function(parent)
-		local art = r.Instance.new("ImageLabel")
-		art.Name, art.Parent = "CartoonBackdrop", parent
-		return art
-	end,
-}
+-- Use production art construction: its sibling ZIndex is part of rendering, so
+-- a stub with default layer 1 would hide the exact blank-panel regression.
+modules.CartoonUI = luau.load(fs.readFile("src/client/CartoonUI.luau"), { environment = env, injectGlobals = true })()
+modules.HudKit = luau.load(fs.readFile("src/client/HudKit.luau"), { environment = env, injectGlobals = true })()
 local module = luau.load(fs.readFile("src/client/RewardsArcade.luau"), { environment = env, injectGlobals = true })()
 local gui = r.Instance.new("ScreenGui")
+gui.ZIndexBehavior = r.Enum.ZIndexBehavior.Sibling
 local scale = r.Instance.new("UIScale"); scale.Scale, scale.Parent = 0.6, gui
 local panel = r.Instance.new("Frame"); panel.Parent, panel.Visible = gui, true
 local close = r.Instance.new("TextButton"); close.Name, close.Parent = "CloseButton", panel
@@ -86,6 +76,11 @@ local arcade = content.SpinArcade
 local spinButton = arcade.SpinInfo.FreeSpin
 check(content:FindFirstChild("DailyRewards") == nil, "The daily streak panel is gone; only the spin wheel remains")
 local disc = arcade.WheelMount.PrizeDisc
+check(root.ZIndex > panel.ZIndex, "Rewards content branch renders above the kit-styled panel surface in sibling mode")
+check(root.Header.Heading.ZIndex > root.Header.ZIndex, "Rewards title renders above its own opaque header")
+check(content.ZIndex > root.ZIndex and arcade.ZIndex > content.ZIndex, "Rewards scroll and canvas have explicit foreground layers")
+check(disc.RadialPrizeWedges.ZIndex > disc.ZIndex, "The actual prize wheel viewport renders in front of its disc")
+check(close.ZIndex > root.ZIndex, "Close control remains on the top modal branch")
 local function rect(item, width, height)
 	local w, h = item.Size.X.Scale * width + item.Size.X.Offset, item.Size.Y.Scale * height + item.Size.Y.Offset
 	return { x = item.Position.X.Scale * width + item.Position.X.Offset - item.AnchorPoint.X * w,
@@ -131,7 +126,9 @@ end
 check(totalWeight > 0, "Spin odds have positive total weight")
 state.SpinReadyIn = 59
 controller:Refresh(state)
+check(root.Header.Heading.Text == "Lucky Wheel", "Wheel window carries the Lucky Wheel title")
 check(not spinButton.Active, "Cooldown disables the spin request")
+check(arcade.SpinHeading.Text == "Next FREE spin in 0:59", "Kit-style countdown line shows the remaining free-spin time")
 check(not spinButton:FindFirstChildOfClass("UIGradient").Enabled, "Unavailable free spin has no active purchase sheen")
 spinButton.Activated:Fire()
 check(spins == 0, "Disabled spin cannot request a reward even if Activated fires")

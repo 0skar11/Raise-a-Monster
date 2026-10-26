@@ -31,7 +31,7 @@ local modules = { Config = config, MonsterMath = { FormatNumber = tostring }, Gu
 local camera = { ViewportSize = r.Vector2.new(1096, 676), GetPropertyChangedSignal = changed }
 local workspace = { CurrentCamera = camera, GetPropertyChangedSignal = changed }
 local services = {
-	Players = { LocalPlayer = {} }, ReplicatedStorage = { Shared = { Config = "Config", MonsterMath = "MonsterMath" } },
+	Players = { LocalPlayer = {}, GetPlayers = function() return {} end, PlayerAdded = signal(), PlayerRemoving = signal() }, ReplicatedStorage = { Shared = { Config = "Config", MonsterMath = "MonsterMath" } },
 	TweenService = {}, RunService = { IsStudio = function() return false end },
 	GuiService = { GetGuiInset = function() return r.Vector2.new(0, 36), r.Vector2.zero end },
 }
@@ -41,7 +41,7 @@ if options.Market then services.MarketplaceService = { GetProductInfo = function
 services.RunService.IsStudio = function() return options.Studio == true end
 env.game = { GetService = function(_, name) return assert(services[name], name) end }
 env.workspace = workspace
-env.script = { Parent = { UI = "UI", GuiTheme = "GuiTheme", TravelControls = "TravelControls", RewardsArcade = "RewardsArcade", MonsterForge = "MonsterForge", CartoonUI = "CartoonUI" } }
+env.script = { Parent = { UI = "UI", GuiTheme = "GuiTheme", TravelControls = "TravelControls", RewardsArcade = "RewardsArcade", MonsterForge = "MonsterForge", CartoonUI = "CartoonUI", HudKit = "HudKit" } }
 env.require = function(name) return assert(modules[name], name) end
 -- Decorative images are real GuiObjects; network loading is an engine concern.
 modules.CartoonUI = { Icon = function(parent, _, size)
@@ -57,6 +57,7 @@ for _, method in { "WeaponPreview", "GearPreview" } do
 		local preview = r.Instance.new("ViewportFrame"); preview.Name = method; preview.Parent = parent
 	end
 end
+modules.HudKit = luau.load(fs.readFile("src/client/HudKit.luau"), { environment = env, injectGlobals = true })()
 modules.MonsterForge = luau.load(fs.readFile("src/client/MonsterForge.luau"), { environment = env, injectGlobals = true })()
 local source = fs.readFile("src/client/Features.luau"):gsub("return Features%s*$", [[
 return { Build = buildShopExtras, Refresh = function() refreshShopCatalog(); refreshAdultChooser() end, Context = function(newUi, stateGetter, allRemotes)

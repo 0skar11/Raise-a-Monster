@@ -81,6 +81,28 @@ type AttackState = {
 }
 local attacks: { [Player]: AttackState } = {}
 local tags: { [Player]: Tag } = {}
+local pvpOff: { [Player]: boolean } = {} -- PvP is on by default; players opt out
+local protectedUntil: { [Player]: number } = {} -- os.clock() deadline of the death protection
+local lastToggle: { [Player]: number } = {}
+
+local function protectionLeft(player: Player): number
+	local deadline = protectedUntil[player]
+	if not deadline then return 0 end
+	local left = deadline - os.clock()
+	if left <= 0 then
+		protectedUntil[player] = nil
+		return 0
+	end
+	return left
+end
+
+local function sendPvPState(player: Player)
+	remotes.PvPState:FireClient(player, pvpOff[player] ~= true, math.ceil(protectionLeft(player)))
+end
+
+local function canBeHit(player: Player): boolean
+	return pvpOff[player] ~= true and protectionLeft(player) <= 0
+end
 
 local function clearAttack(player: Player)
 	local state = attacks[player]
@@ -239,10 +261,14 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 	if CombatService.IsInSafeZone(root.Position) then
 		return
 	end
+	-- PvP off (or still under death protection) means no hitting players either, so protection can't be abused
+	if not canBeHit(player) then
+		return
+	end
 	local victim: Player? = nil
 	local victimDistance = math.huge
 	for _, other in Players:GetPlayers() do
-		if other ~= player then
+		if other ~= player and canBeHit(other) then
 			local otherRoot = getRoot(other)
 			local otherHumanoid = getHumanoid(other)
 			if otherRoot and otherHumanoid and otherHumanoid.Health > 0 then
@@ -260,8 +286,15 @@ local function swing(player: Player, tool: Tool, damageMultiplier: number, extra
 		if victimHumanoid and victimRoot then
 			tags[victim] = { Attacker = player, Time = now }
 			local passMultiplier = if MonsterService.HasPass(player, "DoubleDamage") then Config.DoubleDamageMultiplier else 1
-			local damage = math.floor((pvpDamage + MonsterService.GetFollowerDamageBonus(player) * Config.Followers.PvpDamageScale) * damageMultiplier * passMultiplier)
+			local rawDamage = math.floor((pvpDamage + MonsterService.GetFollowerDamageBonus(player) * Config.Followers.PvpDamageScale) * damageMultiplier * passMultiplier)
+			-- Weapon multipliers are tuned for monsters; against players one hit is capped to a share of max health
+			local damage = math.max(1, math.min(rawDamage, math.floor(victimHumanoid.MaxHealth * Config.PvP.MaxHitFraction)))
+			local killed = victimHumanoid.Health - damage <= 0
 			victimHumanoid:TakeDamage(damage)
+			if killed then
+				protectedUntil[victim] = os.clock() + Config.PvP.DeathProtection
+				sendPvPState(victim)
+			end
 			playSound(victimRoot, Config.Combat.Sounds.Hit, 0.8)
 			spawnHitVfx(victimRoot.Position)
 			remotes.HitFeedback:FireClient(player, victimRoot.Position + Vector3.new(0, 3, 0), damage, false)
@@ -371,9 +404,45 @@ function CombatService.GiveWeapons(player: Player, ownedPasses: { [string]: bool
 	if humanoid and humanoid.Health > 0 then humanoid:EquipTool(equippedTool) end
 end
 
+local started = false
+
+-- SetPvP toggle + state sync; called once from init.server
+function CombatService.Start()
+	if started then return end
+	started = true
+	remotes.SetPvP.OnServerEvent:Connect(function(player: Player, enabled: unknown)
+		if type(enabled) ~= "boolean" then return end
+		local now = os.clock()
+		if lastToggle[player] and now - lastToggle[player] < 1 then
+			sendPvPState(player)
+			return
+		end
+		lastToggle[player] = now
+		pvpOff[player] = if enabled then nil else true
+		sendPvPState(player)
+	end)
+	Players.PlayerAdded:Connect(function(player) task.delay(3, function() if player.Parent then sendPvPState(player) end end) end)
+	for _, player in Players:GetPlayers() do sendPvPState(player) end
+	-- keeps the client countdown honest: it resends once when protection ends
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			for player, deadline in protectedUntil do
+				if os.clock() >= deadline then
+					protectedUntil[player] = nil
+					sendPvPState(player)
+				end
+			end
+		end
+	end)
+end
+
 function CombatService.CleanupPlayer(player: Player)
 	clearAttack(player)
 	lastSwing[player] = nil
+	pvpOff[player] = nil
+	protectedUntil[player] = nil
+	lastToggle[player] = nil
 	tags[player] = nil
 	for victim, tag in tags do
 		if tag.Attacker == player then

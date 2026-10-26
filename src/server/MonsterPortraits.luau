@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local Config = require(ReplicatedStorage.Shared.Config)
 local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local PlotService = require(script.Parent.PlotService)
 
@@ -11,6 +12,7 @@ local Portraits = {}
 type Bank = {
 	Folder: Folder,
 	Desired: { [string]: any },
+	Extra: { [string]: any }, -- species previews requested for the hatch roll (kept across Sync)
 	Running: boolean,
 	Alive: boolean,
 }
@@ -43,11 +45,7 @@ local function strip(model: Model)
 	model:PivotTo(CFrame.new())
 end
 
--- Accept the authoritative monster dictionary. Never accepts client-submitted data.
--- No cloning occurs for unchanged appearance keys; at most two builds per frame.
-function Portraits.Sync(player: Player, monsters: { [string]: any })
-	local playerGui = player:FindFirstChildOfClass("PlayerGui")
-	if not playerGui then return end
+local function ensureBank(player: Player, playerGui: PlayerGui): Bank
 	local bank = banks[player]
 	if not bank or bank.Folder.Parent ~= playerGui then
 		if bank then bank.Alive = false; bank.Folder:Destroy() end
@@ -55,13 +53,14 @@ function Portraits.Sync(player: Player, monsters: { [string]: any })
 		folder.Name = "MonsterPortraitModels"
 		folder:SetAttribute("OwnerUserId", player.UserId)
 		folder.Parent = playerGui
-		bank = { Folder = folder, Desired = {}, Running = false, Alive = true }
+		bank = { Folder = folder, Desired = {}, Extra = {}, Running = false, Alive = true }
 		banks[player] = bank
 	end
-	local desired: { [string]: any } = {}
-	for _, monster in monsters do desired[key(monster)] = table.clone(monster) end
-	bank.Desired = desired
-	for _, model in bank.Folder:GetChildren() do if not desired[model.Name] then model:Destroy() end end
+	return bank :: Bank
+end
+
+-- Builds whatever is still missing from bank.Desired, at most two models per frame.
+local function startBuilder(bank: Bank, playerGui: PlayerGui)
 	if bank.Running then return end
 	bank.Running = true
 	local currentBank = bank
@@ -95,6 +94,44 @@ function Portraits.Sync(player: Player, monsters: { [string]: any })
 		end
 		currentBank.Running = false
 	end)
+end
+
+-- Accept the authoritative monster dictionary. Never accepts client-submitted data.
+-- No cloning occurs for unchanged appearance keys; at most two builds per frame.
+function Portraits.Sync(player: Player, monsters: { [string]: any })
+	local playerGui = player:FindFirstChildOfClass("PlayerGui")
+	if not playerGui then return end
+	local bank = ensureBank(player, playerGui)
+	local desired: { [string]: any } = {}
+	for _, monster in monsters do desired[key(monster)] = table.clone(monster) end
+	for appearance, preview in bank.Extra do desired[appearance] = preview end
+	bank.Desired = desired
+	for _, model in bank.Folder:GetChildren() do if not desired[model.Name] then model:Destroy() end end
+	startBuilder(bank, playerGui)
+end
+
+-- Baby-stage previews of species the player may not own yet (the hatch roll shows every monster in the egg).
+-- Requests accumulate (several eggs can hatch at once) up to MAX_EXTRA; only server-known species are built.
+local MAX_EXTRA = 40
+function Portraits.Request(player: Player, species: { string })
+	local playerGui = player:FindFirstChildOfClass("PlayerGui")
+	if not playerGui then return end
+	local bank = ensureBank(player, playerGui)
+	local extra: { [string]: any } = {}
+	for _, name in species do
+		if Config.Species[name] then
+			local preview = { Id = "Preview", Species = name, Level = 1, Xp = 0, Hunger = 100, Happiness = 100, Slot = 0 }
+			extra[key(preview)] = preview
+		end
+	end
+	local count = 0
+	for _ in bank.Extra do count += 1 end
+	if count > MAX_EXTRA then bank.Extra = {} end
+	for appearance, preview in extra do
+		bank.Extra[appearance] = preview
+		bank.Desired[appearance] = preview
+	end
+	startBuilder(bank, playerGui)
 end
 
 function Portraits.Remove(player: Player)

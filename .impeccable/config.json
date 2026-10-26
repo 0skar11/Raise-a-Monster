@@ -17,6 +17,21 @@
         ],
         "createdAt": "2026-10-25T10:46:56.611Z",
         "reason": "agent decision: Halloween purple/orange theme in an internal dev-only animation preview, flat colors, no gradients"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "fredoka",
+        "createdAt": "2026-10-26T10:20:36.768Z",
+        "reason": "Prototype mirrors the game's own FredokaOne HUD font (src/client/GuiTheme.luau); not a web brand font"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "docs/hatch-roll-prototype.html"
+        ],
+        "createdAt": "2026-10-26T10:27:00.216Z",
+        "reason": "Requested feature: the reel is a one-shot case-opening roll that decelerates and stops on the hatched monster, not a continuous marquee (user asked for this animation)"
       }
     ]
   }

@@ -18,12 +18,14 @@ local Features = require(script.Features)
 local MonsterAnimate = require(script.MonsterAnimate)
 local GearAnimate = require(script.GearAnimate)
 local CombatFx = require(script.CombatFx)
+local PvPToggle = require(script.PvPToggle)
 local Settings = require(script.Settings)
 local MonsterInventory = require(script.MonsterVault)
 local Effects = require(script.Effects)
 local CashCounterFormatter = require(script.CashCounterFormatter)
 local OfflineEarnings = require(script.OfflineEarnings)
 local HalloweenUI = require(script.HalloweenUI)
+local EggStore = require(script.EggStore)
 local CandyCounter = require(script.CandyCounter)
 local HalloweenDecor = require(script.HalloweenDecor)
 local FollowerSmooth = require(script.FollowerSmooth)
@@ -33,6 +35,7 @@ local BossLootPanel = require(script.BossLootPanel)
 local BossSummonNotice = require(script.BossSummonNotice)
 local HalloweenPortalFx = require(script.HalloweenPortalFx)
 local AdChest = require(script.AdChest)
+local HatchRoll = require(script.HatchRoll)
 
 local player = Players.LocalPlayer
 -- Camera zoom limits: keeps the view close enough to read the plaza and stops zooming out to see the whole map.
@@ -57,6 +60,7 @@ end)
 Settings.Init(ui)
 task.spawn(CandyCounter.Init, player:WaitForChild("PlayerGui"), remotes) -- own thread so a missing GUI can't stall startup
 HalloweenUI.Init(ui, remotes)
+EggStore.Init(ui, remotes, function() return state end)
 task.spawn(HalloweenDecor.Init) -- idle bob/blink for the Studio-authored Halloween decorations (client-local, own thread)
 task.spawn(FollowerSmooth.Init) -- display-rate gliding for follower monsters (client-local, own thread)
 task.spawn(HalloweenPortalFx.Init)
@@ -321,10 +325,12 @@ GearAnimate.Start()
 
 -- ضربات الوحوش، أرقام الضرر، والموسيقى
 CombatFx.Start(ui, remotes, UI.Button)
+PvPToggle.Start(remotes, player:WaitForChild("PlayerGui") :: PlayerGui)
 Effects.Start(ui)
 BossFx.Start(remotes, player:WaitForChild("PlayerGui") :: PlayerGui)
 BossLootPanel.Start(remotes, player:WaitForChild("PlayerGui") :: PlayerGui)
 BossSummonNotice.Start(remotes, player:WaitForChild("PlayerGui") :: PlayerGui)
+HatchRoll.Start(remotes, function() return state end) -- egg-hatch reel; the server already chose the monster
 AdminPanel.Start(player:WaitForChild("PlayerGui") :: PlayerGui, remotes) -- only appears for Config.Admin.Usernames
 
 -- العدّاد في لوحة الوحش (Play cooldown) بيتحدث مع كل StateUpdate، وكمان كل نص ثانية.

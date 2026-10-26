@@ -22,9 +22,11 @@ local MonsterMath = require(ReplicatedStorage.Shared.MonsterMath)
 local PumpkinVisual = require(ReplicatedStorage.Shared.PumpkinVisual)
 local PlotService = require(script.Parent.PlotService)
 local Build = require(script.Parent.Build)
+local HalloweenProps = require(script.Parent.HalloweenProps)
 local DataService = require(script.Parent.DataService)
 local MonsterService = require(script.Parent.MonsterService)
 local CombatService = require(script.Parent.CombatService)
+local CharacterService = require(script.Parent.CharacterService)
 local MonsterAttack = require(script.Parent.MonsterAttack)
 local MonsterModels = require(script.Parent.MonsterModels)
 local ZoneService = require(script.Parent.ZoneService)
@@ -279,11 +281,25 @@ local function applyCosmetics(player: Player)
 	local equipped = data.Equipped
 
 	if equipped.Hat and data.Owned[equipped.Hat] then
-		local hat = PumpkinVisual.Create("PumpkinHat", 1.7, CFrame.new())
+		local hatItem = settings.Items[equipped.Hat]
+		local hat = PumpkinVisual.Create("PumpkinHat", hatItem.HatSize or 1.7, CFrame.new(), hatItem.Tint)
 		hat.Parent = container
 		hat.CFrame = head.CFrame * CFrame.new(0, head.Size.Y / 2 + hat.Size.Y / 2 - 0.25, 0)
+		if hatItem.Tint then
+			-- The pumpkin texture is orange and Part.Color never tints a textured mesh, so a glowing untextured shell in
+			-- the hat's colour is laid over it (the carved face still shows through).
+			local shell = PumpkinVisual.Create("HatTint", (hatItem.HatSize or 1.7) * 1.04, hat.CFrame, hatItem.Tint)
+			local shellMesh = shell:FindFirstChildOfClass("SpecialMesh")
+			if shellMesh then
+				shellMesh.TextureId = ""
+			end
+			shell.Material = Enum.Material.Neon
+			shell.Transparency = 0.4
+			shell.Parent = container
+			weldTo(shell, hat)
+		end
 		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 150, 50)
+		light.Color = if hatItem.Tint then hatItem.Color else Color3.fromRGB(255, 150, 50)
 		light.Range = 10
 		light.Brightness = 1
 		light.Shadows = false
@@ -310,7 +326,8 @@ local function applyCosmetics(player: Player)
 			trail.Lifetime = 0.9
 			trail.MinLength = 0.1
 			trail.LightEmission = 0.6
-			trail.Color = ColorSequence.new(settings.Items[equipped.Trail].Color, Color3.fromRGB(150, 120, 255))
+			local trailItem = settings.Items[equipped.Trail]
+			trail.Color = ColorSequence.new(trailItem.Color, trailItem.Color2 or Color3.fromRGB(150, 120, 255))
 			trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
 			trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.2) })
 			trail.Parent = anchor
@@ -319,39 +336,147 @@ local function applyCosmetics(player: Player)
 			local emitter = Instance.new("ParticleEmitter")
 			emitter.Name = "CandyAura"
 			emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-			emitter.Color = ColorSequence.new(settings.Items[equipped.Aura].Color, Color3.fromRGB(255, 220, 90))
-			emitter.LightEmission = 0.7
-			emitter.Rate = 18
-			emitter.Lifetime = NumberRange.new(1, 1.8)
-			emitter.Speed = NumberRange.new(1, 3)
+			local auraItem = settings.Items[equipped.Aura]
+			emitter.Color = ColorSequence.new(auraItem.Color, auraItem.Color2 or Color3.fromRGB(255, 220, 90))
+			emitter.LightEmission = 1
+			emitter.Rate = 70
+			emitter.Lifetime = NumberRange.new(1.2, 2.2)
+			emitter.Speed = NumberRange.new(2, 5)
+			emitter.Acceleration = Vector3.new(0, 2.5, 0)
 			emitter.SpreadAngle = Vector2.new(180, 180)
-			emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
-			emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+			emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0) })
+			emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.7, 0.3), NumberSequenceKeypoint.new(1, 1) })
+			emitter.Rotation = NumberRange.new(0, 360)
+			emitter.RotSpeed = NumberRange.new(-90, 90)
 			emitter.Shape = Enum.ParticleEmitterShape.Sphere
+			emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
 			emitter.Parent = anchor
+			-- a soft glow cloud around the body so the aura reads from far away
+			local glow = Instance.new("ParticleEmitter")
+			glow.Name = "AuraGlow"
+			glow.Texture = "rbxasset://textures/particles/smoke_main.dds"
+			glow.Color = ColorSequence.new(auraItem.Color)
+			glow.LightEmission = 1
+			glow.Rate = 10
+			glow.Lifetime = NumberRange.new(1.2, 1.8)
+			glow.Speed = NumberRange.new(0.2, 0.8)
+			glow.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 3.5), NumberSequenceKeypoint.new(1, 5.5) })
+			glow.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.75), NumberSequenceKeypoint.new(1, 1) })
+			glow.Parent = anchor
+			local auraLight = Instance.new("PointLight")
+			auraLight.Color = auraItem.Color
+			auraLight.Range = 14
+			auraLight.Brightness = 1.5
+			auraLight.Shadows = false
+			auraLight.Parent = anchor
 		end
 	end
 
 	if equipped.Title and data.Owned[equipped.Title] then
 		local item = settings.Items[equipped.Title]
+		-- Prestige: the dearer the title, the richer the plaque (rank among all titles by Candy price, 1 to 4).
+		local pricier, titles = 0, 0
+		for _, other in settings.Items do
+			if other.Kind == "Title" then
+				titles += 1
+				if other.Cost < item.Cost then pricier += 1 end
+			end
+		end
+		local tier = math.clamp(1 + math.floor(pricier / math.max(1, titles - 1) * 3.999), 1, 4)
+		local ornaments = { "", "✦", item.Icon or "🎃", "✦ " .. (item.Icon or "🎃") }
+		local ornament = ornaments[tier]
+		local message = (item.TitleText or item.Name)
+		if ornament ~= "" then message = ornament .. " " .. message .. " " .. ornament end
+		local width = math.clamp((utf8.len(message) or 12) * 8 + 34, 120, 260)
+		local height = 20 + tier * 2
 		local gui = Instance.new("BillboardGui")
 		gui.Name = "HalloweenTitle"
-		gui.Size = UDim2.fromOffset(190, 28)
+		gui.Size = UDim2.fromOffset(width + 12, height + 12)
 		gui.StudsOffset = Vector3.new(0, 3.1, 0)
 		gui.MaxDistance = 70
 		gui.AlwaysOnTop = false
 		gui.LightInfluence = 0
 		gui.Adornee = head
 		gui.Parent = container
+		local function pill(parent: Instance, name: string, size: UDim2): Frame
+			local frame = Instance.new("Frame")
+			frame.Name = name
+			frame.AnchorPoint = Vector2.new(0.5, 0.5)
+			frame.Position = UDim2.fromScale(0.5, 0.5)
+			frame.Size = size
+			frame.BorderSizePixel = 0
+			frame.Parent = parent
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0.5, 0)
+			corner.Parent = frame
+			return frame
+		end
+		if tier >= 3 then
+			-- soft halo behind the plaque
+			local halo = pill(gui, "Halo", UDim2.fromOffset(width + 10, height + 10))
+			halo.BackgroundColor3 = item.Color
+			halo.BackgroundTransparency = if tier == 4 then 0.55 else 0.72
+		end
+		local plaque = pill(gui, "Plaque", UDim2.fromOffset(width, height))
+		plaque.BackgroundColor3 = Color3.new(1, 1, 1)
+		local plaqueGradient = Instance.new("UIGradient")
+		plaqueGradient.Color = ColorSequence.new(Color3.fromRGB(46, 26, 74):Lerp(item.Color, 0.18), Color3.fromRGB(14, 8, 26))
+		plaqueGradient.Rotation = 90
+		plaqueGradient.Parent = plaque
+		local rim = Instance.new("UIStroke")
+		rim.Color = item.Color
+		rim.Thickness = 1 + tier * 0.5
+		rim.Parent = plaque
+		if tier >= 2 then
+			local rimGradient = Instance.new("UIGradient")
+			local bright = item.Color:Lerp(Color3.new(1, 1, 1), 0.6)
+			rimGradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, item.Color),
+				ColorSequenceKeypoint.new(0.5, bright),
+				ColorSequenceKeypoint.new(1, item.Color),
+			})
+			rimGradient.Parent = rim
+			-- glossy highlight across the top half
+			local shine = pill(plaque, "Shine", UDim2.new(0.88, 0, 0.36, 0))
+			shine.Position = UDim2.fromScale(0.5, 0.3)
+			shine.BackgroundColor3 = Color3.new(1, 1, 1)
+			shine.BackgroundTransparency = 0.82
+		end
+		if tier == 4 then
+			-- inner gold line for the top tier
+			local inner = pill(plaque, "InnerLine", UDim2.new(1, -6, 1, -6))
+			inner.BackgroundTransparency = 1
+			local innerStroke = Instance.new("UIStroke")
+			innerStroke.Color = Color3.fromRGB(255, 226, 140)
+			innerStroke.Thickness = 1
+			innerStroke.Transparency = 0.25
+			innerStroke.Parent = inner
+		end
 		local label = Instance.new("TextLabel")
-		label.Size = UDim2.fromScale(1, 1)
+		label.Name = "Text"
+		label.AnchorPoint = Vector2.new(0.5, 0.5)
+		label.Position = UDim2.fromScale(0.5, 0.5)
+		label.Size = UDim2.new(1, -18, 1, -6)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.FredokaOne
 		label.TextScaled = true
-		label.Text = "🎃 " .. (item.TitleText or item.Name)
-		label.TextColor3 = item.Color
-		label.TextStrokeTransparency = 0.2
-		label.Parent = gui
+		label.Text = message
+		label.TextColor3 = Color3.new(1, 1, 1)
+		label.Parent = plaque
+		local textGradient = Instance.new("UIGradient")
+		textGradient.Color = if tier == 4
+			then ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 250, 220)),
+				ColorSequenceKeypoint.new(0.55, item.Color),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 190, 70)),
+			})
+			else ColorSequence.new(Color3.new(1, 1, 1), item.Color)
+		textGradient.Rotation = 90
+		textGradient.Parent = label
+		local textStroke = Instance.new("UIStroke")
+		textStroke.Color = Color3.fromRGB(12, 6, 24)
+		textStroke.Thickness = 1.5
+		textStroke.Parent = label
 	end
 
 	container.Parent = character
@@ -572,59 +697,8 @@ end
 
 local ORANGE = Color3.fromRGB(240, 120, 25)
 
-local function jackOLantern(parent: Instance, position: Vector3, size: number, yaw: number, lit: boolean, tint: Color3?)
-	local width = size * 1.15
-	local height = PumpkinVisual.MeshSize.Y * width / PumpkinVisual.MeshSize.X
-	local base = CFrame.new(position + Vector3.new(0, height * 0.5, 0)) * CFrame.Angles(0, yaw, 0)
-	local body = PumpkinVisual.Create("Pumpkin", width, base, tint)
-	body.Parent = parent
-	if lit then
-		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 150, 50)
-		light.Range = settings.Atmosphere.LanternRange
-		light.Brightness = 1.3
-		light.Shadows = false
-		light.Parent = body
-	end
-end
-
-local function deadTree(parent: Instance, position: Vector3, height: number, yaw: number)
-	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
-	local wood = Color3.fromRGB(46, 34, 40)
-	local common = { CanCollide = false, CanQuery = false, CanTouch = false, Color = wood, Material = Enum.Material.Wood, Parent = parent }
-	local function part(props: { [string]: any }): Part
-		for key, value in common do props[key] = value end
-		return makePart(props)
-	end
-	part({ Name = "DeadTrunk", Size = Vector3.new(1.4, height, 1.4), CFrame = base * CFrame.new(0, height / 2, 0) })
-	for index, side in { -1, 1, -1 } do
-		part({
-			Name = "DeadBranch",
-			Size = Vector3.new(0.7, height * 0.5, 0.7),
-			CFrame = base * CFrame.new(side * height * 0.18, height * (0.55 + 0.12 * index), 0) * CFrame.Angles(0, index, side * math.rad(40)),
-		})
-	end
-end
-
-local function tombstone(parent: Instance, position: Vector3, yaw: number)
-	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
-	local stone = Color3.fromRGB(110, 110, 120)
-	makePart({ Name = "Tombstone", Size = Vector3.new(3, 3.4, 0.9), CFrame = base * CFrame.new(0, 1.7, 0), CanCollide = false, CanQuery = false, CanTouch = false, Color = stone, Material = Enum.Material.Slate, Parent = parent })
-	makePart({
-		Name = "TombstoneTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 3, 3),
-		CFrame = base * CFrame.new(0, 3.4, 0) * CFrame.Angles(0, math.pi / 2, 0),
-		CanCollide = false, CanQuery = false, CanTouch = false, Color = stone, Material = Enum.Material.Slate, Parent = parent,
-	})
-end
-
-local function clearOf(x: number, z: number, margin: number): boolean
-	for _, zone in pumpkinSettings.KeepClear do
-		if math.sqrt((zone.X - x) ^ 2 + (zone.Z - z) ^ 2) < zone.Radius + margin then
-			return false
-		end
-	end
-	return true
-end
+local jackOLantern = HalloweenProps.JackOLantern
+local clearOf = HalloweenProps.ClearOf
 
 -- Workspace.HalloweenWorld is authored in Studio (Edit mode) so the decorations and the merchant are visible
 -- without pressing Play and stay wherever the designer moved them. The server only ADOPTS what is there. Only
@@ -682,70 +756,7 @@ local function buildProps()
 	local parent = authored or folder("Props", world)
 	parent:SetAttribute("AutoBuilt", true)
 	propFolder = parent :: Folder
-	local a = settings.Atmosphere
-	local random = Random.new(a.Seed)
-	local placed, attempts = 0, 0
-	while placed < a.PumpkinPropCount and attempts < a.PumpkinPropCount * 12 do
-		attempts += 1
-		local x = random:NextNumber(Config.Map.PlazaMinX + 2, Config.Map.ZonesStartX - 6)
-		local z = random:NextNumber(-Config.Map.PlazaHalfZ + 14, Config.Map.PlazaHalfZ - 14)
-		-- keep the path in front of the zone gate and the shop area open
-		if clearOf(x, z, 4) then
-			placed += 1
-			local pos = Vector3.new(x, 0.2, z)
-			local yaw = random:NextNumber(0, math.pi * 2)
-			local kind = placed % 6
-			if kind == 0 then
-				deadTree(parent, pos, random:NextNumber(8, 13), yaw)
-			elseif kind == 1 then
-				tombstone(parent, pos, yaw)
-			elseif kind == 2 or kind == 3 then
-				jackOLantern(parent, pos, random:NextNumber(2.4, 3.6), yaw, true)
-			else
-				-- a small pile: one lit jack and two plain pumpkins
-				jackOLantern(parent, pos, 3, yaw, true)
-				jackOLantern(parent, pos + Vector3.new(2.6, 0, 1.2), 2, yaw + 1, false)
-				jackOLantern(parent, pos + Vector3.new(-2.2, 0, 1.8), 1.7, yaw + 2, false, Color3.fromRGB(225, 95, 20))
-			end
-		end
-	end
-	-- a lantern on each side of every zone gate road
-	for index = 1, #Config.Zones do
-		local gateX = Config.Map.ZonesStartX + (index - 1) * Config.Map.ZoneLength
-		for _, side in { -1, 1 } do
-			jackOLantern(parent, Vector3.new(gateX + 4, 0.2, side * (Config.Map.RoadWidth / 2 + 7)), 3.6, if side < 0 then math.pi / 2 else -math.pi / 2, true)
-		end
-	end
-	-- drifting embers and wisps over the whole plaza
-	local centers = {}
-	for z = -200, 200, 100 do
-		table.insert(centers, Vector3.new((Config.Map.PlazaMinX + Config.Map.ZonesStartX) / 2, 14, z))
-	end
-	for _, center in centers do
-		local emitterPart = makePart({
-			Name = "AmbientEmitter", Size = Vector3.new(100, 8, 90), Position = center, Transparency = 1,
-			CanCollide = false, CanQuery = false, CanTouch = false, Parent = parent,
-		})
-		for _, spec in {
-			{ Color = Color3.fromRGB(255, 140, 40), Rate = 6, Speed = 1.5 },
-			{ Color = Color3.fromRGB(170, 120, 255), Rate = 4, Speed = 0.8 },
-		} do
-			local emitter = Instance.new("ParticleEmitter")
-			emitter.Name = "Wisps"
-			emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-			emitter.Color = ColorSequence.new(spec.Color)
-			emitter.LightEmission = 0.8
-			emitter.Rate = spec.Rate
-			emitter.Lifetime = NumberRange.new(7, 12)
-			emitter.Speed = NumberRange.new(spec.Speed * 0.5, spec.Speed)
-			emitter.Acceleration = Vector3.new(0, 0.4, 0)
-			emitter.SpreadAngle = Vector2.new(180, 180)
-			emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.7), NumberSequenceKeypoint.new(1, 0) })
-			emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.2), NumberSequenceKeypoint.new(1, 1) })
-			emitter.Shape = Enum.ParticleEmitterShape.Box
-			emitter.Parent = emitterPart
-		end
-	end
+	HalloweenProps.Populate(parent)
 end
 
 -- merchant --------------------------------------------------------------------------------------------
@@ -791,55 +802,274 @@ end
 -- Fallback only (the authored merchant is missing): a simple code-built merchant at Config.Halloween.Merchant,
 -- built into the same HalloweenWorld/Merchant folder and tagged so the normal adoption path wires it.
 local function buildDefaultMerchant()
-	local info = settings.Merchant
-	local model = Instance.new("Model")
-	model.Name = "PumpkinMerchant"
-	local origin = CFrame.lookAt(info.Position + Vector3.new(0, 0.2, 0), Vector3.new(info.FaceTowards.X, info.Position.Y + 0.2, info.FaceTowards.Z))
-	local function limb(name: string, size: Vector3, offset: Vector3, color: Color3, material: Enum.Material?, shape: Enum.PartType?): Part
-		return makePart({
-			Name = name, Size = size, CFrame = origin * CFrame.new(offset), Color = color,
-			Material = material or Enum.Material.Fabric, Shape = shape or Enum.PartType.Block,
-			CanCollide = false, CanQuery = true, CanTouch = false, Parent = model,
-		})
-	end
-	local robe = Color3.fromRGB(58, 30, 84)
-	limb("LeftLeg", Vector3.new(1, 2, 1), Vector3.new(-0.5, 1, 0), robe)
-	limb("RightLeg", Vector3.new(1, 2, 1), Vector3.new(0.5, 1, 0), robe)
-	local torso = limb("Torso", Vector3.new(2, 2, 1), Vector3.new(0, 3, 0), robe)
-	limb("RobeHem", Vector3.new(2.6, 1.6, 1.5), Vector3.new(0, 1.4, 0), Color3.fromRGB(45, 22, 66))
-	limb("LeftArm", Vector3.new(1, 2, 1), Vector3.new(-1.5, 3, -0.3), Color3.fromRGB(70, 38, 100))
-	limb("RightArm", Vector3.new(1, 2, 1), Vector3.new(1.5, 3, -0.3), Color3.fromRGB(70, 38, 100))
-	local head = limb("Head", Vector3.new(2.5, 2.2, 2.5), Vector3.new(0, 5.2, 0), ORANGE, Enum.Material.SmoothPlastic, Enum.PartType.Ball)
-	PumpkinVisual.Fit(head)
-	local brim = limb("HatBrim", Vector3.new(0.25, 3.4, 3.4), Vector3.new(0, 6.15, 0), Color3.fromRGB(30, 20, 40), Enum.Material.Fabric, Enum.PartType.Cylinder)
-	brim.CFrame = origin * CFrame.new(0, 6.15, 0) * CFrame.Angles(0, 0, math.pi / 2)
-	limb("HatCone", Vector3.new(2, 1.9, 2), Vector3.new(0, 7.15, 0), Color3.fromRGB(30, 20, 40))
-	local lantern = limb("Lantern", Vector3.new(0.9, 1.1, 0.9), Vector3.new(2.1, 2.2, -0.9), Color3.fromRGB(255, 160, 50), Enum.Material.Neon)
-	local glow = Instance.new("PointLight")
-	glow.Color = Color3.fromRGB(255, 150, 60)
-	glow.Range = 22
-	glow.Brightness = 1.6
-	glow.Parent = lantern
-	-- a counter piled with pumpkins in front of him
-	limb("Counter", Vector3.new(7, 3, 2.4), Vector3.new(0, 1.5, -3.2), Color3.fromRGB(80, 50, 32), Enum.Material.Wood)
-	jackOLantern(model, (origin * CFrame.new(-2, 3, -3.2)).Position, 1.8, 0.3, true)
-	jackOLantern(model, (origin * CFrame.new(2.2, 3, -3.2)).Position, 1.5, -0.4, false)
-
-	local humanoid = Instance.new("Humanoid")
-	humanoid.DisplayName = ""
-	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-	humanoid.Parent = model
-	model.PrimaryPart = torso
 	local world = ensureWorld()
 	local holder = world:FindFirstChild("Merchant") or folder("Merchant", world)
 	holder:SetAttribute("AutoBuilt", true)
-	CollectionService:AddTag(model, TAG_MERCHANT)
-	model.Parent = holder
+	HalloweenProps.BuildMerchant(holder)
+end
 
-	local gui, label = Build.MakeBillboard(head, UDim2.fromOffset(240, 60), Vector3.new(0, 4.5, 0), 90)
-	gui.AlwaysOnTop = false
-	label.Text = '<font color="#FFA030">' .. info.Name .. '</font>\n🎃 Trade your Candy!'
+-- Dresses the merchant stall with the full "Pumpkin Merchant" look at runtime: layered cloak, gold trim, tall bent
+-- witch hat, glowing staff, striped canopy with lanterns and a sign, candy jar, bubbling cauldron, rune rug,
+-- floating sparkles and a plaque name tag. Everything is positioned relative to HIS Torso, so it follows him if the
+-- designer moves him. Only the standard stall (Torso/Head/Counter/HatCone) is dressed; a differently authored
+-- merchant is left untouched. Idempotent via the "Dressed" attribute.
+local function dressMerchant(model: Model)
+	if model:GetAttribute("Dressed") == true then
+		return
+	end
+	local torso = model:FindFirstChild("Torso")
+	local head = model:FindFirstChild("Head")
+	if not (torso and torso:IsA("BasePart") and head and head:IsA("BasePart") and model:FindFirstChild("Counter") and model:FindFirstChild("HatCone")) then
+		return
+	end
+	model:SetAttribute("Dressed", true)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BillboardGui") then
+			descendant:Destroy() -- the old two-line label is replaced by the plaque below
+		end
+	end
+	local origin = torso.CFrame * CFrame.new(0, -3, 0) -- feet level, facing the customers (-Z)
+	local dressing = folder("Dressing", model)
+
+	local GOLD = Color3.fromRGB(255, 205, 80)
+	local PURPLE = Color3.fromRGB(92, 48, 138)
+	local DEEP = Color3.fromRGB(38, 18, 62)
+	local WOOD = Color3.fromRGB(96, 62, 38)
+	local CANDY_PINK = Color3.fromRGB(255, 90, 170)
+	local CANDY_GREEN = Color3.fromRGB(110, 255, 120)
+	local CANDY_YELLOW = Color3.fromRGB(255, 225, 80)
+	local CANDY_CYAN = Color3.fromRGB(90, 225, 255)
+
+	local function part(name: string, size: Vector3, offset: Vector3, color: Color3, material: Enum.Material?, shape: Enum.PartType?, rotation: CFrame?): Part
+		return makePart({
+			Name = name, Size = size, CFrame = origin * CFrame.new(offset) * (rotation or CFrame.new()), Color = color,
+			Material = material or Enum.Material.Fabric, Shape = shape or Enum.PartType.Block,
+			CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false, Parent = dressing,
+		})
+	end
+	-- Cylinders lie along X by default: these two rotations make them stand upright or point along Z.
+	local UPRIGHT = CFrame.Angles(0, 0, math.pi / 2)
+	local ALONG_Z = CFrame.Angles(0, math.pi / 2, 0)
+	local function light(parent: Instance, color: Color3, range: number, brightness: number)
+		local pointLight = Instance.new("PointLight")
+		pointLight.Color = color
+		pointLight.Range = range
+		pointLight.Brightness = brightness
+		pointLight.Shadows = false
+		pointLight.Parent = parent
+	end
+	local function sparkles(parent: Instance, name: string, colors: ColorSequence, rate: number, size: number, speed: number, lifetime: number, rise: number)
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Name = name
+		emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		emitter.Color = colors
+		emitter.LightEmission = 0.9
+		emitter.Rate = rate
+		emitter.Lifetime = NumberRange.new(lifetime * 0.7, lifetime)
+		emitter.Speed = NumberRange.new(speed * 0.4, speed)
+		emitter.Acceleration = Vector3.new(0, rise, 0)
+		emitter.SpreadAngle = Vector2.new(180, 180)
+		emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.25, size), NumberSequenceKeypoint.new(1, 0) })
+		emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.1), NumberSequenceKeypoint.new(1, 1) })
+		emitter.Parent = parent
+	end
+
+	-- rune rug under the whole stall ------------------------------------------------------------------------
+	part("RugGold", Vector3.new(0.06, 15.2, 15.2), Vector3.new(0, 0.05, -1.6), GOLD, Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT)
+	part("RugRune", Vector3.new(0.06, 14.2, 14.2), Vector3.new(0, 0.07, -1.6), Color3.fromRGB(190, 110, 255), Enum.Material.Neon, Enum.PartType.Cylinder, UPRIGHT).Transparency = 0.35
+	part("RugCloth", Vector3.new(0.06, 13.4, 13.4), Vector3.new(0, 0.09, -1.6), DEEP, Enum.Material.Fabric, Enum.PartType.Cylinder, UPRIGHT)
+	part("RugInner", Vector3.new(0.06, 9.4, 9.4), Vector3.new(0, 0.11, -1.6), GOLD, Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT).Transparency = 0.2
+	part("RugCenter", Vector3.new(0.06, 9.0, 9.0), Vector3.new(0, 0.13, -1.6), PURPLE, Enum.Material.Fabric, Enum.PartType.Cylinder, UPRIGHT)
+
+	-- cloak, mantle, trim -----------------------------------------------------------------------------------
+	part("CloakUpper", Vector3.new(2.4, 2.8, 0.3), Vector3.new(0, 3.1, 0.78), DEEP, nil, nil, CFrame.Angles(0.08, 0, 0))
+	part("CloakLower", Vector3.new(3.0, 2.6, 0.3), Vector3.new(0, 1.3, 1.12), PURPLE, nil, nil, CFrame.Angles(0.16, 0, 0))
+	part("CloakTrim", Vector3.new(3.1, 0.2, 0.4), Vector3.new(0, 0.1, 1.38), GOLD, Enum.Material.Metal, nil, CFrame.Angles(0.16, 0, 0))
+	part("Collar", Vector3.new(2.7, 0.55, 1.5), Vector3.new(0, 4.15, 0.05), PURPLE)
+	part("CollarTrim", Vector3.new(2.8, 0.12, 1.6), Vector3.new(0, 4.45, 0.05), GOLD, Enum.Material.Metal)
+	for _, side in { -1, 1 } do
+		part("Mantle", Vector3.new(1.5, 0.55, 1.5), Vector3.new(side * 1.3, 4.0, 0), PURPLE)
+		part("MantleTrim", Vector3.new(1.55, 0.12, 1.55), Vector3.new(side * 1.3, 4.3, 0), GOLD, Enum.Material.Metal)
+		part("Cuff", Vector3.new(1.12, 0.3, 1.12), Vector3.new(side * 1.5, 2.2, -0.3), GOLD, Enum.Material.Metal)
+		part("Glove", Vector3.new(1.05, 0.5, 1.05), Vector3.new(side * 1.5, 1.85, -0.3), Color3.fromRGB(28, 18, 38))
+	end
+	part("HemTrim", Vector3.new(2.75, 0.2, 1.65), Vector3.new(0, 0.62, 0), GOLD, Enum.Material.Metal)
+	part("FrontSash", Vector3.new(0.4, 2.4, 0.14), Vector3.new(0, 2.9, -0.58), GOLD, Enum.Material.Metal)
+	part("Belt", Vector3.new(2.15, 0.38, 1.1), Vector3.new(0, 2.2, 0), Color3.fromRGB(46, 28, 20), Enum.Material.Leather)
+	local buckle = part("Buckle", Vector3.new(0.6, 0.52, 0.16), Vector3.new(0, 2.2, -0.6), GOLD, Enum.Material.Metal)
+	part("BuckleGem", Vector3.new(0.26, 0.26, 0.18), Vector3.new(0, 2.2, -0.65), Color3.fromRGB(255, 120, 30), Enum.Material.Neon)
+	light(buckle, Color3.fromRGB(255, 140, 50), 7, 0.8)
+	light(head, Color3.fromRGB(255, 150, 50), 12, 1.2) -- the pumpkin head glows from inside
+
+	-- tall bent witch hat -----------------------------------------------------------------------------------
+	part("HatBand", Vector3.new(0.45, 2.15, 2.15), Vector3.new(0, 6.4, 0), Color3.fromRGB(255, 120, 30), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder, UPRIGHT)
+	part("HatBuckle", Vector3.new(0.62, 0.6, 0.14), Vector3.new(0, 6.4, -1.1), GOLD, Enum.Material.Metal)
+	part("HatMid", Vector3.new(1.5, 1.4, 1.5), Vector3.new(0.1, 8.4, 0), Color3.fromRGB(30, 20, 40), nil, nil, CFrame.Angles(0, 0, -0.14))
+	part("HatBend", Vector3.new(1.0, 1.2, 1.0), Vector3.new(0.5, 9.5, 0), Color3.fromRGB(30, 20, 40), nil, nil, CFrame.Angles(0, 0, -0.42))
+	part("HatTip", Vector3.new(0.6, 0.9, 0.6), Vector3.new(1.0, 10.4, 0), Color3.fromRGB(30, 20, 40), nil, nil, CFrame.Angles(0, 0, -0.8))
+	local tipGem = part("HatTipGem", Vector3.new(0.5, 0.5, 0.5), Vector3.new(1.35, 10.85, 0), Color3.fromRGB(255, 140, 40), Enum.Material.Neon, Enum.PartType.Ball)
+	light(tipGem, Color3.fromRGB(255, 150, 60), 10, 1)
+
+	-- glowing staff -----------------------------------------------------------------------------------------
+	part("StaffPole", Vector3.new(8.4, 0.34, 0.34), Vector3.new(-2.0, 4.2, -1.0), WOOD, Enum.Material.Wood, Enum.PartType.Cylinder, UPRIGHT)
+	part("StaffGrip", Vector3.new(0.9, 0.46, 0.46), Vector3.new(-2.0, 3.0, -1.0), GOLD, Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT)
+	part("StaffRing", Vector3.new(0.14, 2.0, 2.0), Vector3.new(-2.0, 8.5, -1.0), GOLD, Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT)
+	for _, angle in { 0, math.pi / 2, math.pi, math.pi * 1.5 } do
+		part("StaffClaw", Vector3.new(0.14, 0.9, 0.14), Vector3.new(-2.0 + math.cos(angle) * 0.85, 8.1, -1.0 + math.sin(angle) * 0.85), GOLD, Enum.Material.Metal)
+	end
+	local orb = part("StaffOrb", Vector3.new(1.35, 1.35, 1.35), Vector3.new(-2.0, 8.6, -1.0), Color3.fromRGB(255, 130, 35), Enum.Material.Neon, Enum.PartType.Ball)
+	light(orb, Color3.fromRGB(255, 150, 60), 26, 2)
+	sparkles(orb, "OrbSparks", ColorSequence.new(Color3.fromRGB(255, 190, 80), Color3.fromRGB(255, 110, 200)), 14, 0.7, 2.5, 1.6, 1.5)
+	TweenService:Create(orb, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = orb.Position + Vector3.new(0, 0.35, 0) }):Play()
+
+	-- striped canopy, lanterns, sign ------------------------------------------------------------------------
+	for _, side in { -1, 1 } do
+		part("StallPost", Vector3.new(9.6, 0.55, 0.55), Vector3.new(side * 3.9, 4.8, -3.2), WOOD, Enum.Material.Wood, Enum.PartType.Cylinder, UPRIGHT)
+		part("PostCap", Vector3.new(0.5, 0.8, 0.8), Vector3.new(side * 3.9, 9.7, -3.2), GOLD, Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT)
+	end
+	for strip = 1, 8 do
+		local x = (strip - 4.5) * 1.0
+		local color = if strip % 2 == 0 then Color3.fromRGB(70, 36, 108) else Color3.fromRGB(255, 125, 30)
+		part("Canopy", Vector3.new(1.02, 0.22, 4.2), Vector3.new(x, 9.2, -3.7), color, nil, nil, CFrame.Angles(0.2, 0, 0))
+		local fringe = part("Fringe", Vector3.new(0.62, 0.62, 0.62), Vector3.new(x, 8.55, -5.6), color, Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+		fringe.Transparency = 0
+	end
+	for _, side in { -1, 1 } do
+		part("LanternChain", Vector3.new(1.3, 0.07, 0.07), Vector3.new(side * 3.3, 7.8, -5.5), Color3.fromRGB(60, 60, 70), Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT)
+		local lantern = part("StallLantern", Vector3.new(0.9, 1.2, 0.9), Vector3.new(side * 3.3, 6.6, -5.5), Color3.fromRGB(255, 160, 50), Enum.Material.Neon)
+		part("LanternCap", Vector3.new(1.1, 0.18, 1.1), Vector3.new(side * 3.3, 7.3, -5.5), GOLD, Enum.Material.Metal)
+		light(lantern, Color3.fromRGB(255, 150, 60), 16, 1.4)
+	end
+	local sign = part("Sign", Vector3.new(4.6, 1.3, 0.24), Vector3.new(0, 7.3, -5.55), Color3.fromRGB(44, 26, 18), Enum.Material.Wood)
+	part("SignFrame", Vector3.new(4.9, 1.6, 0.16), Vector3.new(0, 7.3, -5.48), GOLD, Enum.Material.Metal)
+	local signGui = Instance.new("SurfaceGui")
+	signGui.Face = Enum.NormalId.Front
+	signGui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+	signGui.CanvasSize = Vector2.new(460, 130)
+	signGui.LightInfluence = 0
+	signGui.Parent = sign
+	local signText = Instance.new("TextLabel")
+	signText.Size = UDim2.fromScale(1, 1)
+	signText.BackgroundTransparency = 1
+	signText.Font = Enum.Font.FredokaOne
+	signText.TextScaled = true
+	signText.Text = "🍬 CANDY SHOP 🎃"
+	signText.TextColor3 = GOLD
+	signText.Parent = signGui
+	local signStroke = Instance.new("UIStroke")
+	signStroke.Color = Color3.fromRGB(30, 10, 10)
+	signStroke.Thickness = 3
+	signStroke.Parent = signText
+
+	-- counter dressing: runner, trim, candy jar, lollipops -------------------------------------------------
+	part("CounterRunner", Vector3.new(7.2, 0.12, 2.5), Vector3.new(0, 3.06, -3.2), PURPLE)
+	part("CounterTrim", Vector3.new(7.1, 0.28, 0.12), Vector3.new(0, 2.5, -4.42), GOLD, Enum.Material.Metal)
+	part("CounterTrimTop", Vector3.new(7.1, 0.12, 0.12), Vector3.new(0, 3.0, -4.42), GOLD, Enum.Material.Metal)
+	local jar = part("CandyJar", Vector3.new(1.6, 1.3, 1.3), Vector3.new(0.1, 3.8, -3.3), Color3.fromRGB(190, 230, 255), Enum.Material.Glass, Enum.PartType.Cylinder, UPRIGHT)
+	jar.Transparency = 0.45
+	part("JarLid", Vector3.new(0.22, 1.4, 1.4), Vector3.new(0.1, 4.6, -3.3), GOLD, Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT)
+	local candyColors = { CANDY_PINK, CANDY_GREEN, CANDY_YELLOW, CANDY_CYAN }
+	local candySpots = { { -0.3, 3.4, -3.3 }, { 0.5, 3.45, -3.1 }, { 0.1, 3.5, -3.6 }, { -0.1, 4.0, -3.2 }, { 0.4, 4.05, -3.45 }, { -0.35, 4.1, -3.45 } }
+	for index, spot in candySpots do
+		part("JarCandy", Vector3.new(0.42, 0.42, 0.42), Vector3.new(spot[1], spot[2], spot[3]), candyColors[(index - 1) % #candyColors + 1], Enum.Material.Neon, Enum.PartType.Ball)
+	end
+	for index, x in { -1.3, -0.8, 1.5, 2.0 } do
+		part("PopStick", Vector3.new(1.7, 0.09, 0.09), Vector3.new(x, 3.95, -3.9), Color3.fromRGB(245, 240, 230), Enum.Material.SmoothPlastic, Enum.PartType.Cylinder, UPRIGHT)
+		part("PopCandy", Vector3.new(0.12, 0.95, 0.95), Vector3.new(x, 4.9, -3.9), candyColors[index], Enum.Material.Neon, Enum.PartType.Cylinder, ALONG_Z)
+	end
+
+	-- bubbling cauldron + pumpkin pile ---------------------------------------------------------------------
+	part("Cauldron", Vector3.new(2.9, 2.9, 2.9), Vector3.new(-5.2, 1.5, -2.4), Color3.fromRGB(34, 34, 40), Enum.Material.Metal, Enum.PartType.Ball)
+	part("CauldronRim", Vector3.new(0.3, 2.35, 2.35), Vector3.new(-5.2, 2.55, -2.4), Color3.fromRGB(58, 58, 66), Enum.Material.Metal, Enum.PartType.Cylinder, UPRIGHT)
+	local brew = part("Brew", Vector3.new(0.1, 2.0, 2.0), Vector3.new(-5.2, 2.6, -2.4), Color3.fromRGB(110, 255, 90), Enum.Material.Neon, Enum.PartType.Cylinder, UPRIGHT)
+	light(brew, Color3.fromRGB(110, 255, 90), 14, 1.3)
+	sparkles(brew, "Bubbles", ColorSequence.new(Color3.fromRGB(150, 255, 120), Color3.fromRGB(230, 255, 180)), 12, 0.55, 2, 1.8, 2)
+	for _, leg in { { -6.1, -1.7 }, { -4.3, -1.7 }, { -5.2, -3.4 } } do
+		part("CauldronLeg", Vector3.new(0.4, 0.7, 0.4), Vector3.new(leg[1], 0.35, leg[2]), Color3.fromRGB(26, 26, 32), Enum.Material.Metal)
+	end
+	jackOLantern(dressing, (origin * CFrame.new(5.3, 0, -2.4)).Position + Vector3.new(0, 0.2, 0), 2.6, 0.5, true)
+	jackOLantern(dressing, (origin * CFrame.new(6.5, 0, -3.1)).Position + Vector3.new(0, 0.2, 0), 1.8, -0.3, false)
+	jackOLantern(dressing, (origin * CFrame.new(5.6, 2.6, -2.5)).Position, 1.5, 0.9, true)
+
+	-- floating candy sparkles over the stall ---------------------------------------------------------------
+	local aura = part("StallSparkles", Vector3.new(11, 6, 9), Vector3.new(0, 5.5, -2.2), Color3.new(1, 1, 1))
+	aura.Transparency = 1
+	aura.Shape = Enum.PartType.Block
+	sparkles(aura, "CandySparkles", ColorSequence.new({
+		ColorSequenceKeypoint.new(0, CANDY_PINK), ColorSequenceKeypoint.new(0.5, CANDY_YELLOW), ColorSequenceKeypoint.new(1, CANDY_CYAN),
+	}), 9, 0.8, 0.8, 4, 0.5)
+
+	-- name plaque (prestige style) -------------------------------------------------------------------------
+	local plaqueGui = Instance.new("BillboardGui")
+	plaqueGui.Name = "MerchantPlaque"
+	plaqueGui.Size = UDim2.fromOffset(280, 70)
+	plaqueGui.StudsOffset = Vector3.new(0, 7.2, 0)
+	plaqueGui.MaxDistance = 95
+	plaqueGui.AlwaysOnTop = false
+	plaqueGui.LightInfluence = 0
+	plaqueGui.Adornee = head
+	plaqueGui.Parent = dressing
+	local halo = Instance.new("Frame")
+	halo.AnchorPoint = Vector2.new(0.5, 0)
+	halo.Position = UDim2.new(0.5, 0, 0, 0)
+	halo.Size = UDim2.fromOffset(266, 42)
+	halo.BackgroundColor3 = Color3.fromRGB(255, 140, 40)
+	halo.BackgroundTransparency = 0.6
+	halo.BorderSizePixel = 0
+	halo.Parent = plaqueGui
+	local haloCorner = Instance.new("UICorner")
+	haloCorner.CornerRadius = UDim.new(0.5, 0)
+	haloCorner.Parent = halo
+	local plaque = Instance.new("Frame")
+	plaque.AnchorPoint = Vector2.new(0.5, 0.5)
+	plaque.Position = UDim2.fromScale(0.5, 0.5)
+	plaque.Size = UDim2.new(1, -8, 1, -8)
+	plaque.BackgroundColor3 = Color3.new(1, 1, 1)
+	plaque.BorderSizePixel = 0
+	plaque.Parent = halo
+	local plaqueCorner = Instance.new("UICorner")
+	plaqueCorner.CornerRadius = UDim.new(0.5, 0)
+	plaqueCorner.Parent = plaque
+	local plaqueGradient = Instance.new("UIGradient")
+	plaqueGradient.Color = ColorSequence.new(Color3.fromRGB(78, 42, 120), Color3.fromRGB(16, 8, 30))
+	plaqueGradient.Rotation = 90
+	plaqueGradient.Parent = plaque
+	local plaqueRim = Instance.new("UIStroke")
+	plaqueRim.Thickness = 3
+	plaqueRim.Color = GOLD
+	plaqueRim.Parent = plaque
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	nameLabel.Position = UDim2.fromScale(0.5, 0.5)
+	nameLabel.Size = UDim2.new(1, -30, 1, -8)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Font = Enum.Font.FredokaOne
+	nameLabel.TextScaled = true
+	nameLabel.Text = "🎃 " .. settings.Merchant.Name .. " 🎃"
+	nameLabel.TextColor3 = Color3.new(1, 1, 1)
+	nameLabel.Parent = plaque
+	local nameGradient = Instance.new("UIGradient")
+	nameGradient.Color = ColorSequence.new(Color3.fromRGB(255, 250, 220), Color3.fromRGB(255, 170, 60))
+	nameGradient.Rotation = 90
+	nameGradient.Parent = nameLabel
+	local nameStroke = Instance.new("UIStroke")
+	nameStroke.Color = Color3.fromRGB(20, 8, 30)
+	nameStroke.Thickness = 2
+	nameStroke.Parent = nameLabel
+	local tagline = Instance.new("TextLabel")
+	tagline.AnchorPoint = Vector2.new(0.5, 0)
+	tagline.Position = UDim2.new(0.5, 0, 0, 44)
+	tagline.Size = UDim2.fromOffset(240, 22)
+	tagline.BackgroundTransparency = 1
+	tagline.Font = Enum.Font.FredokaOne
+	tagline.TextScaled = true
+	tagline.Text = "🍬 Trade your Candy! 🍬"
+	tagline.TextColor3 = Color3.fromRGB(255, 190, 235)
+	tagline.Parent = plaqueGui
+	local taglineStroke = Instance.new("UIStroke")
+	taglineStroke.Color = Color3.fromRGB(30, 10, 40)
+	taglineStroke.Thickness = 2
+	taglineStroke.Parent = tagline
 end
 
 -- Adopt the authored merchant (find by tag/name, never move or rebuild it), make sure his prompt exists and
@@ -861,6 +1091,10 @@ local function adoptMerchant()
 	if not model or not part then
 		warn("[HalloweenService] no Pumpkin Merchant found or built")
 		return
+	end
+	local dressed, dressFailure = pcall(dressMerchant, model)
+	if not dressed then
+		warn("[HalloweenService] merchant dressing failed:", dressFailure)
 	end
 	local prompt = part:FindFirstChildOfClass("ProximityPrompt")
 	if not prompt then
@@ -1576,7 +1810,7 @@ end
 local REASONS = {
 	NoCandy = "Not enough Candy!",
 	Owned = "You already own that!",
-	BoostCap = "You already have the maximum Candy Boost time stored.",
+	BoostCap = "You already have the maximum boost time stored.",
 	Unknown = "That item isn't available.",
 }
 
@@ -1603,6 +1837,13 @@ local function onBuy(player: Player, itemId: unknown)
 	end
 	busy[player] = true
 	local done, failure = pcall(function()
+		-- Speed has its own timer (the same one as the Robux Speed Boost), so its stacking cap is checked here.
+		local speedItem = settings.Items[itemId]
+		if speedItem and speedItem.Kind == "Speed"
+			and math.max(0, profile.Data.SpeedBoostUntil - os.time()) + (speedItem.Duration or 0) > (speedItem.MaxBoostSeconds or 0) then
+			notify(player, REASONS.BoostCap, "error")
+			return
+		end
 		local ok, reason, purchase = HalloweenLogic.ApplyPurchase(data :: any, itemId, settings.Items, os.time(), rng:NextNumber())
 		if not ok or not purchase then
 			notify(player, REASONS[reason] or "Can't buy that right now.", "error")
@@ -1641,7 +1882,12 @@ local function onBuy(player: Player, itemId: unknown)
 			return
 		end
 		if purchase.Kind == "Boost" then
-			notify(player, "🍬 Candy Boost active: 2x cash!", "success")
+			notify(player, string.format("🍬 %s active: %dx cash!", item.Name, item.Multiplier or 2), "success")
+			MonsterService.PushState(player)
+		elseif purchase.Kind == "Speed" then
+			profile.Data.SpeedBoostUntil = math.max(os.time(), profile.Data.SpeedBoostUntil) + (item.Duration or 0)
+			CharacterService.SetSpeedFactor(player, "Boost", item.Multiplier or Config.SpeedBoost.Multiplier)
+			notify(player, string.format("💨 %s active for %d minutes!", item.Name, math.floor((item.Duration or 0) / 60)), "success")
 			MonsterService.PushState(player)
 		elseif purchase.Kind == "Hat" or purchase.Kind == "Trail" or purchase.Kind == "Aura" or purchase.Kind == "Title" then
 			notify(player, "🎃 " .. item.Name .. " unlocked and equipped!", "success")

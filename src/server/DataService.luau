@@ -46,8 +46,13 @@ export type PlayerData = {
 		Targets: { { Id: string, Identity: string } }, ReceiptId: string?,
 	}?,
 	SpeedBoostUntil: number,
+	EggLuckUntil: number, -- os.time epoch; Egg Keeper Luck on Halloween Monster Egg hatches
 	Halloween: HalloweenData, -- event currency + purchases; safe to keep forever (see Config.Halloween)
+	UserSettings: UserSettings, -- the player's own audio / scenery choices, restored on every join
+	RedeemedCodes: { [string]: boolean }, -- promo codes already used (Config.Codes keys)
 }
+
+export type UserSettings = { Volume: number, MusicOn: boolean, DistanceIndex: number }
 
 export type HalloweenData = {
 	Candy: number,
@@ -91,7 +96,10 @@ local DEFAULT_DATA: PlayerData = {
 	ProcessedReceipts = {},
 	PendingBossSummons = {},
 	SpeedBoostUntil = 0,
+	EggLuckUntil = 0,
 	Halloween = { Candy = 0, TotalCandy = 0, BoostUntil = 0, Converted = 0, Owned = {}, Equipped = {} },
+	UserSettings = { Volume = 100, MusicOn = true, DistanceIndex = 3 },
+	RedeemedCodes = {},
 }
 
 local store: DataStore? = nil
@@ -256,11 +264,26 @@ local function sanitizeHalloween(data: PlayerData)
 end
 DataService.SanitizeHalloween = sanitizeHalloween
 
+-- Rebuilt field by field, like Halloween: bad types fall back to the defaults. Also used on every client save.
+local function cleanSettings(source: any): UserSettings
+	local volume, music, distance = 100, true, 3
+	if type(source) == "table" then
+		if type(source.Volume) == "number" and source.Volume == source.Volume then volume = math.clamp(math.floor(source.Volume), 0, 100) end
+		if type(source.MusicOn) == "boolean" then music = source.MusicOn end
+		if type(source.DistanceIndex) == "number" and source.DistanceIndex == source.DistanceIndex then distance = math.clamp(math.floor(source.DistanceIndex), 1, 3) end
+	end
+	return { Volume = volume, MusicOn = music, DistanceIndex = distance }
+end
+DataService.CleanSettings = cleanSettings
+
 -- ريسيت البروجريس: بداية جديدة بالكامل، مع الاحتفاظ بسجل الإيصالات عشان أي شراء Robux قديم ماينفذش تاني.
 local function wipeProgress(old: PlayerData): PlayerData
 	local fresh: PlayerData = deepCopy(DEFAULT_DATA)
 	if type(old.ProcessedReceipts) == "table" then
 		fresh.ProcessedReceipts = old.ProcessedReceipts
+	end
+	if type(old.RedeemedCodes) == "table" then
+		fresh.RedeemedCodes = old.RedeemedCodes -- one-time codes stay used after a progression reset
 	end
 	if type(old.PendingBossSummons) == "table" then
 		fresh.PendingBossSummons = old.PendingBossSummons -- paid summons survive a progression reset
@@ -319,6 +342,11 @@ function DataService.Load(player: Player): Profile
 
 	reconcileGear(data)
 	sanitizeHalloween(data)
+	do
+		local luckUntil: any = data.EggLuckUntil
+		data.EggLuckUntil = if type(luckUntil) == "number" and luckUntil == luckUntil and luckUntil > 0 then math.min(math.floor(luckUntil), 4e9) else 0
+	end
+	data.UserSettings = cleanSettings(data.UserSettings)
 	do
 		local pending: { [string]: number } = {}
 		if type(data.PendingBossSummons) == "table" then

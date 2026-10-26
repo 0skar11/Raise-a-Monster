@@ -389,6 +389,9 @@ end
 
 -- Each press goes to a different arena than last time, unless that one has a fight going.
 function ArenaService.GetTeleportCFrame(player: Player): CFrame
+	if not Config.Arena.Enabled or #arenas == 0 then
+		return CFrame.new(Config.Map.SpawnPosition + Vector3.new(0, 4, 0))
+	end
 	local count = #arenas
 	local index = ((lastArenaIndex[player] or 0) % count) + 1
 	if arenas[index].Busy then
@@ -414,6 +417,7 @@ end
 
 function ArenaService.Init(allRemotes: { [string]: RemoteEvent })
 	remotes = allRemotes
+	if not Config.Arena.Enabled then return end
 	for index, position in Config.Arena.Positions do
 		table.insert(arenas, buildArena(index, position))
 	end

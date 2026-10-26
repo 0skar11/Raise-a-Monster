@@ -21,7 +21,7 @@ local Build = {MakePart=function(props)
 end}
 local map=config.Map
 local modules={Config=config,Build=Build,
- PlotService={IslandMinX=map.IslandMinX,ZonesStartX=map.ZonesStartX,PlazaHalfZ=map.PlazaHalfZ},
+ PlotService={IslandMinX=map.IslandMinX,ZonesStartX=map.ZonesStartX,LobbyMaxX=map.LobbyMaxX,PlazaHalfZ=map.PlazaHalfZ},
  ZoneService={ZonesEndX=map.ZonesStartX+#config.Zones*map.ZoneLength,ZoneHalfZ=map.ZoneHalfZ}}
 local terrain = luau.load(fs.readFile('src/server/TerrainService.luau'),{environment=env({workspace=workspace,game={GetService=function() return {Shared={Config='Config'}} end},script={Parent={Build='Build',PlotService='PlotService',ZoneService='ZoneService'}},require=function(key) return assert(modules[key],key) end})})()
 terrain.Init()

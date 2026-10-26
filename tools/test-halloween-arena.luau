@@ -14,7 +14,7 @@ local model=builder.Build(config)
 local checks,parts,pumpkins=0,0,0
 local function check(condition,label) checks+=1; assert(condition,label) end
 check(model.Name=="HalloweenArena" and model.Parent==nil,"Builder must return a detached arena")
-check(config.Capacity==dependencies.Config.MaxPlots and config.Capacity==6,"Capacity does not follow actual tycoon slots")
+check(config.Capacity==dependencies.Config.MaxPlots and config.Capacity==10,"Capacity does not follow actual tycoon slots")
 check(config.CombatRadius==90,"Approved combat diameter changed")
 check((config.Origin.Position-dependencies.Config.Map.SpawnPosition).Magnitude>10000,"Arena must remain isolated from the tycoon spawn")
 local combat=model:FindFirstChild("CombatFloor")
@@ -50,7 +50,7 @@ for i=1,config.Capacity do
 	for _,other in points do check((marker.CFrame.Position-other).Magnitude>=6,"Arrival positions overlap") end
 	table.insert(points,marker.CFrame.Position)
 end
-check(model:FindFirstChild("ArrivalPoint_7")==nil,"Arena still uses an incorrect server capacity")
+check(model:FindFirstChild("ArrivalPoint_"..(config.Capacity+1))==nil,"Arena still uses an incorrect server capacity")
 local portal=model:FindFirstChild("ReturnPortal")
 check(portal and portal:FindFirstChild("TeleportTrigger"),"Return portal trigger missing")
 local portalPos=config.Origin:PointToObjectSpace(portal.TeleportTrigger.CFrame.Position)

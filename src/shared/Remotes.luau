@@ -41,6 +41,8 @@ local EVENT_NAMES = {
 	"TradeCancel", -- ()
 	"ArenaChallenge", -- (targetUserId, monsterId)
 	"ArenaRespond", -- (fromUserId, monsterId?)  monsterId = nil يعني رفض
+	"SetPvP", -- (enabled) player-vs-player toggle; the server owns the flag and rate limits it
+	"PvPState", -- (enabled, protectedSeconds) server → client: toggle state + remaining death protection
 	-- سيرفر → كلاينت (زيادة)
 	"Announce", -- (text, color)  إعلان كبير لكل السيرفر
 	"SpinResult", -- (prizeIndex)
@@ -59,6 +61,11 @@ local EVENT_NAMES = {
 	"HalloweenBuy", -- (itemId)
 	"HalloweenEquip", -- (itemId, equip)
 	"HalloweenSync", -- () ask for a fresh HalloweenState
+	-- Egg Keeper store (the client only sends a bundle size or "buy luck"; the server prices, charges and rolls)
+	"OpenEggStore", -- (state) the Egg Keeper prompt was used close enough to him
+	"EggStoreState", -- (state) { LuckLeft } refreshed after a purchase
+	"BuyEggBundle", -- (count) 1, 3 or 8 Halloween Monster Eggs for coins
+	"BuyEggLuck", -- () adds timed Luck to Halloween Monster Egg hatches
 	-- Admin panel (server checks Config.Admin.Usernames on every call; non-admins are ignored)
 	"AdminAction", -- ("Hello" | actionName, { Target: string?, Amount: number?, Name: string?, Text: string? })
 	"AdminAccess", -- (true, { actionNames }) only ever sent to an admin
@@ -66,6 +73,10 @@ local EVENT_NAMES = {
 	"BossFx", -- (kind, data)
 	"BossLoot", -- ({ Share, Rank, Fighters, Needed, Items = { { Icon, Name, Detail, Rarity } } }) the loot you won from the Pumpkin Titan
 	"BossSummoned", -- ({ UserId, Name, DisplayName, Robux }) server-confirmed paid summon announcement
+	"SaveSettings", -- ({ Volume, MusicOn, DistanceIndex }) the player's own settings; validated and saved by the server
+	"RedeemCode", -- (code) the typed text only; the server validates it against Config.Codes
+	"RedeemResult", -- (ok, message) server → client answer for the Codes tab
+	"HatchResult", -- ({ EggType, Species, Mutation, Slot, MonsterId }) the monster that just hatched; the client only animates the roll to it
 }
 
 local Remotes = {}

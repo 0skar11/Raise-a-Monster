@@ -44,6 +44,19 @@ for _, id in { "CandyBoost", "PumpkinHat", "GhostTrail", "CandyAura", "Halloween
 end
 for id, item in items do check(item.Kind ~= "Monster", id .. ": the Candy shop no longer sells monsters") end
 check(items.CandyBoost.Multiplier == 2 and items.CandyBoost.Duration == 600, "Candy Boost is 2x for 10 minutes")
+check(items.DoubleCash5.Kind == "Boost" and items.DoubleCash5.Multiplier == 2 and items.DoubleCash5.Duration == 300, "x2 Money is 2x for 5 minutes")
+check(items.SpeedBoost.Kind == "Speed" and items.SpeedBoost.Multiplier == Config.SpeedBoost.Multiplier and items.SpeedBoost.Duration > 0, "Ghost Sprint is a timed speed boost")
+do
+	local orders = {}
+	for id, item in items do
+		check(orders[item.Order] == nil, id .. " has a unique shop Order")
+		orders[item.Order] = id
+		if item.Kind == "Egg" then
+			for eggType, weight in item.EggWeights do check(Config.Eggs[eggType] ~= nil and weight > 0, id .. " rolls a real egg: " .. eggType) end
+		end
+	end
+	check(items.MysteryEgg.EggWeights.Basic and items.MysteryEgg.EggWeights.Lucky, "Mystery Egg rolls from Basic up to Lucky")
+end
 -- The eight Halloween monsters: valid species, only in the Halloween Monster Egg, Pumpkin King rarest and strongest.
 local halloweenEgg = Config.Eggs.HalloweenMonster
 check(halloweenEgg ~= nil and halloweenEgg.AllowSecret == false and halloweenEgg.Cost == 0, "The Halloween Monster Egg exists, is not sold and never rolls a Secret")

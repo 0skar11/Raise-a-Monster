@@ -7,10 +7,19 @@ local game = r.deserializePlace(fs.readFile(process.args[1]))
 -- Build in an empty workspace so an older preview/runtime map cannot duplicate
 -- the generated floor. Editable rigs are read from a clone and never rewritten.
 local sourceWorkspace = game:GetService('Workspace')
+-- Lune 0.11 does not keep imported PrimaryPart refs reliably; the rigs' pivot is always their HumanoidRootPart.
+for _, item in game:GetDescendants() do
+ if item:IsA('Model') then
+  local root = item:FindFirstChild('HumanoidRootPart', true)
+  if root and root:IsA('BasePart') then item.PrimaryPart = root end
+ end
+end
 local workspace = r.Instance.new('Workspace')
 local authoredRigs = sourceWorkspace:FindFirstChild('AnimationRigs')
 if authoredRigs then authoredRigs:Clone().Parent = workspace end
 local signal = { Connect = function() return { Disconnect = function() end } end }
+r.implementMethod('CollectionService', 'GetTagged', function() return {} end)
+r.implementMethod('CollectionService', 'GetInstanceAddedSignal', function() return signal end)
 r.implementProperty('BasePart', 'Touched', function() return signal end)
 r.implementProperty('ProximityPrompt', 'Triggered', function() return signal end)
 local function parts(model)
@@ -18,7 +27,13 @@ local function parts(model)
  for _, item in model:GetDescendants() do if item:IsA('BasePart') then table.insert(result,item) end end
  return result
 end
-r.implementMethod('Model','GetPivot',function(model) return model.PrimaryPart and model.PrimaryPart.CFrame or r.CFrame.new() end)
+-- Lune 0.11 can resolve a cloned model's PrimaryPart to an unrelated instance, so only trust a real BasePart inside the model.
+local function pivotPart(model)
+ local primary=model.PrimaryPart
+ if primary and primary:IsA('BasePart') and primary:IsDescendantOf(model) then return primary end
+ return model:FindFirstChild('HumanoidRootPart',true) or parts(model)[1]
+end
+r.implementMethod('Model','GetPivot',function(model) local part=pivotPart(model) return part and part.CFrame or r.CFrame.new() end)
 r.implementMethod('Model','PivotTo',function(model, target)
  local old = model:GetPivot()
  for _, part in parts(model) do part.CFrame = target * old:ToObjectSpace(part.CFrame) end
@@ -120,20 +135,40 @@ local function solidFloor(part,position,size)
  near(part.CFrame.UpVector,r.Vector3.new(0,1,0),part:GetFullName()..' orientation')
 end
 local floor=world.Map.Ground
-solidFloor(floor,r.Vector3.new((plotService.IslandMinX+plotService.ZonesStartX)/2,-1,0),
- r.Vector3.new(plotService.ZonesStartX-plotService.IslandMinX,2,plotService.PlazaHalfZ*2))
-solidFloor(world.Map.Plaza,r.Vector3.new((config.Map.PlazaMinX+plotService.ZonesStartX)/2,0.1,0),
- r.Vector3.new(plotService.ZonesStartX-config.Map.PlazaMinX,0.2,(plotService.PlazaHalfZ-config.Map.PlazaPadding)*2))
+solidFloor(floor,r.Vector3.new((plotService.IslandMinX+plotService.LobbyMaxX)/2,-1,(plotService.PlazaHalfZ+config.Map.IslandMinZ)/2),
+ r.Vector3.new(plotService.LobbyMaxX-plotService.IslandMinX,2,plotService.PlazaHalfZ-config.Map.IslandMinZ))
+solidFloor(world.Map.Plaza,r.Vector3.new((config.Map.PlazaMinX+config.Map.PlazaMaxX)/2,0.1,0),
+ r.Vector3.new(config.Map.PlazaMaxX-config.Map.PlazaMinX,0.2,404))
+solidFloor(world.Map.ZoneConnector,r.Vector3.new((plotService.LobbyMaxX+plotService.ZonesStartX)/2,-1,0),
+ r.Vector3.new(plotService.ZonesStartX-plotService.LobbyMaxX,2,zoneService.ZoneHalfZ*2))
+solidFloor(world.Map.NorthPlotPath,r.Vector3.new(0,0.1,-236),r.Vector3.new(20,0.2,68))
+solidFloor(world.Map.SouthPlotPath,r.Vector3.new(0,0.1,236),r.Vector3.new(20,0.2,68))
+local plots=plotService.GetPlots()
+assert(#plots==10 and #plots==config.MaxPlots,'Expected six original and four additional plots')
+for index,plot in plots do
+ local position=plot.CFrame.Position
+ if index<=6 then
+  near(position,r.Vector3.new(-40,0,(index-3.5)*68),'Original plot position')
+ else
+  near(position,r.Vector3.new(if index%2==1 then -40 else 40,0,if index<=8 then -238 else 238),'Additional plot position')
+  near(plot.CFrame.LookVector,r.Vector3.new(if index%2==1 then 1 else -1,0,0),'Additional plot faces access lane')
+ end
+ local low,high=bounds(plot.Model.Floor)
+ assert(low.X>=config.Map.IslandMinX and high.X<=config.Map.LobbyMaxX and low.Z>=config.Map.IslandMinZ and high.Z<=config.Map.PlazaHalfZ,'Unsupported plot floor')
+ for otherIndex=1,index-1 do
+  local otherLow,otherHigh=bounds(plots[otherIndex].Model.Floor)
+  assert(not (high.X>otherLow.X+0.001 and low.X<otherHigh.X-0.001 and high.Z>otherLow.Z+0.001 and low.Z<otherHigh.Z-0.001),'Plot floors overlap')
+ end
+end
 near(world.Map.CenterSpawn.CFrame.Position,config.Map.SpawnPosition,'CenterSpawn position')
 local counter=world.Map.EggShop.Counter
 near(counter.CFrame.Position,config.Shop.Position+r.Vector3.new(0,2,0),'Gear Shop position')
 local shopPrompt=counter:FindFirstChild('ShopPrompt')
 assert(shopPrompt and shopPrompt:IsA('ProximityPrompt'),'Missing Gear Shop prompt')
-local promptReach=shopPrompt.MaxActivationDistance
-assert(counter.CFrame.Position.X+promptReach<plotService.ZonesStartX
- and counter.CFrame.Position.X-promptReach>config.Map.PlazaMinX
- and math.abs(counter.CFrame.Position.Z)+promptReach<plotService.PlazaHalfZ-config.Map.PlazaPadding,
- 'Gear Shop prompt extends outside the plaza')
+local counterLow,counterHigh=bounds(counter)
+assert(counterLow.X>=config.Map.PlazaMinX and counterHigh.X<=config.Map.PlazaMaxX
+ and counterLow.Z>=-zoneService.ZoneHalfZ and counterHigh.Z<=zoneService.ZoneHalfZ,
+ 'Gear Shop is unsupported by the compact plaza')
 local zoneLength=(zoneService.ZonesEndX-plotService.ZonesStartX)/#config.Zones
 local nestCount,motherCount=0,0
 local shopMotherDistance,teleportMotherDistance=math.huge,math.huge
@@ -179,8 +214,8 @@ local borderCount=0
 for _,part in world.MapBorder:GetDescendants() do if part:IsA('BasePart') then
  borderCount+=1
  local low,high=bounds(part)
- assert(not overlaps(low,high,plotService.IslandMinX,plotService.ZonesStartX,-plotService.PlazaHalfZ,plotService.PlazaHalfZ)
-  and not overlaps(low,high,plotService.ZonesStartX,zoneService.ZonesEndX,-zoneService.ZoneHalfZ,zoneService.ZoneHalfZ),
+ assert(not overlaps(low,high,plotService.IslandMinX,plotService.LobbyMaxX,config.Map.IslandMinZ,plotService.PlazaHalfZ)
+  and not overlaps(low,high,plotService.LobbyMaxX,zoneService.ZonesEndX,-zoneService.ZoneHalfZ,zoneService.ZoneHalfZ),
   'Map border enters playable ground: '..part.Name)
 end end
 assert(#world:GetChildren()==3,'Generated world has duplicate folders')

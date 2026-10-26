@@ -10,10 +10,12 @@ local Arena = {
 	ArrivalPoints = {},
 }
 Arena.ReturnPortalOrigin = Arena.Origin * CFrame.new(0, 0, 137)
-for _, z in { 115, 123 } do
-	for _, x in { -10, 0, 10 } do
-		table.insert(Arena.ArrivalPoints, CFrame.new(x, 3.5, z))
-	end
+local columns = math.ceil(Arena.Capacity / 2)
+local spacing = math.min(10, 32 / math.max(1, columns - 1))
+for index = 1, Arena.Capacity do
+	local column = (index - 1) % columns
+	local row = math.floor((index - 1) / columns)
+	table.insert(Arena.ArrivalPoints, CFrame.new((column - (columns - 1) / 2) * spacing, 3.5, 115 + row * 8))
 end
 
 function Arena.IsCombatPosition(position: Vector3): boolean

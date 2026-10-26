@@ -58,6 +58,7 @@ local PlotService = {}
 
 -- أول المناطق (آخر الساحة) بالـ X
 PlotService.ZonesStartX = Config.Map.ZonesStartX
+PlotService.LobbyMaxX = Config.Map.LobbyMaxX
 -- حدود منطقة القواعد والساحة (الجبال بتلف حواليها)
 PlotService.IslandMinX = ISLAND_MIN_X
 PlotService.PlazaHalfZ = PLAZA_HALF_Z
@@ -86,26 +87,43 @@ local function buildGround()
 	-- الجزيرة اللي عليها القواعد والساحة (المناطق بتبني أرضها في ZoneService)
 	makePart({
 		Name = "Ground",
-		Size = Vector3.new(PlotService.ZonesStartX - ISLAND_MIN_X, 2, PLAZA_HALF_Z * 2),
-		Position = Vector3.new((ISLAND_MIN_X + PlotService.ZonesStartX) / 2, -1, 0),
+		Size = Vector3.new(PlotService.LobbyMaxX - ISLAND_MIN_X, 2, PLAZA_HALF_Z - Config.Map.IslandMinZ),
+		Position = Vector3.new((ISLAND_MIN_X + PlotService.LobbyMaxX) / 2, -1, (PLAZA_HALF_Z + Config.Map.IslandMinZ) / 2),
 		Color = Color3.fromRGB(95, 160, 80),
 		Material = Enum.Material.Grass,
 		Parent = mapFolder,
 	})
 	makePart({
 		Name = "Plaza",
-		Size = Vector3.new(PlotService.ZonesStartX - PLAZA_MIN_X, 0.2, (PLAZA_HALF_Z - Config.Map.PlazaPadding) * 2),
-		Position = Vector3.new((PLAZA_MIN_X + PlotService.ZonesStartX) / 2, 0.1, 0),
+		Size = Vector3.new(Config.Map.PlazaMaxX - PLAZA_MIN_X, 0.2, 404),
+		Position = Vector3.new((PLAZA_MIN_X + Config.Map.PlazaMaxX) / 2, 0.1, 0),
 		Color = Color3.fromRGB(150, 150, 155),
 		Material = Enum.Material.Cobblestone,
 		Parent = mapFolder,
 	})
 	-- المية بتكبر مع الأرض، فتفضل محاوطة آخر منطقة كمان.
+	for _, endZ in { -236, 236 } do
+		makePart({
+			Name = if endZ < 0 then "NorthPlotPath" else "SouthPlotPath", Size = Vector3.new(20, 0.2, 68),
+			Position = Vector3.new(0, 0.1, endZ),
+			Color = Color3.fromRGB(150, 150, 155), Material = Enum.Material.Cobblestone, Parent = mapFolder,
+		})
+	end
+	makePart({
+		Name = "ZoneConnector", Size = Vector3.new(PlotService.ZonesStartX - PlotService.LobbyMaxX, 2, Config.Map.ZoneHalfZ * 2),
+		Position = Vector3.new((PlotService.LobbyMaxX + PlotService.ZonesStartX) / 2, -1, 0),
+		Color = Color3.fromRGB(95, 160, 80), Material = Enum.Material.Grass, Parent = mapFolder,
+	})
+	makePart({
+		Name = "GatePath", Size = Vector3.new(PlotService.ZonesStartX - Config.Map.PlazaMaxX, 0.2, Config.Map.RoadWidth),
+		Position = Vector3.new((Config.Map.PlazaMaxX + PlotService.ZonesStartX) / 2, 0.1, 0),
+		Color = Color3.fromRGB(150, 150, 155), Material = Enum.Material.Cobblestone, Parent = mapFolder,
+	})
 	local zonesEndX = PlotService.ZonesStartX + #Config.Zones * Config.Map.ZoneLength
 	makePart({
 		Name = "Water",
-		Size = Vector3.new(zonesEndX - ISLAND_MIN_X + Config.Map.WaterMargin * 2, 1, PLAZA_HALF_Z * 2 + Config.Map.WaterMargin * 2),
-		Position = Vector3.new((ISLAND_MIN_X + zonesEndX) / 2, -4, 0),
+		Size = Vector3.new(zonesEndX - ISLAND_MIN_X + Config.Map.WaterMargin * 2, 1, PLAZA_HALF_Z - Config.Map.IslandMinZ + Config.Map.WaterMargin * 2),
+		Position = Vector3.new((ISLAND_MIN_X + zonesEndX) / 2, -4, (PLAZA_HALF_Z + Config.Map.IslandMinZ) / 2),
 		Color = Color3.fromRGB(40, 110, 200),
 		Material = Enum.Material.Glass,
 		Transparency = 0.2,
@@ -274,11 +292,17 @@ end
 local function plotCFrames(): { CFrame }
 	local result = {}
 	local facing = Vector3.new(1, 0, 0)
-	for index = 1, Config.MaxPlots do
-		local z = (index - (Config.MaxPlots + 1) / 2) * PLOT_SPACING
+	-- Preserve all six original plots and their internal geometry; append two at each end.
+	for index = 1, 6 do
+		local z = (index - 3.5) * PLOT_SPACING
 		local position = Vector3.new(BASE_X, 0, z)
 		table.insert(result, CFrame.lookAt(position, position + facing))
 	end
+	table.insert(result, CFrame.lookAt(Vector3.new(BASE_X, 0, -238), Vector3.new(BASE_X + 1, 0, -238)))
+	-- Opposing entrances open into the twenty-stud gap between the new plots.
+	table.insert(result, CFrame.lookAt(Vector3.new(40, 0, -238), Vector3.new(39, 0, -238)))
+	table.insert(result, CFrame.lookAt(Vector3.new(BASE_X, 0, 238), Vector3.new(BASE_X + 1, 0, 238)))
+	table.insert(result, CFrame.lookAt(Vector3.new(40, 0, 238), Vector3.new(39, 0, 238)))
 	return result
 end
 
@@ -1102,6 +1126,22 @@ function PlotService.Release(player: Player)
 	plotByPlayer[player] = nil
 end
 
+-- Plot_N floors the user moved in Studio (StudioWorld.Map), saved in the place file. Read before StudioWorld is destroyed.
+local authoredFloors: { [number]: CFrame } = {}
+
+function PlotService.CaptureAuthoredLayout(studioWorld: Instance?)
+	table.clear(authoredFloors)
+	local studioMap = studioWorld and studioWorld:FindFirstChild("Map")
+	if not studioMap or not Config.Map.KeepStudioPlotLayout then return end
+	for index = 1, Config.MaxPlots do
+		local floor = studioMap:FindFirstChild("Plot_" .. index)
+		floor = floor and floor:FindFirstChild("Floor")
+		if floor and floor:IsA("BasePart") then
+			authoredFloors[index] = floor.CFrame
+		end
+	end
+end
+
 function PlotService.Init()
 	mapFolder = Instance.new("Folder")
 	mapFolder.Name = "Map"
@@ -1110,7 +1150,15 @@ function PlotService.Init()
 	buildGround()
 	buildShop()
 	for index, cframe in plotCFrames() do
-		table.insert(plots, buildPlot(index, cframe))
+		local plot = buildPlot(index, cframe)
+		local authored = authoredFloors[index]
+		local floor = plot.Model:FindFirstChild("Floor")
+		if authored and floor and floor:IsA("BasePart") and (authored.Position - floor.Position).Magnitude > 0.05 then
+			-- Same geometry, moved by hand: rebuild at the saved spot so every field follows it.
+			plot.Model:Destroy()
+			plot = buildPlot(index, authored * floor.CFrame:Inverse() * cframe)
+		end
+		table.insert(plots, plot)
 	end
 end
 

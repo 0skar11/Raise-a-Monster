@@ -845,8 +845,8 @@ local function restoreLights(seconds: number)
 	tween(Lighting, seconds, { Brightness = Lighting:GetAttribute("BossBaseBrightness") })
 end
 
--- the normal background music pauses and the boss theme plays until the boss is gone. The theme is flagged as music so
--- the player's music button (Settings) still mutes it.
+-- the normal background music pauses and the boss theme plays until the boss is gone. The theme is flagged as forced
+-- music: the player's music button and master volume (Settings) do not affect it.
 local bossTheme: Sound? = nil
 local function setBossMusic(on: boolean)
 	local background = SoundService:FindFirstChild("BackgroundMusic")
@@ -860,7 +860,7 @@ local function setBossMusic(on: boolean)
 			theme.SoundId = Config.Boss.Audio.Music
 			theme.Looped = true
 			theme.Volume = 0
-			theme:SetAttribute("RaiseAMonsterMusic", true)
+			theme:SetAttribute("RaiseAMonsterForcedMusic", true) -- Settings never mutes or lowers it
 			theme.Parent = SoundService
 			bossTheme = theme
 		end

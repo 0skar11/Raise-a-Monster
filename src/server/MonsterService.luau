@@ -33,6 +33,14 @@ MonsterService.GetEventMultiplier = function(_player: Player): number
 	return 1
 end
 
+-- Egg Keeper Luck re-weights the species an egg can hatch (identity until init.server links EggStoreService).
+MonsterService.AdjustHatchWeights = function(_player: Player, _eggType: string, weights: { [string]: number }): { [string]: number }
+	return weights
+end
+
+-- Roughly how long the client's hatch roll takes, so the server-wide Secret announcement doesn't spoil it.
+local HATCH_ANNOUNCE_DELAY = 11
+
 local remotes: Remotes
 local lastPlay: { [Player]: { [string]: number } } = {}
 local lastAction: { [Player]: number } = {}
@@ -112,6 +120,8 @@ end
 
 -- Rendering is supplied by startup; progress and claims do not depend on it.
 MonsterService.SyncPortraits = function(_player: Player, _monsters: any) end
+-- Species previews for the hatch roll (every monster an egg can give), also supplied by startup.
+MonsterService.RequestPortraits = function(_player: Player, _species: { string }) end
 
 -- بيبعت للاعب نسخة من بياناته + أرقام محسوبة عشان الواجهة.
 function MonsterService.PushState(player: Player)
@@ -417,7 +427,8 @@ local function buyEgg(player: Player, eggType: unknown)
 end
 
 -- بيحط البيضة في مكان فاضي، أو يحفظ بيضة المكافأة على البنش لحد الفقس.
-function MonsterService.AddEgg(player: Player, eggType: string): boolean
+-- quiet: the caller sends its own single message (bundle purchases would otherwise toast once per egg).
+function MonsterService.AddEgg(player: Player, eggType: string, quiet: boolean?): boolean
 	local egg = Config.Eggs[eggType]
 	local profile = DataService.Get(player)
 	local slot = MonsterService.GetFreeSlot(player) or 0
@@ -432,7 +443,9 @@ function MonsterService.AddEgg(player: Player, eggType: string): boolean
 		HatchAt = os.time() + egg.HatchTime,
 	}
 	if slot > 0 then PlotService.RenderEgg(player, id, eggType, slot) end
-	MonsterService.Notify(player, "🥚 " .. egg.DisplayName .. (if slot > 0 then " placed in your base! Wait for it to hatch." else " is waiting in your Pets menu. Place it in a free slot to start hatching."), "success")
+	if not quiet then
+		MonsterService.Notify(player, "🥚 " .. egg.DisplayName .. (if slot > 0 then " placed in your base! Wait for it to hatch." else " is waiting in your Pets menu. Place it in a free slot to start hatching."), "success")
+	end
 	saveInventory(player)
 	return true
 end
@@ -460,7 +473,7 @@ local function hatch(player: Player, eggData: DataService.EggData)
 		return
 	end
 	local egg = Config.Eggs[eggData.EggType]
-	local species = if egg then rollWeighted(egg.Weights) else "Blobby"
+	local species = if egg then rollWeighted(MonsterService.AdjustHatchWeights(player, eggData.EggType, egg.Weights)) else "Blobby"
 	-- Lucky uses its historical pool plus the configured 5x separate Secret roll.
 	local secretChance = Config.SecretChance * (if eggData.EggType == "Lucky" then Config.LuckyEggSecretMultiplier else 1)
 	if (not egg or egg.AllowSecret ~= false) and math.random() < secretChance then
@@ -485,9 +498,32 @@ local function hatch(player: Player, eggData: DataService.EggData)
 	if MonsterService.IsPlaced(player, monster) then PlotService.RenderMonster(player, monster) end
 
 	local rarity = Config.Species[species].Rarity
-	MonsterService.Notify(player, "🐣 Hatched! You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")", "success")
+	-- The client rolls a reel of every monster this egg can give and lands on the one chosen above. It only
+	-- animates; the result is already saved. The generic "Hatched!" toast is gone because it would spoil the roll.
+	local preview: { string } = { species }
+	if egg then
+		for name in egg.Weights do table.insert(preview, name) end
+	end
+	-- The monster is already saved above; a failure here must never abort the hatch tick, so fall back to the old toast.
+	local sent, sendError = pcall(function()
+		MonsterService.RequestPortraits(player, preview)
+		remotes.HatchResult:FireClient(player, {
+			EggType = eggData.EggType,
+			Species = species,
+			Mutation = monster.Mutation,
+			Slot = eggData.Slot,
+			MonsterId = monster.Id,
+		})
+	end)
+	if not sent then
+		warn("HatchResult failed:", sendError)
+		MonsterService.Notify(player, "🐣 Hatched! You got " .. MonsterMath.GetDisplayName(monster) .. " (" .. rarity .. ")", "success")
+	end
 	if rarity == "Secret" then
-		MonsterService.Announce("🌌 " .. player.DisplayName .. " hatched a SECRET monster: " .. MonsterMath.GetDisplayName(monster) .. "!", Color3.fromRGB(200, 120, 255))
+		local announcement = "🌌 " .. player.DisplayName .. " hatched a SECRET monster: " .. MonsterMath.GetDisplayName(monster) .. "!"
+		task.delay(HATCH_ANNOUNCE_DELAY, function()
+			MonsterService.Announce(announcement, Color3.fromRGB(200, 120, 255))
+		end)
 	end
 end
 

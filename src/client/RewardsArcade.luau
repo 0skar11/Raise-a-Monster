@@ -7,8 +7,13 @@ local GuiService = game:GetService("GuiService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local GuiTheme = require(script.Parent.GuiTheme)
 local CartoonUI = require(script.Parent.CartoonUI)
+local HudKit = require(script.Parent.HudKit)
 
 local RewardsArcade = {}
+-- UI.Create uses Sibling ordering: a high-layer background sibling covers the
+-- entire lower-layer content branch, regardless of the children's ZIndex.
+-- Keep every branch above its parent surface, with the modal close control last.
+local MODAL_LAYER, CLOSE_LAYER = 30, 50
 local COLORS = {
 	Night = Color3.fromRGB(18, 35, 82), Panel = Color3.fromRGB(255, 248, 226),
 	Card = Color3.fromRGB(229, 247, 255), Edge = Color3.fromRGB(81, 192, 224),
@@ -53,6 +58,7 @@ end
 local function frame(parent: Instance, name: string, color: Color3): Frame
 	local item = Instance.new("Frame")
 	item.Name, item.BorderSizePixel, item.BackgroundColor3 = name, 0, color
+	item.ZIndex = if parent:IsA("GuiObject") then parent.ZIndex + 1 else 1
 	item.Parent = parent
 	return item
 end
@@ -60,6 +66,7 @@ end
 local function text(parent: Instance, name: string, value: string, size: number, color: Color3): TextLabel
 	local item = Instance.new("TextLabel")
 	item.Name, item.BackgroundTransparency = name, 1
+	item.ZIndex = if parent:IsA("GuiObject") then parent.ZIndex + 1 else 1
 	item.Font, item.RichText = Enum.Font.GothamBold, false
 	item.Text, item.TextSize, item.TextColor3 = value, size, color
 	item.TextWrapped = true
@@ -70,20 +77,6 @@ end
 
 local function position(object: GuiObject, x: number, y: number, width: number, height: number)
 	object.Position, object.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(width, height)
-end
-
-local function button(parent: Instance, name: string): TextButton
-	local item = Instance.new("TextButton")
-	item.Name, item.BorderSizePixel, item.Font = name, 0, Enum.Font.FredokaOne
-	item.TextSize, item.TextColor3 = 20, COLORS.Night
-	item.TextWrapped, item.AutoButtonColor = true, true
-	item.BackgroundColor3 = COLORS.Green
-	item.Parent = parent
-	rounded(item, 9)
-	local border = outline(item, Color3.fromRGB(53, 148, 15), 2)
-	gradient(item, Color3.new(1, 1, 1), Color3.fromRGB(190, 226, 139))
-	GuiTheme.ButtonFeedback(item, border)
-	return item
 end
 
 local function clock(seconds: number): string
@@ -125,69 +118,68 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 	local step = if #prizes > 0 then 360 / #prizes else 360
 	local controller = {} :: any
 
-	panel.BackgroundColor3 = COLORS.Sky
-	panel.ZIndex = 30
+	panel.ZIndex = MODAL_LAYER
 	for _, child in panel:GetChildren() do
 		if child.Name == "Ornament" or child.Name == "PixelInset" or child.Name == "ModalBackdrop" or child:IsA("UIGradient") then child:Destroy()
 		elseif child:IsA("TextLabel") then child.Visible = false
-		elseif child:IsA("UIStroke") then child.Color, child.Thickness = COLORS.Cyan, 3 end
+		elseif child:IsA("UIStroke") or child:IsA("UICorner") then child:Destroy() end
 	end
-	local backdrop = CartoonUI.ApplyBackdrop(panel)
+	HudKit.Body(panel)
 	local root = frame(panel, "RewardsArcade", COLORS.Panel)
+	root.ZIndex = panel.ZIndex + 1
 	root.BackgroundTransparency, root.Size = 1, UDim2.fromScale(1, 1)
 	local nativeScale = Instance.new("UIScale")
 	nativeScale.Name, nativeScale.Parent = "NativeRewardsScale", panel
 	local screen = panel:FindFirstAncestorOfClass("ScreenGui")
 	local inheritedScale = if screen then screen:FindFirstChildOfClass("UIScale") else nil
 
-	local header = frame(root, "Header", COLORS.Sky)
-	rounded(header, 10)
-	gradient(header, Color3.fromRGB(107, 225, 255), COLORS.Sky)
-	local headerLine = frame(header, "GoldRule", COLORS.Gold)
-	headerLine.Position, headerLine.Size = UDim2.new(0, 8, 1, -2), UDim2.new(1, -16, 0, 2)
+	-- Lucky Wheel header in the HUD kit style: coloured face, black outline, gift art and a heavy white title.
+	local header, heading = HudKit.Header(root, "Header", "Purple", "Lucky Wheel")
+	heading.Name = "Heading"
 	local gift = CartoonUI.Icon(header, "Gift", 48)
 	gift.Name, gift.Size, gift.Position = "GiftArt", UDim2.fromOffset(48, 48), UDim2.fromOffset(14, 8)
-	local heading = text(header, "Heading", "REWARDS", 31, COLORS.Gold)
-	heading.Font, heading.TextStrokeTransparency = Enum.Font.FredokaOne, 0.05
-	heading.TextXAlignment = Enum.TextXAlignment.Left
-	local subtitle = text(header, "Subtitle", "Your daily loot drop", 11, COLORS.Night)
-	subtitle.TextXAlignment = Enum.TextXAlignment.Left
 	local close = panel:FindFirstChild("CloseButton")
 	if close and close:IsA("TextButton") then
-		close.ZIndex = 40
-		close.BackgroundColor3, close.TextColor3, close.TextSize = Color3.fromRGB(243, 72, 94), COLORS.White, 24
+		close.ZIndex = CLOSE_LAYER
+		close.BackgroundColor3, close.TextColor3, close.TextSize, close.Font = Color3.fromRGB(232, 40, 72), COLORS.White, 26, Enum.Font.FredokaOne
 		for _, child in close:GetChildren() do
-			if child:IsA("UIGradient") then child:Destroy() end
+			if child:IsA("UIGradient") or child:IsA("UIStroke") or child:IsA("UICorner") or child.Name == "PixelInset" then child:Destroy() end
 		end
+		rounded(close, 6)
+		outline(close, HudKit.Colors.Ink, 3)
+		local closeText = Instance.new("UIStroke")
+		closeText.Color, closeText.Thickness, closeText.ApplyStrokeMode = HudKit.Colors.Ink, 2, Enum.ApplyStrokeMode.Contextual
+		closeText.Parent = close
 	end
 
 	local content = Instance.new("ScrollingFrame")
 	content.Name, content.BackgroundTransparency, content.BorderSizePixel = "RewardContent", 1, 0
+	content.ZIndex = root.ZIndex + 1
 	content.ScrollBarThickness, content.ScrollBarImageColor3 = 4, COLORS.Edge
 	content.ScrollingDirection = Enum.ScrollingDirection.Y
 	content.CanvasSize = UDim2.new()
 	content.Parent = root
-	local arcade = frame(content, "SpinArcade", COLORS.Panel)
-	rounded(arcade, 16)
-	outline(arcade, Color3.fromRGB(255, 227, 159), 2)
-	local spinHeading = text(arcade, "SpinHeading", "SPIN WHEEL", 23, COLORS.Night)
-	spinHeading.Font = Enum.Font.FredokaOne
-	spinHeading.TextXAlignment = Enum.TextXAlignment.Left
-	local spinSubtitle = text(arcade, "SpinSubtitle", "ONE FREE SPIN EVERY " .. tostring(math.floor(Config.Spin.Cooldown / 3600)) .. " HOURS", 11, COLORS.Muted)
-	spinSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+	local arcade = frame(content, "SpinArcade", Color3.fromRGB(38, 40, 54))
+	rounded(arcade, 4)
+	outline(arcade, HudKit.Colors.Ink, 3)
+	-- The kit's big "Next FREE spin in ..." line sits above the wheel.
+	local spinHeading = HudKit.Text(arcade, "SpinHeading", "Next FREE spin in", 28)
+	local spinSubtitle = HudKit.Text(arcade, "SpinSubtitle", "ONE FREE SPIN EVERY " .. tostring(math.floor(Config.Spin.Cooldown / 3600)) .. " HOURS", 12)
+	spinSubtitle.TextColor3 = HudKit.Colors.Muted
 
 	local wheelMount = frame(arcade, "WheelMount", COLORS.Gold)
 	wheelMount.BackgroundTransparency = 1
-	local rim = frame(wheelMount, "GoldenRim", COLORS.Gold)
+	local rim = frame(wheelMount, "GoldenRim", COLORS.White)
 	rim.Size, rim.Position = UDim2.fromScale(0.96, 0.96), UDim2.fromScale(0.02, 0.02)
 	rounded(rim, 999)
-	outline(rim, COLORS.Night, 2)
-	gradient(rim, Color3.fromRGB(255, 242, 160), Color3.fromRGB(231, 151, 24))
+	outline(rim, HudKit.Colors.Ink, 4)
+	gradient(rim, Color3.fromRGB(255, 255, 255), Color3.fromRGB(176, 184, 206))
 	local wheel = frame(wheelMount, "PrizeDisc", COLORS.Night)
 	wheel.AnchorPoint, wheel.Size, wheel.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.9, 0.9), UDim2.fromScale(0.5, 0.5)
 	wheel.BackgroundTransparency = 1
 	local viewport = Instance.new("ViewportFrame")
 	viewport.Name, viewport.Size, viewport.BackgroundTransparency = "RadialPrizeWedges", UDim2.fromScale(1, 1), 1
+	viewport.ZIndex = wheel.ZIndex + 1
 	viewport.Ambient, viewport.LightColor = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
 	viewport.Parent = wheel
 	local world = Instance.new("WorldModel")
@@ -216,13 +208,28 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		local art = CartoonUI.Icon(labelGroup, iconName, 64)
 		art.Name = if prize.Egg then "Egg" elseif prize.Candy then "Candy" else "Coins"
 		art.Size, art.Position = UDim2.fromScale(0.54, 0.58), UDim2.fromScale(0.23, 0)
-		local caption = text(labelGroup, "PrizeName", prize.Name, 16, COLORS.Night)
-		caption.TextStrokeTransparency = 1
+		local caption = text(labelGroup, "PrizeName", prize.Name, 16, COLORS.White)
+		caption.Font = Enum.Font.FredokaOne
+		HudKit.Outline(caption, 2)
 		caption.Size, caption.Position = UDim2.fromScale(1, 0.4), UDim2.fromScale(0, 0.6)
 		caption.TextScaled = true
 		local limit = Instance.new("UITextSizeConstraint")
 		limit.MinTextSize, limit.MaxTextSize, limit.Parent = 8, 17, caption
 	end
+	-- Black spokes between prizes and a black rim, as on the kit wheel. Spokes turn with the disc.
+	for index = 1, #prizes do
+		local boundary = math.rad(((index - 1) * step) + step / 2)
+		local spoke = frame(wheel, "Spoke" .. index, HudKit.Colors.Ink)
+		spoke.AnchorPoint, spoke.Size = Vector2.new(0.5, 0.5), UDim2.new(0, 5, 0.5, 0)
+		spoke.Position = UDim2.fromScale(0.5 + math.sin(boundary) * 0.25, 0.5 - math.cos(boundary) * 0.25)
+		spoke.Rotation = math.deg(boundary)
+		spoke.ZIndex = wheel.ZIndex + 2
+	end
+	local discRing = frame(wheelMount, "DiscRing", COLORS.Night)
+	discRing.BackgroundTransparency = 1
+	discRing.AnchorPoint, discRing.Size, discRing.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.9, 0.9), UDim2.fromScale(0.5, 0.5)
+	rounded(discRing, 999)
+	outline(discRing, HudKit.Colors.Ink, 4)
 	table.insert(connections, wheel:GetPropertyChangedSignal("Rotation"):Connect(function()
 		-- Labels travel with the disc while staying readable at every final position.
 		for _, label in prizeLabels do label.Rotation = -wheel.Rotation end
@@ -230,7 +237,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 	local hub = frame(wheelMount, "Hub", COLORS.Gold)
 	hub.AnchorPoint, hub.Size, hub.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.18, 0.18), UDim2.fromScale(0.5, 0.5)
 	rounded(hub, 99)
-	outline(hub, COLORS.Pale, 3)
+	outline(hub, HudKit.Colors.Ink, 4)
 	gradient(hub, Color3.fromRGB(255, 245, 170), Color3.fromRGB(241, 169, 39))
 	local hubMark = CartoonUI.Icon(hub, "Gift", 44)
 	hubMark.Size, hubMark.Position = UDim2.fromScale(0.8, 0.8), UDim2.fromScale(0.1, 0.1)
@@ -239,22 +246,20 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 	pointer.BackgroundTransparency = 1
 	pointer.AnchorPoint, pointer.Size, pointer.Position = Vector2.new(0.5, 0), UDim2.fromOffset(36, 32), UDim2.fromScale(0.5, 0.025)
 	for row = 0, 15 do
-		local edge = frame(pointer, "PointerEdge", COLORS.Night)
+		local edge = frame(pointer, "PointerEdge", HudKit.Colors.Ink)
 		position(edge, row, row * 2, 36 - row * 2, 2)
 		if row >= 2 and row < 13 then
-			local fill = frame(pointer, "PointerFill", COLORS.Gold)
+			local fill = frame(pointer, "PointerFill", Color3.fromRGB(235, 45, 75))
 			position(fill, row + 3, row * 2, 30 - row * 2, 2)
 		end
 	end
 
+	-- The info card is now just the kit's big green SPIN button; the countdown lives in the heading above the wheel.
 	local spinInfo = frame(arcade, "SpinInfo", COLORS.Card)
-	rounded(spinInfo, 14)
-	outline(spinInfo, COLORS.Edge, 2)
-	local spinStatus = text(spinInfo, "Status", "FREE SPIN", 12, COLORS.Muted)
-	local spinClock = text(spinInfo, "Cooldown", "Loading...", 27, COLORS.Night)
-	spinClock.Font = Enum.Font.FredokaOne
-	local spinButton = button(spinInfo, "FreeSpin")
-	local spinResult = text(arcade, "SpinResult", "Coins, candy or eggs. Your next prize awaits.", 14, COLORS.Muted)
+	spinInfo.BackgroundTransparency = 1
+	local spinButton = HudKit.Button(spinInfo, "FreeSpin", "SPIN", "Green")
+	local spinResult = HudKit.Text(arcade, "SpinResult", "Coins, candy or eggs. Your next prize awaits.", 15)
+	spinResult.Font = Enum.Font.GothamBold
 
 	local function layout()
 		if destroyed then return end
@@ -266,11 +271,11 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		local height = math.min(760, math.max(180, available.Y - 24))
 		nativeScale.Scale = (if inheritedScale then 1 / math.max(0.01, inheritedScale.Scale) else 1) * GuiTheme.ModalShrink(activeCamera.ViewportSize)
 		panel.Size = UDim2.fromOffset(width, height)
-		position(header, 3, 3, width - 6, 66)
-		position(heading, 70, 8, width - 142, 34)
-		position(subtitle, 72, 43, width - 145, 14)
+		position(header, 6, 6, width - 12, 66)
+		position(heading, 70, 0, width - 146, 66)
 		gift.Visible = width >= 350
-		if width < 350 then position(heading, 16, 8, width - 85, 34); position(subtitle, 18, 43, width - 86, 14) end
+		if width < 350 then position(heading, 16, 0, width - 90, 66) end
+		heading.TextSize = if width < 350 then 26 else 36
 		if close and close:IsA("TextButton") then position(close, width - 56, 13, 44, 44) end
 		position(content, 10, 78, width - 20, height - 88)
 		local inner = width - 28
@@ -280,39 +285,30 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		-- Desktop keeps the complete disc visible; short / narrow screens retain native scroll.
 		local fittingWheelSize = content.Size.Y.Offset - 8 - 104
 		if not compact and fittingWheelSize >= 240 then wheelSize = math.min(wheelSize, fittingWheelSize) end
-		local arcadeHeight = if compact then wheelSize + 222 else wheelSize + 104
+		local arcadeHeight = if compact then wheelSize + 200 else wheelSize + 104
 		position(arcade, 4, 4, arcadeWidth, arcadeHeight)
-		position(spinHeading, 16, 11, arcadeWidth - 32, 31)
-		position(spinSubtitle, 17, 43, arcadeWidth - 34, 18)
+		position(spinHeading, 16, 8, arcadeWidth - 32, 36)
+		position(spinSubtitle, 17, 45, arcadeWidth - 34, 18)
+		spinHeading.TextSize = if compact then 22 else 28
 		if compact then
 			position(wheelMount, (arcadeWidth - wheelSize) / 2, 72, wheelSize, wheelSize)
-			position(spinInfo, 14, wheelSize + 84, arcadeWidth - 28, 94)
-			position(spinStatus, 12, 11, (arcadeWidth - 52) * 0.44, 20)
-			position(spinClock, 10, 36, (arcadeWidth - 52) * 0.46, 40)
-			position(spinButton, (arcadeWidth - 28) * 0.49, 25, (arcadeWidth - 28) * 0.51 - 12, 48)
-			position(spinResult, 14, wheelSize + 185, arcadeWidth - 28, 26)
+			position(spinInfo, 14, wheelSize + 84, arcadeWidth - 28, 56)
+			position(spinButton, 0, 0, arcadeWidth - 28, 56)
+			position(spinResult, 14, wheelSize + 148, arcadeWidth - 28, 40)
 		else
 			position(wheelMount, 14, 74, wheelSize, wheelSize)
 			local infoWidth = arcadeWidth - wheelSize - 48
-			local infoY = wheelSize * 0.5 - 8
-			position(spinInfo, wheelSize + 29, infoY, infoWidth, 164)
-			position(spinStatus, 8, 14, infoWidth - 16, 23)
-			position(spinClock, 8, 45, infoWidth - 16, 39)
-			position(spinButton, 10, 103, infoWidth - 20, 48)
-			position(spinResult, wheelSize + 25, infoY + 176, infoWidth + 8, 52)
+			local infoY = wheelSize * 0.5 - 24
+			position(spinInfo, wheelSize + 29, infoY, infoWidth, 64)
+			position(spinButton, 0, 0, infoWidth, 64)
+			position(spinResult, wheelSize + 25, infoY + 78, infoWidth + 8, 52)
 		end
 		content.CanvasSize = UDim2.fromOffset(0, arcadeHeight + 8)
 		if content.CanvasSize.Y.Offset <= content.Size.Y.Offset then content.CanvasPosition = Vector2.zero end
 	end
 
 	local function enabled(item: TextButton, available: boolean)
-		item.Active, item.Selectable, item.AutoButtonColor = available, available, available
-		item.BackgroundColor3 = if available then COLORS.Green else COLORS.Disabled
-		item.TextColor3 = if available then COLORS.Night else COLORS.Muted
-		local sheen = item:FindFirstChildOfClass("UIGradient")
-		if sheen then sheen.Enabled = available end
-		local border = item:FindFirstChildOfClass("UIStroke")
-		if border then border.Color = if available then Color3.fromRGB(53, 148, 15) else Color3.fromRGB(149, 177, 196) end
+		HudKit.SetEnabled(item, available)
 	end
 
 	-- Celebration: a short confetti burst from the claim button / the wheel. Pure decoration; never blocks input.
@@ -351,14 +347,14 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		if destroyed then return end
 		lastState = state
 		if not state then
-			spinButton.Text = "Loading..."
+			HudKit.SetText(spinButton, "Loading...")
+			spinHeading.Text = "Loading..."
 			enabled(spinButton, false)
 			return
 		end
 		local spinIn = math.max(0, state.SpinReadyIn or 0)
-		spinStatus.Text = if spinning then "CHOOSING YOUR PRIZE" elseif spinIn > 0 then "FREE SPIN IN" else "YOUR FREE SPIN IS READY"
-		spinClock.Text = if spinning then "GOOD LUCK!" elseif pendingSpin then "Starting..." elseif spinIn > 0 then clock(spinIn) else "LET'S GO!"
-		spinButton.Text = if spinning then "SPINNING..." elseif pendingSpin then "WAIT..." else "FREE SPIN"
+		spinHeading.Text = if spinning then "Good luck!" elseif pendingSpin then "Starting..." elseif spinIn > 0 then "Next FREE spin in " .. clock(spinIn) else "Your FREE spin is ready!"
+		HudKit.SetText(spinButton, if spinning then "SPINNING..." elseif pendingSpin then "WAIT..." else "SPIN")
 		enabled(spinButton, #prizes > 0 and spinIn <= 0 and not spinning and not pendingSpin)
 	end
 
@@ -368,7 +364,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		wheel.Rotation = spinTarget % 360
 		spinning = false
 		if resultIndex and prizes[resultIndex] then
-			spinResult.Text, spinResult.TextColor3 = "Prize: " .. prizes[resultIndex].Name, COLORS.Night
+			spinResult.Text, spinResult.TextColor3 = "Prize: " .. prizes[resultIndex].Name, COLORS.White
 		end
 		controller:Refresh(lastState)
 	end
@@ -396,7 +392,7 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		task.delay(4.6, function()
 			if destroyed or version ~= animationVersion then return end
 			finishSpin()
-			spinResult.Text, spinResult.TextColor3 = "Prize: " .. prizes[index].Name, COLORS.Night
+			spinResult.Text, spinResult.TextColor3 = "Prize: " .. prizes[index].Name, COLORS.White
 			burst(wheel)
 		end)
 	end
@@ -429,7 +425,6 @@ function RewardsArcade.Mount(panel: Frame, options: Options): Controller
 		if viewportConnection then viewportConnection:Disconnect() end
 		for _, connection in connections do connection:Disconnect() end
 		root:Destroy()
-		backdrop:Destroy()
 		nativeScale:Destroy()
 	end
 	table.insert(connections, panel.Destroying:Connect(function() controller:Destroy() end))

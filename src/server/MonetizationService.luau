@@ -21,6 +21,10 @@ local MonetizationService = {}
 MonetizationService.CanPromptBossSummon = function(_player: Player): boolean return false end
 MonetizationService.ProcessBossSummonReceipt = function(_player: Player, _receipt: any): boolean return false end
 
+-- Egg Keeper developer products share this one ProcessReceipt (Roblox allows a single callback).
+MonetizationService.IsEggStoreProduct = function(_productId: unknown): boolean return false end
+MonetizationService.ProcessEggStoreReceipt = function(_player: Player, _receipt: any): boolean return false end
+
 local owned: { [Player]: { [string]: boolean } } = {}
 local lastPrompt: { [Player]: number } = {}
 local lastGearAction: { [Player]: number } = {}
@@ -415,6 +419,10 @@ function MonetizationService.Init(remotes: { [string]: RemoteEvent })
 		local profile = player and DataService.Get(player)
 		if not player or not profile or profile.LoadFailed or profile.Closing or type(receipt.PurchaseId) ~= "string" or #receipt.PurchaseId == 0 then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		if MonetizationService.IsEggStoreProduct(receipt.ProductId) then
+			return if MonetizationService.ProcessEggStoreReceipt(player, receipt)
+				then Enum.ProductPurchaseDecision.PurchaseGranted else Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		for name, product in Config.Products do
 			if product.Id > 0 and product.Id == receipt.ProductId then
