@@ -261,8 +261,14 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 			local crop = (MonsterForge.Assets.PassCrops :: any)[offer.Key]
 			if crop then art.ImageRectOffset, art.ImageRectSize = crop.Min, crop.Max - crop.Min end
 		else
-			local icon = glyph(preview, "Coins & Growth")
-			icon.Position = UDim2.new(0.5, -17, 0.5, -17)
+			if offer.Key == "SummonBoss" then
+				local pumpkin = text(preview, "Pumpkin", "🎃", 42, C.Gold)
+				pumpkin.Size = UDim2.fromScale(1, 1)
+				pumpkin.TextXAlignment = Enum.TextXAlignment.Center
+			else
+				local icon = glyph(preview, "Coins & Growth")
+				icon.Position = UDim2.new(0.5, -17, 0.5, -17)
+			end
 		end
 		for _, child in preview:GetChildren() do
 			if child:IsA("ViewportFrame") then
@@ -331,7 +337,8 @@ function MonsterForge.Mount(root: Frame, scroll: ScrollingFrame, options: any): 
 	for _, key in productKeys do
 		local info = Config.Products[key]
 		if not info.Hidden then
-			add({ Key = key, Kind = "Product", Category = "Coins & Growth", Title = info.Name, Description = info.Description, Price = info.Price, Id = info.Id })
+			add({ Key = key, Kind = "Product", Category = if key == "SummonBoss" then "Gamepasses" else "Coins & Growth",
+				Title = info.Name, Description = info.Description, Price = info.Price, Id = info.Id })
 		end
 	end
 	local function token(offer: any): string return offer.Kind .. ":" .. offer.Key end

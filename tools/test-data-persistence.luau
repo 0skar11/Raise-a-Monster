@@ -74,6 +74,8 @@ check(not second.Save(rival), "Failed load cannot write starter defaults")
 second.Release(rival)
 check(stored.Player_1._SessionLock.Id == profile.SessionId, "Rejected session cannot release another server's lock")
 profile.Data.Coins = 7654
+profile.Data.ProcessedReceipts["summon-pending"] = true
+profile.Data.PendingBossSummons["summon-pending"] = 50
 profile.Data.PendingCoins = 125.5
 profile.Data.TotalEarned = 9000
 profile.Data.Monsters = { ["7"] = { Id = "7", Species = "Grassland_1", Slot = 1, Level = 12, Xp = 25, Hunger = 65, Happiness = 77, Hat = "saved-hat" } }
@@ -100,6 +102,9 @@ check(first.Get(p) == nil and stored.Player_1._SessionLock == nil, "Exit atomica
 check(stored.Player_1.Monsters["7"].Level == 13, "Exit saves progress after the last autosave")
 profile = second.Load(rival)
 check(not profile.LoadFailed and profile.Data.Coins == 7654, "Rejoin reads the saved balance")
+check(profile.Data.PendingBossSummons["summon-pending"] == 50 and profile.Data.ProcessedReceipts["summon-pending"], "Paid summon credit and receipt survive real DataService save/rejoin together")
+local reset = second.WipeProgress(profile.Data)
+check(reset.PendingBossSummons["summon-pending"] == 50 and reset.ProcessedReceipts["summon-pending"], "Progress reset preserves unfulfilled paid summons and their receipt markers")
 check(profile.Data.Monsters["7"].Hat == "saved-hat" and profile.Data.Monsters["7"].Level == 13 and profile.Data.Eggs["8"].EggType == "Rare", "Monsters, accessories, XP and eggs survive rejoin")
 check(profile.Data.Weapons.IronSword and profile.Data.EquippedWeapon == "IronSword" and profile.Data.SpeedAccessories.SwiftSneakers and profile.Data.EquippedSpeedAccessory == "SwiftSneakers", "Gear ownership and both selections survive rejoin")
 check(profile.Data.LastSpin == now - config.AutosaveInterval and profile.Data.ProcessedReceipts["purchase-1"] and profile.Data.NextId == 9, "Rewards, receipt deduplication and ID sequence survive rejoin")

@@ -40,6 +40,7 @@ export type PlayerData = {
 	LastSpin: number,
 	LastAdChest: number, -- آخر مرة اتدّت فيها جايزة صندوق الإعلان (os.time)
 	ProcessedReceipts: { [string]: boolean },
+	PendingBossSummons: { [string]: number }, -- receipt -> Robux paid; durable until delivered in the buyer's server
 	PendingAdultPurchase: {
 		Token: string, ProductName: string, ProductId: number, Status: string,
 		Targets: { { Id: string, Identity: string } }, ReceiptId: string?,
@@ -88,6 +89,7 @@ local DEFAULT_DATA: PlayerData = {
 	LastSpin = 0,
 	LastAdChest = 0,
 	ProcessedReceipts = {},
+	PendingBossSummons = {},
 	SpeedBoostUntil = 0,
 	Halloween = { Candy = 0, TotalCandy = 0, BoostUntil = 0, Converted = 0, Owned = {}, Equipped = {} },
 }
@@ -260,6 +262,9 @@ local function wipeProgress(old: PlayerData): PlayerData
 	if type(old.ProcessedReceipts) == "table" then
 		fresh.ProcessedReceipts = old.ProcessedReceipts
 	end
+	if type(old.PendingBossSummons) == "table" then
+		fresh.PendingBossSummons = old.PendingBossSummons -- paid summons survive a progression reset
+	end
 	return fresh
 end
 DataService.WipeProgress = wipeProgress
@@ -314,6 +319,18 @@ function DataService.Load(player: Player): Profile
 
 	reconcileGear(data)
 	sanitizeHalloween(data)
+	do
+		local pending: { [string]: number } = {}
+		if type(data.PendingBossSummons) == "table" then
+			for receiptId, robux in data.PendingBossSummons do
+				if type(receiptId) == "string" and #receiptId > 0 and data.ProcessedReceipts[receiptId] == true
+					and type(robux) == "number" and robux == robux and robux >= 0 and robux < math.huge then
+					pending[receiptId] = math.floor(robux)
+				end
+			end
+		end
+		data.PendingBossSummons = pending
+	end
 	do
 		local cleaned: { string } = {}
 		if type((data :: any).Followers) == "table" then

@@ -18,6 +18,7 @@ local MonsterAttack = require(script.MonsterAttack)
 local TerrainService = require(script.TerrainService)
 local MonetizationService = require(script.MonetizationService)
 local EventService = require(script.EventService)
+local BossSummonService = require(script.BossSummonService)
 local LeaderboardService = require(script.LeaderboardService)
 local RewardService = require(script.RewardService)
 local AdChestService = require(script.AdChestService)
@@ -33,6 +34,8 @@ local remotes = Remotes.Get()
 
 -- Hooks (عشان MonsterService مايحتاجش يعمل require للخدمات اللي بتعتمد عليه)
 MonsterService.HasPass = MonetizationService.HasPass
+MonetizationService.CanPromptBossSummon = BossSummonService.CanPrompt
+MonetizationService.ProcessBossSummonReceipt = BossSummonService.ProcessReceipt
 MonsterService.SyncPortraits = MonsterPortraits.Sync
 -- Halloween Candy Boost (inert unless Config.Halloween is running)
 MonsterService.GetEventMultiplier = HalloweenService.GetCashMultiplier
@@ -65,6 +68,7 @@ ZoneService.Init()
 TerrainService.Init()
 MonetizationService.Init(remotes)
 EventService.Init()
+BossSummonService.Init(remotes)
 HalloweenService.Init(remotes)
 PumpkinDecor.Init()
 LeaderboardService.Init()
