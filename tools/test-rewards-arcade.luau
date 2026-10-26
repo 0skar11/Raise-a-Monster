@@ -39,7 +39,7 @@ local services = {
 local env = {
 	game = { GetService = function(_, name) return assert(services[name], name) end },
 	workspace = workspace,
-	script = { Parent = { Config = "Config", GuiTheme = "GuiTheme" } },
+	script = { Parent = { Config = "Config", GuiTheme = "GuiTheme", CartoonUI = "CartoonUI" } },
 	require = function(name) return assert(modules[name], name) end,
 	task = { delay = function(seconds, callback) table.insert(scheduled, { Seconds = seconds, Callback = callback }) end },
 	TweenInfo = { new = function() return {} end },
@@ -53,6 +53,21 @@ modules.GuiTheme = {
 	Backdrop = function() end,
 	Atlas = { Image = "rbxassetid://116704436062887", CellSize = r.Vector2.new(360, 296.75) },
 	IconRects = { Gift = r.Vector2.new(1, 0) },
+}
+-- Artwork is a renderer boundary; the real controller still builds all native
+-- controls, labels and prize geometry, and exercises every reward interaction.
+modules.CartoonUI = {
+	Icon = function(parent, key, size)
+		local icon = r.Instance.new("ImageLabel")
+		icon.Name, icon.BackgroundTransparency = key, 1
+		icon.Image, icon.Size, icon.Parent = "rbxassetid://123", r.UDim2.fromOffset(size, size), parent
+		return icon
+	end,
+	ApplyBackdrop = function(parent)
+		local art = r.Instance.new("ImageLabel")
+		art.Name, art.Parent = "CartoonBackdrop", parent
+		return art
+	end,
 }
 local module = luau.load(fs.readFile("src/client/RewardsArcade.luau"), { environment = env, injectGlobals = true })()
 local gui = r.Instance.new("ScreenGui")
@@ -82,6 +97,9 @@ for _, viewport in { r.Vector2.new(320, 568), r.Vector2.new(480, 320), r.Vector2
 	check(width <= viewport.X - 24 and height <= viewport.Y - 60, "Panel fits available inset viewport")
 	check(math.abs(scale.Scale * panel.NativeRewardsScale.Scale - 1) < 0.00001, "Parent scale is cancelled for native touch targets")
 	check(content.Position.Y.Offset >= 78 and content.Position.Y.Offset + content.Size.Y.Offset <= height, "Content fits below fixed header")
+	local heading, gift = root.Header.Heading, root.Header.GiftArt
+	check(not gift.Visible or gift.Position.X.Offset + gift.Size.X.Offset <= heading.Position.X.Offset,
+		"Reward header illustration and heading never overlap")
 	check(arcade.Position.Y.Offset + arcade.Size.Y.Offset <= content.CanvasSize.Y.Offset, "Spin region reachable through scroll canvas")
 	if viewport.X >= 1100 and viewport.Y >= 600 then
 		check(content.CanvasSize.Y.Offset <= content.Size.Y.Offset, "Desktop shows the full wheel without scrolling")
@@ -114,9 +132,11 @@ check(totalWeight > 0, "Spin odds have positive total weight")
 state.SpinReadyIn = 59
 controller:Refresh(state)
 check(not spinButton.Active, "Cooldown disables the spin request")
+check(not spinButton:FindFirstChildOfClass("UIGradient").Enabled, "Unavailable free spin has no active purchase sheen")
 spinButton.Activated:Fire()
 check(spins == 0, "Disabled spin cannot request a reward even if Activated fires")
 state.SpinReadyIn = 0; controller:Refresh(state)
+check(spinButton:FindFirstChildOfClass("UIGradient").Enabled, "Ready free spin restores its action sheen")
 spinButton.Activated:Fire(); spinButton.Activated:Fire()
 check(spins == 1, "Pending spin sends exactly one request")
 for index, prize in modules.Config.Spin.Prizes do

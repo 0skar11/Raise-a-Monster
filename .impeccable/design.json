@@ -1,84 +1,105 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-23T21:20:00Z",
-  "title": "Design System: Monster Forge",
+  "generatedAt": "2026-10-26T00:00:00Z",
+  "title": "Design System: Colorful Monster Forge and Rewards",
   "extensions": {
     "platform": "nativeRoblox",
-    "scope": "Monster Forge shop only",
-    "evidence": ["src/client/MonsterForge.luau", "src/client/UI.luau", "PRODUCT.md", "docs/monster-forge/brief.md", "assets/MonsterForge/README.md", "assets/MonsterForge/provenance.json"],
-    "previewPolicy": "Native Roblox components have no faithful HTML/CSS runtime equivalent here. Component entries identify source-backed native patterns; browser snippets and invented tonal ramps are deliberately omitted.",
+    "scope": "Monster Forge shop and RewardsArcade spin wheel only",
+    "evidence": ["src/client/MonsterForge.luau", "src/client/RewardsArcade.luau", "src/client/CartoonUI.luau", "src/client/GuiTheme.luau", "src/client/UI.luau", "docs/colorful-ui/direction.md", "assets/CartoonUI/upload-manifest.json"],
+    "previewPolicy": "Source-backed native Roblox components; no HTML/CSS runtime equivalent or invented browser interaction preview. Primitive values live only in DESIGN.md frontmatter. Synthetic tonal ramps omitted because not present in the native build.",
     "colorMeta": {
-      "gold": {"role": "primary", "displayName": "Gold"},
-      "bronze": {"role": "primary", "displayName": "Bronze"},
-      "cyan": {"role": "secondary", "displayName": "Selection Cyan"},
-      "red": {"role": "secondary", "displayName": "Damage Red"},
-      "ink": {"role": "neutral", "displayName": "Ink"},
-      "stone": {"role": "neutral", "displayName": "Stone"},
-      "raised": {"role": "neutral", "displayName": "Raised Stone"},
-      "edge": {"role": "neutral", "displayName": "Edge"},
-      "ivory": {"role": "neutral", "displayName": "Ivory"},
-      "text": {"role": "neutral", "displayName": "Text"},
-      "muted": {"role": "neutral", "displayName": "Muted"}
+      "shop-sky": {"role": "primary", "displayName": "Shop Sky"},
+      "rewards-sky": {"role": "primary", "displayName": "Rewards Sky"},
+      "shop-gold": {"role": "primary", "displayName": "Shop Gold"},
+      "rewards-gold": {"role": "primary", "displayName": "Rewards Gold"},
+      "rewards-lime": {"role": "primary", "displayName": "Rewards Lime"},
+      "shop-cyan": {"role": "secondary", "displayName": "Shop Cyan"},
+      "shop-coral": {"role": "secondary", "displayName": "Close Coral"},
+      "shop-cream": {"role": "neutral", "displayName": "Shop Cream"},
+      "rewards-cream": {"role": "neutral", "displayName": "Rewards Cream"},
+      "shop-navy": {"role": "neutral", "displayName": "Shop Navy"},
+      "rewards-navy": {"role": "neutral", "displayName": "Rewards Navy"}
     },
     "typographyMeta": {
-      "body": {"displayName": "Native supporting copy", "purpose": "Descriptions; compact variants use native TextSize 12."},
-      "label": {"displayName": "Native category label", "purpose": "Navigation; compact variants use native TextSize 12."}
+      "body": {"displayName": "Native supporting text", "purpose": "GothamBold body labels with responsive TextSize values documented in DESIGN.md."},
+      "label": {"displayName": "Native label", "purpose": "GothamBold information and state text; observed FredokaOne display roles remain non-canonized."}
     },
     "nativeRendering": {
-      "units": "Native offset pixels and TextSize; CSS lengths in DESIGN.md serialize those values only.",
+      "units": "Native offset pixels and TextSize; px serialization is not browser CSS measurement.",
       "gradients": [
-        {"name": "card", "value": "UIGradient: Raised to Ink, Rotation 90"},
-        {"name": "detail", "value": "UIGradient: RGB(13,31,43) to Ink, Rotation 90"},
-        {"name": "action", "value": "UIGradient: RGB(255,218,126) to RGB(218,145,42), Rotation 90"}
+        {"name": "shop-action", "value": "UIGradient RGB(192,255,69) to RGB(112,219,35), Rotation 90, on white base"},
+        {"name": "shop-card", "value": "UIGradient shop-raised to shop-cream, Rotation 90, on white base"},
+        {"name": "shop-detail", "value": "UIGradient RGB(238,255,255) to RGB(198,244,255), Rotation 90, on white base"},
+        {"name": "rewards-action", "value": "UIGradient white to RGB(190,226,139), Rotation 90, multiplied by rewards-lime base"},
+        {"name": "rewards-header", "value": "UIGradient RGB(107,225,255) to rewards-sky, Rotation 90"}
       ],
       "borders": [
-        {"name": "shell", "value": "UIStroke Bronze, Thickness 3"},
-        {"name": "ordinary", "value": "UIStroke Edge, Thickness 1"},
-        {"name": "selected-gear", "value": "UIStroke Cyan, Thickness 3"}
+        {"name": "shop-shell", "value": "UIStroke shop-sky, Thickness 3"},
+        {"name": "selected-gear", "value": "UIStroke shop-cyan, Thickness 3"},
+        {"name": "selected-category", "value": "UIStroke shop-cyan, Thickness 2.5"},
+        {"name": "shop-action", "value": "UIStroke RGB(78,172,21), Thickness 2"},
+        {"name": "rewards-action", "value": "UIStroke RGB(53,148,15), Thickness 2 before ButtonFeedback state response"}
       ],
-      "textStroke": "Ink; TextStrokeTransparency 0.3",
-      "interaction": "AutoButtonColor true; state-driven Active and Selectable; no custom focus, tween or easing tokens.",
-      "inactiveActionCaveat": "Changing BackgroundColor3 to Edge does not remove the warm UIGradient.",
-      "shellSliceCenter": [64,144,1799,780]
+      "disabled": "Disable gradient and input together; muted text with per-module disabled background and border.",
+      "shopInteraction": "Roblox AutoButtonColor; Active and Selectable follow state.",
+      "rewardsInteraction": "GuiTheme.ButtonFeedback handles mouse/touch/controller border thickness and gloss offset; enabled state also updates AutoButtonColor.",
+      "artwork": "20 independent icon IDs plus one Sky ID; Fit icons, Crop backdrop; aliases reuse images; Gift fallback; no runtime atlas crop.",
+      "statLayout": "Stat icons are siblings of padded labels. Reserve 40px text inset when visible; 28px icon at x6 leaves 6px gap. Hide icons below 250px detail width.",
+      "wheel": "Config-defined colors and labels; WedgeParts in ViewportFrame for sectors; fixed native geometric pointer; label groups counter-rotate. No daily reward cards in RewardsArcade."
     },
+    "motion": [
+      {"name": "rewards-feedback-press", "value": "0.08s Quad Out", "purpose": "Pressed border and gloss response."},
+      {"name": "rewards-feedback-release", "value": "0.14s Quad Out", "purpose": "Hover, selection and release response."},
+      {"name": "prize-spin", "value": "4s Quart Out; five turns plus server-selected alignment", "purpose": "Animate the server-selected prize without choosing rewards client-side."},
+      {"name": "prize-confetti", "value": "26 decorative Frames; 0.9-1.3s Quad Out; cleanup after 1.5s", "purpose": "Noninteractive result celebration."}
+    ],
     "breakpoints": [
-      {"name": "compact-width", "value": "panel width < 840 native pixels"},
-      {"name": "compact-height", "value": "panel height < 420 native pixels"},
-      {"name": "labels-only-navigation", "value": "panel width < 480 native pixels"},
-      {"name": "stacked-detail-width", "value": "content width < 370 native pixels"},
-      {"name": "stacked-detail-height", "value": "content height < 300 native pixels"}
+      {"name": "shop-compact", "value": "panel width <840 or height <420 native pixels"},
+      {"name": "shop-labels-only", "value": "panel width <480 native pixels"},
+      {"name": "shop-stacked-detail", "value": "content width <370 or height <300 native pixels"},
+      {"name": "shop-stat-icons", "value": "detail width >=250 native pixels"},
+      {"name": "rewards-stacked", "value": "arcade width <530 native pixels"},
+      {"name": "rewards-hide-header-art", "value": "panel width <350 native pixels"}
     ],
     "verification": {
       "sourceDerived": true,
+      "sourceFunctionalReview": "PASS reported by coordinator; focused offline checks and limitations in docs/colorful-ui/implementation.md",
+      "studioEditSync": "Final three presentation modules synced to verified Studio Edit target, reported by coordinator; does not establish visual acceptance.",
       "studioRuntimeVerified": false,
+      "desktopVisualVerified": false,
+      "phoneVisualVerified": false,
       "visuallyAccepted": false,
-      "fullCompFidelityVerified": false,
-      "decorativeAssetsPublished": true,
-      "pendingDecorativeFiles": 0,
-      "decorativeAssetsUploadedAt": "2026-10-23",
-      "uploadManifest": "assets/MonsterForge/upload-manifest.json",
-      "reason": "Seven images uploaded, assigned and observed loaded in Studio. Desktop and landscape phone QA recorded in docs/monster-forge/runtime-qa.md; real purchases and cloud publication unverified."
+      "finishReviewDisposition": "recapture",
+      "reason": "User stopped Computer Use with physical Escape during capture; no new desktop or phone captures available.",
+      "decorativeAssetIdsAssigned": true,
+      "uploadManifest": "assets/CartoonUI/upload-manifest.json",
+      "iconCount": 20,
+      "skyCount": 1,
+      "realPurchasesVerified": false,
+      "publicPlacePublicationVerified": false
     },
     "notCanonized": [
-      "Selected-item eyebrow",
-      "Frame-built glyph icons",
-      "GothamBlack system display faces",
-      "Damage-art composition drift and unverified capsule translucency recorded in provenance"
+      "Built-in display faces are observed implementation evidence, not a future display-font requirement.",
+      "Prize label minimum legibility and actual image loading await runtime visual review.",
+      "Manifest runtime text says 20 images but actual mapping contains 20 icons plus Sky.",
+      "PRODUCT.md still records the older shop approval scope; left unchanged as outside documentation ownership."
     ]
   },
   "components": [
-    {"name": "Purchase or equip action", "kind": "button", "refersTo": "button-primary", "description": "Native TextButton with UICorner, UIStroke and warm UIGradient; pending and ownership states remain native text."},
-    {"name": "Close", "kind": "button", "refersTo": "button-close", "description": "Native square Stone TextButton; inherited action gradient explicitly removed."},
-    {"name": "Category navigation", "kind": "nav", "refersTo": "category", "description": "Native scrolling category column; selected category uses category-selected tokens."},
-    {"name": "Catalog card", "kind": "card", "refersTo": "catalog-card", "description": "Native gradient Frame with selection outline, actual model preview and native state labels."},
-    {"name": "Stat block", "kind": "custom", "refersTo": "stat", "description": "Native wrapped TextLabel with Ink background transparency 0.15 and Edge stroke."}
+    {"name": "Shop action", "kind": "button", "refersTo": "button-primary", "description": "Native TextButton with lime UIGradient on white base, navy label and state-driven input."},
+    {"name": "Disabled shop action", "kind": "button", "refersTo": "button-disabled", "description": "Gradient disabled together with input; muted label and inactive border."},
+    {"name": "Close", "kind": "button", "refersTo": "button-close", "description": "Coral native square control with action gradient removed."},
+    {"name": "Shop categories", "kind": "nav", "refersTo": "category", "description": "Five scrolling native category controls with independent illustration icons and selected turquoise state."},
+    {"name": "Catalog card", "kind": "card", "refersTo": "catalog-card", "description": "Cream gradient card, actual model or authored icon, native price/state text and selection outline."},
+    {"name": "Spin action", "kind": "button", "refersTo": "rewards-spin", "description": "Lime native spin control with loading, cooldown, pending and spinning states plus GuiTheme feedback."},
+    {"name": "Prize wheel", "kind": "custom", "description": "Native ViewportFrame sectors, fixed pointer, counter-rotating labels and server-selected outcome animation."}
   ],
   "narrative": {
-    "northStar": "Monster Forge",
-    "overview": "The implemented shop uses midnight stone, bronze framing and warm ivory text to hold a dense catalog of native Roblox controls and actual game models. Gold marks purchase actions; cyan outlines the selected gear card. This document is scoped to the Monster Forge shop, not the rest of Raise a Monster.\n\nThis records the current source and bounded native Studio checks. Seven decorative images were uploaded, assigned and observed loaded in Studio on 2026-10-23. Desktop and landscape phone screenshots and scrolling were reviewed; see docs/monster-forge/runtime-qa.md. Complete illustration fidelity, real purchases and cloud place publication are not established by these checks.",
-    "keyCharacteristics": ["Dense dark containers with warm metal edges.", "Native text and controls above decorative art.", "Actual 3D equipment previews.", "Native pixel sizing with scrolling and responsive reflow."],
-    "rules": [{"name": "The State Accent Rule", "body": "Use the selected gear outline and selected category treatment to communicate the current selection independently of item artwork.", "section": "colors"}],
-    "dos": ["**Do** preserve native labels, prices, states and actionable controls over decorative artwork.", "**Do** use actual equipment models for item previews.", "**Do** reflow and scroll the catalog using native pixel sizes.", "**Do** distinguish source delivery, asset activation and Studio visual acceptance."],
-    "donts": ["**Don't** bake control labels or prices into raster art.", "**Don't** treat uploaded artwork as native Studio visual acceptance.", "**Don't** extend this shop-specific palette into unrelated screens without inspecting their incumbent system."]
+    "northStar": "Colorful Monster Forge and Rewards",
+    "overview": "The approved cartoon world uses blue sky and clouds around cream containers, navy text, gold titles, turquoise selection and lime actions. Native Roblox controls carry readable prices, ownership and cooldowns; authored illustrations supply character. Equipment previews remain actual game models.\n\nThis refresh replaces the former dark-stone shop record following the approved 2026-10-26 concept and extension to Rewards in `docs/colorful-ui/direction.md`. Scope is `MonsterForge.luau`, `RewardsArcade.luau` and shared `CartoonUI.luau`; other game surfaces retain their own systems. The current RewardsArcade source implements the spin wheel, not daily reward cards. PRODUCT.md still records the older shop approval; its native-platform and server-authority constraints remain applicable.",
+    "keyCharacteristics": ["Sky artwork around bright cream content.", "Navy text with gold display headings and lime actions.", "Independent uploaded illustrations alongside native controls and model previews.", "Native pixel reflow and scrolling, with explicit state labels."],
+    "rules": [{"name": "The State Accent Rule", "body": "Selection, ownership and availability must remain understandable through native text and borders independently of illustrations.", "section": "colors"}],
+    "dos": ["**Do** preserve native labels, prices, cooldowns and ownership over decorative art.", "**Do** use actual equipment models and server-selected spin results.", "**Do** disable the active gradient together with unavailable actions.", "**Do** distinguish offline checks, image upload IDs, Studio visual acceptance and public publication."],
+    "donts": ["**Don't** bake prices or action labels into raster images.", "**Don't** use emoji or primitive Frame-built substitutes for the authored illustration icons.", "**Don't** treat this scoped system as a redesign of unrelated game interfaces."]
   }
 }

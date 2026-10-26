@@ -51,6 +51,23 @@ for _,v in {{1366,768},{1606,686},{750,381},{1920,1080},{320,568},{568,320},{480
    local d=rect(detail,if detail.Parent==ui.GearScroll then body.w else w,if detail.Parent==ui.GearScroll then body.h else ht)
    local a=rect(detail.BuyButton,d.w,d.h)
    check(a.w>=44 and a.h==44 and a.y+a.h<=d.h,"Selected purchase action retains native target")
+   local stats=detail.Stats
+   local statSize=rect(stats,d.w,d.h)
+   for _,name in {"Primary","Secondary"} do
+    local label=stats:FindFirstChild(name)
+    local icon=stats:FindFirstChild(name.."Icon")
+    check(icon~=nil and icon.Parent==stats,"Stat art is a sibling, never shifted by text padding")
+    local padding=label:FindFirstChildOfClass("UIPadding").PaddingLeft.Offset
+    local labelBox=rect(label,statSize.w,statSize.h)
+    if icon.Visible then
+     local iconBox=rect(icon,statSize.w,statSize.h)
+     local textBox={x=labelBox.x+padding,y=labelBox.y,w=labelBox.w-padding,h=labelBox.h}
+     check(iconBox.x>=labelBox.x and iconBox.x+iconBox.w<=labelBox.x+labelBox.w and iconBox.y>=labelBox.y and iconBox.y+iconBox.h<=labelBox.y+labelBox.h,"Each stat icon stays inside its own stat cell")
+     check(padding>=40 and textBox.w>0 and not overlap(iconBox,textBox) and textBox.x-(iconBox.x+iconBox.w)>=6,"Stat icon and padded text have separate regions with a clear gap")
+    else
+     check(padding==0,"Compact stats reclaim hidden-icon space for readable text")
+    end
+   end
    local regions={}
    for _,name in {"SelectedLabel","Title","Stats","Preview","Price","BuyButton","CollectionNote"} do
     local item=detail:FindFirstChild(name)
