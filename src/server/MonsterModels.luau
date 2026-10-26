@@ -996,6 +996,243 @@ local REGIONS = {
 
 local RIG_TYPE = { slime = "Slime", quad = "Quad", biped = "Biped", bird = "Bird", dragon = "Dragon", serpent = "Serpent", spider = "Spider", scorpion = "Scorpion", turtle = "Turtle" }
 
+-- Halloween skins use the original animation bones and bind poses. Only their
+-- visible surfaces change; every detail follows exactly one existing bone.
+local HALLOWEEN_VISUAL_VERSION = 1
+local function dressHalloween(r, c, name)
+	local bones = {}
+	for _, bone in pairs(r.bones) do bones[bone] = true end
+	for _, part in ipairs(r.model:GetChildren()) do
+		if part:IsA("BasePart") then
+			if bones[part] then
+				part.Transparency = 1
+				part.CastShadow = false
+			else
+				part:Destroy()
+			end
+		end
+	end
+	local function size(bone) return r.bones[bone].Size / r.s end
+	local function skin(bone, detail, dimensions, offset, color, shape, rotation, material, transparency)
+		local anchor = r.bones[bone]
+		local p = r:mk(detail, dimensions, V(0, 0, 0), color, material or M.SmoothPlastic, { wedge = shape == "Wedge", tr = transparency })
+		if shape == Enum.PartType.Ball then
+			-- Native Ball parts render a sphere using the smallest dimension.
+			-- A sphere mesh on a block retains the intended ellipsoid silhouette.
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = p
+		elseif shape and shape ~= "Wedge" then
+			p.Shape = shape
+		end
+		p.CFrame = anchor.CFrame * CFrame.new(offset * r.s)
+		if rotation then p.CFrame *= CFrame.Angles(rad(rotation[1]), rad(rotation[2]), rad(rotation[3])) end
+		p.CanTouch = false
+		p.CanQuery = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = anchor
+		weld.Part1 = p
+		weld.Parent = p
+		return p
+	end
+	local BALL = Enum.PartType.Ball
+	local CYLINDER = Enum.PartType.Cylinder
+	local dark = rgb(24, 20, 34)
+	local ivory = rgb(238, 225, 190)
+	local function pair(bone, detail, dimensions, offset, color, shape, rotation, material)
+		for _, side in ipairs(SIDES) do
+			local rot = rotation and { rotation[1], rotation[2] * side[1], rotation[3] * side[1] }
+			skin(bone, detail .. side[2], dimensions, V(offset.X * side[1], offset.Y, offset.Z), color, shape, rot, material)
+		end
+	end
+	local function face(bone, dimensions, eyeColor, sockets)
+		local x, y, z = dimensions.X, dimensions.Y, dimensions.Z
+		if sockets then pair(bone, "EyeSocket", V(x * 0.28, y * 0.3, 0.22), V(x * 0.23, y * 0.08, -z * 0.47), dark, BALL) end
+		pair(bone, "HauntedEye", V(x * 0.12, y * 0.16, 0.16), V(x * 0.23, y * 0.08, -z * 0.54), eyeColor, BALL, nil, M.Neon)
+	end
+	local function bipedLimbs(color, handColor, shape, material)
+		for _, side in ipairs(SIDES) do
+			local sn = side[2]
+			for _, bone in ipairs({ "Arm" .. sn, "Forearm" .. sn, "Leg" .. sn }) do
+				local d = size(bone)
+				skin(bone, "LimbSkin", V(d.X * 0.88, d.Y * 1.12, d.Z * 0.9), V(0, 0, 0), color, shape, nil, material)
+			end
+			local arm = size("Arm" .. sn)
+			skin("Arm" .. sn, "ShoulderSkin", V(arm.X * 1.8, arm.X * 1.35, arm.Z * 1.35), V(-side[1] * arm.X * 0.12, arm.Y * 0.32, 0), color, shape, nil, material)
+			local hand = size("Forearm" .. sn)
+			skin("Forearm" .. sn, "Hand", V(hand.X * 1.06, hand.X * 0.8, hand.Z * 1.08), V(0, -hand.Y * 0.52, -0.06), handColor, shape, nil, material)
+			local leg = size("Leg" .. sn)
+			skin("Leg" .. sn, "FootSkin", V(leg.X * 1.05, 0.45, leg.Z * 1.35), V(0, -leg.Y / 2 + 0.23, -leg.Z * 0.13), handColor, shape, nil, material)
+		end
+	end
+	local head = r.bones.Head and size("Head")
+	local upper = r.bones.UpperTorso and size("UpperTorso")
+	local lower = r.bones.LowerTorso and size("LowerTorso")
+	if name == "Ghost Slime" then
+		-- A single milky shell avoids the overlapping transparent cube faces.
+		skin("Body", "GhostShell", V(4.8, 3.15, 4.3), V(0, 0.23, 0), rgb(218, 230, 249), BALL, nil, M.SmoothPlastic, 0.12)
+		skin("Top", "GhostCrest", V(2.5, 1.4, 2.4), V(0.12, 0.15, 0.12), rgb(229, 237, 255), BALL)
+		skin("Top", "GhostCurl", V(1.1, 1.05, 1.05), V(0.5, 0.87, 0.15), rgb(229, 237, 255), BALL, { 0, 0, -28 })
+		pair("Body", "GhostArm", V(1.1, 0.72, 1.05), V(2.16, 0.1, -0.2), rgb(203, 217, 244), BALL, { 0, 0, -22 })
+		for i = -1, 1 do skin("Body", "GhostHem" .. i, V(1.45, 0.65, 1.4), V(i * 1.35, -0.94, -0.45), rgb(203, 217, 244), BALL) end
+		pair("Body", "GhostSocket", V(0.72, 0.95, 0.18), V(0.82, 0.43, -1.98), rgb(56, 42, 87), BALL)
+		pair("Body", "GhostGlint", V(0.22, 0.31, 0.12), V(0.74, 0.62, -2.1), rgb(229, 204, 255), BALL, nil, M.Neon)
+		skin("Body", "GhostMouth", V(0.45, 0.54, 0.14), V(0, -0.27, -2.15), rgb(56, 42, 87), BALL)
+		pair("Body", "GhostBlush", V(0.53, 0.2, 0.12), V(1.38, -0.12, -1.81), rgb(195, 157, 233), BALL)
+	elseif name == "Hex Cat" then
+		local body = size("Body")
+		skin("Body", "CatBody", V(body.X, body.Y * 1.05, body.Z), V(0, 0, 0), rgb(45, 30, 66), BALL)
+		skin("Body", "CatBib", V(body.X * 0.56, body.Y * 0.74, 0.3), V(0, -0.07, -body.Z * 0.46), rgb(107, 61, 149), BALL)
+		skin("Head", "CatHead", V(head.X, head.Y * 0.93, head.Z), V(0, 0, 0), rgb(45, 30, 66), BALL)
+		face("Head", head, rgb(255, 184, 67), true)
+		pair("Head", "CatMuzzle", V(head.X * 0.28, head.Y * 0.2, 0.34), V(head.X * 0.12, -head.Y * 0.21, -head.Z * 0.49), rgb(141, 102, 170), BALL)
+		skin("Head", "CatNose", V(0.28, 0.2, 0.17), V(0, -head.Y * 0.15, -head.Z * 0.6), rgb(236, 140, 175), BALL)
+		skin("Head", "HexRune", V(0.28, 0.38, 0.1), V(0, head.Y * 0.32, -head.Z * 0.42), rgb(200, 143, 255), nil, { 0, 0, 45 }, M.Neon)
+		for _, side in ipairs(SIDES) do
+			local sn = side[2]
+			local ear = size("Ear" .. sn)
+			skin("Ear" .. sn, "CatEar", V(ear.X * 1.4, ear.Y * 1.02, ear.Z), V(0, 0, 0), rgb(45, 30, 66), "Wedge")
+			skin("Ear" .. sn, "CatInnerEar", V(0.12, ear.Y * 0.66, ear.Z * 0.59), V(side[1] * ear.X * 0.73, -ear.Y * 0.08, 0), rgb(161, 86, 191), "Wedge")
+			for _, fb in ipairs({ "F", "B" }) do
+				local bone = "Leg" .. fb .. sn
+				local d = size(bone)
+				skin(bone, "CatLeg", V(d.X * 0.85, d.Y, d.Z * 0.85), V(0, 0, 0), rgb(45, 30, 66), BALL)
+				skin(bone, "CatPaw", V(d.X * 1.18, 0.5, d.Z * 1.35), V(0, -d.Y / 2 + 0.25, -0.12), rgb(83, 49, 115), BALL)
+			end
+		end
+		for i = 1, 3 do
+			local bone = "Tail" .. i
+			local d = size(bone)
+			local rise = TAILS.thin[i][4]
+			local run = d.Z * 0.85
+			local length = math.sqrt(run * run + rise * rise)
+			local width = math.max(0.4, d.X * 1.6)
+			skin(bone, "CatTail", V(width, width, length * 1.4), V(0, 0, -d.Z * 0.075), i == 3 and rgb(162, 98, 218) or rgb(45, 30, 66), BALL, { -math.deg(math.atan2(rise, run)), 0, 0 })
+		end
+		skin("Body", "CatCollar", V(body.X * 0.9, 0.3, 0.6), V(0, body.Y * 0.3, -body.Z * 0.48), rgb(181, 119, 49), BALL)
+		skin("Body", "CatCharm", V(0.4, 0.46, 0.16), V(0, body.Y * 0.12, -body.Z * 0.62), rgb(255, 186, 65), nil, { 0, 0, 45 }, M.Neon)
+	elseif name == "Skeleton Imp" then
+		skin("Head", "ImpSkull", V(head.X, head.Y * 0.88, head.Z), V(0, 0.08, 0), ivory, BALL)
+		face("Head", head, rgb(255, 157, 57), true)
+		skin("Head", "NoseSocket", V(0.28, 0.35, 0.16), V(0, -head.Y * 0.15, -head.Z * 0.54), dark, "Wedge", { 0, 0, 180 })
+		skin("Head", "ImpJaw", V(head.X * 0.65, head.Y * 0.21, head.Z * 0.7), V(0, -head.Y * 0.38, -0.13), ivory, BALL)
+		for i = -1, 1 do skin("Head", "ToothGap" .. i, V(0.13, 0.22, 0.09), V(i * 0.39, -head.Y * 0.39, -head.Z * 0.46), rgb(91, 72, 71)) end
+		pair("Head", "ImpHorn", V(0.46, 1.02, 0.52), V(head.X * 0.37, head.Y * 0.53, 0.08), rgb(99, 64, 119), "Wedge", { 0, 0, -23 })
+		skin("UpperTorso", "Spine", V(0.45, upper.Y * 1.2, 0.5), V(0, 0, 0.12), ivory, BALL)
+		for row = 1, 3 do
+			pair("UpperTorso", "Rib" .. row, V(upper.X * (0.46 - row * 0.025), 0.28, upper.Z * 0.6), V(upper.X * 0.2, upper.Y * 0.52 - row * 0.55, -upper.Z * 0.18), ivory, BALL, { 0, 0, -8 })
+		end
+		skin("UpperTorso", "Sternum", V(0.28, upper.Y * 0.65, 0.25), V(0, 0.1, -upper.Z * 0.46), ivory, BALL)
+		skin("LowerTorso", "Pelvis", V(lower.X * 0.82, lower.Y * 0.87, lower.Z * 0.74), V(0, 0, 0), ivory, BALL)
+		for _, side in ipairs(SIDES) do
+			for _, stem in ipairs({ "Arm", "Forearm", "Leg" }) do
+				local bone = stem .. side[2]
+				local d = size(bone)
+				skin(bone, "ImpBone", V(d.X * 0.5, d.Y * 1.12, d.Z * 0.5), V(0, 0, 0), ivory, BALL)
+				skin(bone, "BoneJoint", V(d.X * 0.72, 0.42, d.Z * 0.72), V(0, d.Y * 0.38, 0), ivory, BALL)
+			end
+			local foot = size("Leg" .. side[2])
+			skin("Leg" .. side[2], "ImpFoot", V(foot.X * 0.84, 0.38, foot.Z * 1.15), V(0, -foot.Y / 2 + 0.19, -0.15), ivory, BALL)
+		end
+	elseif name == "Pumpkin King" then
+		bipedLimbs(rgb(85, 62, 42), rgb(103, 78, 42), BALL, M.Wood)
+		skin("UpperTorso", "RoyalCoat", V(upper.X * 0.94, upper.Y * 1.12, upper.Z * 0.94), V(0, 0, 0), rgb(73, 46, 87), BALL)
+		skin("LowerTorso", "RoyalBelt", V(lower.X, lower.Y * 1.35, lower.Z), V(0, 0, 0), rgb(55, 65, 39), BALL)
+		skin("UpperTorso", "CoatClasp", V(0.6, 0.65, 0.18), V(0, upper.Y * 0.22, -upper.Z * 0.49), rgb(238, 176, 55), nil, { 0, 0, 45 }, M.Metal)
+		skin("Head", "PumpkinHead", V(head.X * 1.02, head.Y * 0.94, head.Z * 1.05), V(0, 0, 0), rgb(235, 113, 30), BALL)
+		for i = -1, 1 do
+			skin("Head", "PumpkinLobe" .. i, V(head.X * 0.4, head.Y * 0.94, head.Z * 1.04), V(i * head.X * 0.28, 0, -0.08), i == 0 and rgb(249, 137, 35) or rgb(228, 100, 24), BALL)
+		end
+		pair("Head", "CarvedEye", V(head.X * 0.23, head.Y * 0.21, 0.17), V(head.X * 0.24, head.Y * 0.11, -head.Z * 0.5), dark, "Wedge", { 0, 0, -12 })
+		pair("Head", "PumpkinEyeGlow", V(head.X * 0.14, head.Y * 0.12, 0.12), V(head.X * 0.24, head.Y * 0.11, -head.Z * 0.54), rgb(255, 208, 86), "Wedge", { 0, 0, -12 }, M.Neon)
+		skin("Head", "CarvedSmile", V(head.X * 0.58, head.Y * 0.17, 0.2), V(0, -head.Y * 0.25, -head.Z * 0.51), dark, BALL)
+		for i = -1, 1 do skin("Head", "PumpkinTooth" .. i, V(0.24, 0.28, 0.13), V(i * head.X * 0.18, -head.Y * 0.2, -head.Z * 0.56), rgb(255, 198, 69), nil, nil, M.Neon) end
+		skin("Head", "PumpkinStem", V(0.62, 0.8, 0.62), V(0.15, head.Y * 0.56, 0), rgb(77, 94, 38), BALL, { 0, 0, -18 }, M.Wood)
+		skin("Head", "CrownBand", V(0.3, head.X * 0.62, head.Z * 0.67), V(0, head.Y * 0.47, 0.04), rgb(213, 152, 43), CYLINDER, { 0, 0, 90 }, M.Metal)
+		for i = -1, 1 do skin("Head", "CrownPoint" .. i, V(0.36, 0.75 - math.abs(i) * 0.14, 0.38), V(i * head.X * 0.23, head.Y * 0.6, -head.Z * 0.22), rgb(237, 179, 59), "Wedge", nil, M.Metal) end
+		pair("UpperTorso", "LeafMantle", V(upper.X * 0.32, 0.55, upper.Z * 0.7), V(upper.X * 0.34, upper.Y * 0.43, 0), rgb(85, 117, 50), "Wedge", { 0, 15, -13 })
+	elseif name == "Crypt Mummy" then
+		bipedLimbs(rgb(158, 137, 100), rgb(204, 188, 149), BALL, M.Fabric)
+		skin("UpperTorso", "MummyBody", V(upper.X * 0.89, upper.Y * 1.12, upper.Z * 0.91), V(0, 0, 0), rgb(183, 163, 124), BALL, nil, M.Fabric)
+		skin("LowerTorso", "MummyHip", V(lower.X * 0.92, lower.Y * 1.25, lower.Z * 0.91), V(0, 0, 0), rgb(183, 163, 124), BALL, nil, M.Fabric)
+		skin("Head", "WrappedHead", V(head.X * 0.94, head.Y, head.Z), V(0, 0, 0), rgb(218, 202, 166), BALL, nil, M.Fabric)
+		face("Head", head, rgb(123, 239, 183), true)
+		for i = -1, 1 do
+			skin("Head", "HeadBandage" .. i, V(head.X * 0.95, 0.31, head.Z * 0.97), V(0, i * head.Y * 0.31, 0), rgb(229, 213, 174), nil, { 0, 0, i * 7 }, M.Fabric)
+		end
+		for i = -1, 1 do skin("UpperTorso", "ChestBandage" .. i, V(upper.X * 0.94, 0.34, upper.Z * 0.94), V(0, i * upper.Y * 0.32, 0), i == 0 and rgb(228, 210, 170) or rgb(205, 187, 148), nil, { 0, 0, i == 0 and -12 or 8 }, M.Fabric) end
+		for _, side in ipairs(SIDES) do
+			for _, stem in ipairs({ "Arm", "Forearm", "Leg" }) do
+				local bone = stem .. side[2]
+				local d = size(bone)
+				for i = -1, 1, 2 do skin(bone, "LimbBandage" .. i, V(d.X * 0.94, 0.24, d.Z * 0.94), V(0, d.Y * 0.27 * i, 0), rgb(226, 210, 174), nil, { 0, 0, i * 8 }, M.Fabric) end
+			end
+		end
+		skin("ForearmL", "LooseBandage", V(0.34, 1.0, 0.16), V(-0.55, -0.45, 0.12), rgb(226, 210, 174), "Wedge", { 0, 0, -16 }, M.Fabric)
+		skin("UpperTorso", "Scarab", V(0.55, 0.68, 0.23), V(0, upper.Y * 0.18, -upper.Z * 0.52), rgb(91, 184, 153), BALL, nil, M.Metal)
+	elseif name == "Count Fang" then
+		bipedLimbs(rgb(51, 34, 61), rgb(224, 213, 227), BALL)
+		skin("UpperTorso", "VampireCoat", V(upper.X * 0.93, upper.Y * 1.12, upper.Z * 0.93), V(0, 0, 0), rgb(48, 29, 57), BALL)
+		skin("LowerTorso", "VampireWaist", V(lower.X * 0.92, lower.Y * 1.25, lower.Z * 0.9), V(0, 0, 0), rgb(48, 29, 57), BALL)
+		skin("UpperTorso", "CrimsonVest", V(upper.X * 0.5, upper.Y * 0.82, 0.23), V(0, 0, -upper.Z * 0.45), rgb(142, 37, 64), nil)
+		pair("UpperTorso", "WhiteLapel", V(0.5, upper.Y * 0.58, 0.15), V(0.43, upper.Y * 0.15, -upper.Z * 0.53), rgb(226, 217, 214), "Wedge", { 0, 0, 16 })
+		skin("UpperTorso", "RubyBrooch", V(0.38, 0.45, 0.14), V(0, upper.Y * 0.21, -upper.Z * 0.59), rgb(239, 68, 99), nil, { 0, 0, 45 }, M.Neon)
+		skin("Head", "VampireFace", V(head.X * 0.94, head.Y * 0.94, head.Z), V(0, 0, 0), rgb(227, 216, 230), BALL)
+		face("Head", head, rgb(239, 70, 105), false)
+		skin("Head", "SlickHair", V(head.X * 0.99, head.Y * 0.4, head.Z * 1.02), V(0, head.Y * 0.34, 0.08), rgb(33, 24, 43), BALL)
+		skin("Head", "WidowsPeak", V(0.55, head.Y * 0.36, 0.2), V(0, head.Y * 0.25, -head.Z * 0.47), rgb(33, 24, 43), "Wedge", { 0, 0, 180 })
+		skin("Head", "VampireSmile", V(head.X * 0.44, 0.2, 0.16), V(0, -head.Y * 0.24, -head.Z * 0.52), rgb(75, 29, 52), BALL)
+		pair("Head", "VampireFang", V(0.18, 0.41, 0.15), V(head.X * 0.14, -head.Y * 0.28, -head.Z * 0.57), ivory, "Wedge", { 0, 0, 180 })
+		pair("UpperTorso", "HighCollar", V(upper.X * 0.34, 1.4, 0.4), V(upper.X * 0.43, upper.Y * 0.6, 0.4), rgb(142, 37, 64), "Wedge", { 0, 0, -24 }, M.Fabric)
+		for _, side in ipairs(SIDES) do
+			skin("UpperTorso", "Cape" .. side[2], V(upper.X * 0.64, upper.Y * 1.12, 0.28), V(side[1] * upper.X * 0.29, -upper.Y * 0.19, upper.Z * 0.59), rgb(104, 30, 55), "Wedge", { 7, 0, side[1] * -8 }, M.Fabric)
+		end
+	elseif name == "Grave Golem" then
+		bipedLimbs(rgb(98, 109, 113), rgb(77, 88, 94), nil, M.Slate)
+		skin("UpperTorso", "GraveChest", V(upper.X * 0.95, upper.Y, upper.Z * 0.95), V(0, 0, 0), rgb(104, 116, 119), nil, nil, M.Slate)
+		skin("LowerTorso", "GraveHip", V(lower.X * 0.94, lower.Y, lower.Z * 0.94), V(0, 0, 0), rgb(76, 88, 94), nil, nil, M.Slate)
+		skin("Head", "TombstoneHead", V(head.X * 0.92, head.Y * 0.82, head.Z * 0.91), V(0, -head.Y * 0.07, 0), rgb(125, 136, 138), nil, nil, M.Slate)
+		skin("Head", "TombstoneArch", V(head.X * 0.91, head.Y * 0.59, head.Z * 0.92), V(0, head.Y * 0.28, 0), rgb(125, 136, 138), BALL, nil, M.Slate)
+		face("Head", head, rgb(161, 235, 119), true)
+		skin("Head", "StoneMouth", V(head.X * 0.4, 0.18, 0.12), V(0, -head.Y * 0.24, -head.Z * 0.49), dark)
+		skin("UpperTorso", "GraveSeal", V(0.86, 0.96, 0.15), V(0, 0, -upper.Z * 0.5), rgb(130, 223, 108), nil, { 0, 0, 45 }, M.Neon)
+		pair("UpperTorso", "BrokenSlab", V(upper.X * 0.2, upper.Y * 0.75, 0.35), V(upper.X * 0.32, -0.04, -upper.Z * 0.49), rgb(75, 88, 92), nil, { 0, 0, -9 }, M.Slate)
+		for _, side in ipairs(SIDES) do
+			local arm = size("Arm" .. side[2])
+			skin("Arm" .. side[2], "GraveShoulder", V(arm.X * 1.35, arm.X, arm.Z * 1.35), V(0, arm.Y * 0.37, 0), rgb(77, 91, 87), nil, { 0, side[1] * 9, side[1] * 8 }, M.Slate)
+			skin("Arm" .. side[2], "MossPatch", V(arm.X * 1.1, 0.28, arm.Z), V(0, arm.Y * 0.64, 0), rgb(86, 121, 59), BALL, nil, M.Grass)
+		end
+		skin("Head", "HeadMoss", V(head.X * 0.5, 0.22, head.Z * 0.65), V(-head.X * 0.17, head.Y * 0.5, 0.06), rgb(96, 132, 64), BALL, nil, M.Grass)
+	elseif name == "Wraith Reaper" then
+		bipedLimbs(rgb(49, 42, 65), rgb(156, 190, 181), BALL, M.Fabric)
+		skin("UpperTorso", "WraithRobe", V(upper.X * 0.98, upper.Y * 1.12, upper.Z), V(0, 0, 0), rgb(45, 37, 61), BALL, nil, M.Fabric)
+		skin("LowerTorso", "RobeSkirt", V(lower.X * 1.03, lower.Y * 1.5, lower.Z), V(0, -lower.Y * 0.19, 0), rgb(39, 32, 54), BALL, nil, M.Fabric)
+		for i = -1, 1 do skin("LowerTorso", "RobeHem" .. i, V(lower.X * 0.38, 1.05 - math.abs(i) * 0.16, 0.3), V(i * lower.X * 0.29, -lower.Y * 0.95, -lower.Z * 0.38), rgb(39, 32, 54), "Wedge", { 0, 0, i * 8 }, M.Fabric) end
+		skin("Head", "WraithHood", V(head.X * 1.08, head.Y * 1.12, head.Z * 1.12), V(0, head.Y * 0.03, 0.09), rgb(49, 41, 67), BALL, nil, M.Fabric)
+		skin("Head", "HoodOpening", V(head.X * 0.76, head.Y * 0.81, 0.26), V(0, -head.Y * 0.03, -head.Z * 0.52), rgb(14, 17, 27), BALL)
+		pair("Head", "HauntedEye", V(head.X * 0.2, head.Y * 0.14, 0.16), V(head.X * 0.23, head.Y * 0.08, -head.Z * 0.6), rgb(137, 243, 212), BALL, { 0, 0, -12 }, M.Neon)
+		skin("UpperTorso", "WraithClasp", V(0.44, 0.54, 0.17), V(0, upper.Y * 0.27, -upper.Z * 0.52), rgb(133, 219, 195), nil, { 0, 0, 45 }, M.Metal)
+		for _, side in ipairs(SIDES) do skin("Arm" .. side[2], "ShoulderMantle", V(1.2, 0.6, 1.5), V(side[1] * 0.2, 0.65, 0), rgb(66, 56, 82), "Wedge", { 0, 0, side[1] * -12 }, M.Fabric) end
+		local forearm = size("ForearmR")
+		-- Held by the animated hand with no queryable geometry. Its height still
+		-- contributes to the model bounds used by plot care interactions.
+		local gripY = -forearm.Y * 0.52
+		skin("ForearmR", "ScytheShaft", V(4.7, 0.25, 0.25), V(0.17, gripY + 1.1, -0.77), rgb(95, 80, 65), CYLINDER, { 0, 0, 90 }, M.Wood)
+		skin("ForearmR", "ScytheBlade", V(2.65, 0.57, 0.18), V(-0.98, gripY + 3.2, -0.77), rgb(178, 204, 196), "Wedge", { 0, 0, -14 }, M.Metal)
+		skin("ForearmR", "ScytheTip", V(0.62, 0.94, 0.17), V(-2.13, gripY + 2.73, -0.77), rgb(132, 222, 199), "Wedge", { 0, 0, -20 }, M.Neon)
+	end
+	local aura = Instance.new("Attachment")
+	aura.Name = "HalloweenAura"
+	aura.Parent = r.bones.UpperTorso or r.bones.Body
+	local light = Instance.new("PointLight")
+	light.Color = c.glow
+	light.Brightness = 0.55
+	light.Range = 5 * r.s
+	light.Shadows = false
+	light.Parent = aura
+	r.model:SetAttribute("HalloweenVisualVersion", HALLOWEEN_VISUAL_VERSION)
+end
+
 -- ========================= FX =========================
 local function addFX(r, c, rarity, f)
 	local rr = RARITY[rarity]
@@ -1054,7 +1291,11 @@ local function buildMonster(def, regionName, idx, stage, parent)
 	local builder = ARCH[arch]
 	if not builder then error("Unknown archetype " .. tostring(arch) .. " for " .. name) end
 	builder(r, c, f)
-	addFX(r, c, rarity, f)
+	if regionName == "Halloween" then
+		dressHalloween(r, c, name)
+	else
+		addFX(r, c, rarity, f)
+	end
 	model:SetAttribute("MonsterId", regionName .. "_" .. idx)
 	model:SetAttribute("MonsterName", name)
 	model:SetAttribute("Region", regionName)
@@ -1156,6 +1397,19 @@ function MonsterModels.Get(regionIndex, monsterIndex, stage)
 	end
 	local key = string.format("%02d_%s", monsterIndex, slug(def[1]))
 	local monster = folder:FindFirstChild(key)
+	if monster and region.name == "Halloween" then
+		-- Authored libraries can contain the old procedural Halloween models.
+		-- Refresh this species together so growth never switches back to an old
+		-- skin. Other regions retain their saved rigs and animation edits.
+		for _, st in ipairs(STAGES) do
+			local template = monster:FindFirstChild(st.name)
+			if not template or template:GetAttribute("HalloweenVisualVersion") ~= HALLOWEEN_VISUAL_VERSION then
+				monster:Destroy()
+				monster = nil
+				break
+			end
+		end
+	end
 	if not monster then
 		monster = Instance.new("Folder")
 		monster.Name = key
